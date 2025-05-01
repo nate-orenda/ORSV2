@@ -1,0 +1,69 @@
+@page "{id}"
+@model ORSV2.Pages.Admin.Users.EditModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<h1>Edit User</h1>
+
+<form method="post">
+    <input type="hidden" asp-for="Input.Id" />
+
+    <div class="form-group">
+        <label>Email</label>
+        <input class="form-control" value="@Model.Input.Email" readonly />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.DistrictId"></label>
+        <select asp-for="Input.DistrictId" asp-items="Model.Districts" class="form-control"></select>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.SchoolId"></label>
+        <select asp-for="Input.SchoolId" asp-items="Model.Schools" class="form-control"></select>
+    </div>
+
+    <div class="form-group">
+        <label>Roles</label>
+        @{
+            var allowedRoles = new List<string>();
+
+            if (User.IsInRole("OrendaAdmin"))
+            {
+                allowedRoles = Model.AllRoles;
+            }
+            else if (User.IsInRole("DistrictAdmin"))
+            {
+                allowedRoles = new List<string> { "SchoolAdmin", "Counselor", "Teacher" };
+            }
+            else if (User.IsInRole("SchoolAdmin"))
+            {
+                allowedRoles = new List<string> { "Counselor", "Teacher" };
+            }
+        }
+
+        @foreach (var role in Model.AllRoles)
+        {
+            if (allowedRoles.Contains(role))
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="Input.SelectedRoles" value="@role"
+                        checked="@Model.Input.SelectedRoles.Contains(role)" />
+                    <label class="form-check-label">@role</label>
+                </div>
+            }
+            else
+            {
+                <div class="form-check text-muted">
+                    <input class="form-check-input" type="checkbox" disabled />
+                    <label class="form-check-label">@role (restricted)</label>
+                </div>
+            }
+        }
+
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-page="Index" class="btn btn-secondary">Cancel</a>
+</form>

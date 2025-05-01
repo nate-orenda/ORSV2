@@ -1,0 +1,38 @@
+@page "{districtId:guid}"
+@model ORSV2.Pages.Schools.CreateModel
+@{
+    ViewData["Title"] = "Create School";
+}
+
+<h1>Create School</h1>
+
+<form method="post">
+    <input type="hidden" asp-for="School.DistrictId" />
+
+    <div class="form-group">
+        <label asp-for="School.Name"></label>
+        <input asp-for="School.Name" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="School.LocalSchoolId"></label>
+        <input asp-for="School.LocalSchoolId" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="School.SchoolType"></label>
+        <input asp-for="School.SchoolType" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="School.CDSCode"></label>
+        <input asp-for="School.CDSCode" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="School.Notes"></label>
+        <textarea asp-for="School.Notes" class="form-control"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>

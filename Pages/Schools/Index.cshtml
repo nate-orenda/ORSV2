@@ -1,0 +1,34 @@
+@page "{districtId:guid}"
+@model ORSV2.Pages.Schools.IndexModel
+@{
+    ViewData["Title"] = "Schools";
+}
+
+<h1>Schools in District</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Local ID</th>
+            <th>Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var school in Model.Schools)
+    {
+        <tr>
+            <td>@school.Name</td>
+            <td>@school.LocalSchoolId</td>
+            <td>@school.SchoolType</td>
+            <td>
+                <a asp-page="Edit" asp-route-id="@school.Id">Edit</a> |
+                <a asp-page="Delete" asp-route-id="@school.Id">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<a asp-page="Create" asp-route-districtId="@Model.DistrictId" class="btn btn-primary">Add New School</a>

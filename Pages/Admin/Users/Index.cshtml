@@ -1,0 +1,31 @@
+@page
+@model ORSV2.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<h1>Users</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>District</th>
+            <th>School</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model.Users)
+    {
+        <tr>
+            <td>@user.Email</td>
+            <td>@string.Join(", ", user.Roles)</td>
+            <td>@user.DistrictName</td>
+            <td>@user.SchoolName</td>
+            <td><a asp-page="Edit" asp-route-id="@user.Id">Edit</a></td>
+        </tr>
+    }
+    </tbody>
+</table>

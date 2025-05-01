@@ -1,0 +1,41 @@
+@page
+@model ORSV2.Pages.Districts.IndexModel
+@{
+    ViewData["Title"] = "Districts";
+}
+
+<h1>Districts</h1>
+
+<p>
+    <a asp-page="Create" class="btn btn-primary">Create New District</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>CDS Code</th>
+            <th>SIS Base URL</th>
+            <th>SIS API Key</th>
+            <th>Notes</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var district in Model.Districts)
+    {
+        <tr>
+            <td>@district.Name</td>
+            <td>@district.CDSCode</td>
+            <td>@district.SISBaseUrl</td>
+            <td>@district.SISApiKey</td>
+            <td>@district.Notes</td>
+            <td>
+                <a asp-page="Edit" asp-route-id="@district.Id">Edit</a> |
+                <a asp-page="Delete" asp-route-id="@district.Id">Delete</a> | 
+                <a asp-page="/Schools/Index" asp-route-districtId="@district.Id">View Schools</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

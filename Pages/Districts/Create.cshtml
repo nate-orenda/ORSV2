@@ -1,0 +1,47 @@
+@page
+@model ORSV2.Pages.Districts.CreateModel
+@{
+    ViewData["Title"] = "Create District";
+}
+
+<h1>Create District</h1>
+
+<form method="post">
+    <div class="form-group">
+        <label asp-for="District.Name"></label>
+        <input asp-for="District.Name" class="form-control" />
+        <span asp-validation-for="District.Name" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="District.CDSCode"></label>
+        <input asp-for="District.CDSCode" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="District.SISBaseUrl"></label>
+        <input asp-for="District.SISBaseUrl" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="District.SISApiKey"></label>
+        <input asp-for="District.SISApiKey" class="form-control" type="password" autocomplete="off" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="District.SISApiSecret"></label>
+        <input asp-for="District.SISApiSecret" class="form-control" type="password" autocomplete="off" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="District.Notes"></label>
+        <textarea asp-for="District.Notes" class="form-control"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-page="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

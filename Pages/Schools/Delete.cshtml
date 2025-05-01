@@ -1,0 +1,18 @@
+@page "{id:guid}"
+@model ORSV2.Pages.Schools.DeleteModel
+@{
+    ViewData["Title"] = "Delete School";
+}
+
+<h1>Confirm Delete</h1>
+
+<div>
+    <strong>@Model.School.Name</strong> — @Model.School.SchoolType
+</div>
+
+<form method="post">
+    <input type="hidden" asp-for="School.Id" />
+    <input type="hidden" asp-for="School.DistrictId" />
+    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+    <a asp-page="Index" class="btn btn-secondary">Cancel</a>
+</form>
