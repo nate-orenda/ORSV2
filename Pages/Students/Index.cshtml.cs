@@ -1,38 +1,62 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
-using ORSV2.Models.ViewModels;
 
 namespace ORSV2.Pages.Students
 {
     public class IndexModel : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public IndexModel(ApplicationDbContext context)
+        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        public List<StudentListViewModel> Students { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public bool ShowSWD { get; set; }
 
-        public async Task OnGetAsync(Guid districtId, Guid schoolId)
+        [BindProperty(SupportsGet = true)]
+        public bool ShowSED { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public bool ShowEth { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public bool ShowRace { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public bool ShowLang { get; set; }
+
+
+        public List<STU> Students { get; set; } = new();
+
+        public async Task<IActionResult> OnGetAsync(Guid districtId, Guid schoolId)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var roles = await _userManager.GetRolesAsync(user);
+
+            if (!roles.Contains("OrendaAdmin") && !roles.Contains("OrendaManager"))
+            {
+                if (user.DistrictId.HasValue && user.DistrictId.Value != districtId)
+                    return Forbid();
+                if (user.SchoolId.HasValue && user.SchoolId.Value != schoolId)
+                    return Forbid();
+            }
+
             Students = await _context.STU
-                .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId && (s.Inactive == null || s.Inactive == false))
-                .Select(s => new StudentListViewModel
-                {
-                    STU_ID = s.STU_ID,
-                    LocalStudentID = s.LocalStudentID,
-                    FirstName = s.FirstName,
-                    LastName = s.LastName,
-                    MiddleName = s.MiddleName,
-                    Grade = s.Grade
-                })
+                .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId)
                 .OrderBy(s => s.LastName)
                 .ThenBy(s => s.FirstName)
                 .ToListAsync();
+
+            return Page();
         }
+
     }
 }

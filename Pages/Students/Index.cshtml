@@ -1,18 +1,33 @@
 @page "{districtId:guid}/{schoolId:guid}"
 @model ORSV2.Pages.Students.IndexModel
 @{
-    ViewData["Title"] = "Student List";
+    ViewData["Title"] = "Students";
 }
+
 <div class="container mt-5">
-    <h2 class="mb-4">Students</h2>
-    <table class="table table-hover table-bordered">
-        <thead class="table-light">
+    <h2>Student List</h2>
+
+    <form method="get" id="columnForm" class="mb-3">
+        <label><input type="checkbox" name="showSWD" value="true" onchange="document.getElementById('columnForm').submit();" @(Model.ShowSWD ? "checked" : "") /> SWD</label>
+        <label class="ms-3"><input type="checkbox" name="showSED" value="true" onchange="document.getElementById('columnForm').submit();" @(Model.ShowSED ? "checked" : "") /> SED</label>
+        <label class="ms-3"><input type="checkbox" name="showEth" value="true" onchange="document.getElementById('columnForm').submit();" @(Model.ShowEth ? "checked" : "") /> Ethnicity</label>
+        <label class="ms-3"><input type="checkbox" name="showRace" value="true" onchange="document.getElementById('columnForm').submit();" @(Model.ShowRace ? "checked" : "") /> Race</label>
+        <label class="ms-3"><input type="checkbox" name="showLang" value="true" onchange="document.getElementById('columnForm').submit();" @(Model.ShowLang ? "checked" : "") /> Language Fluency</label>
+    </form>
+
+    <table class="table table-bordered">
+        <thead>
             <tr>
                 <th>Student ID</th>
                 <th>Last</th>
                 <th>First</th>
                 <th>Grade</th>
-                <th>Profile</th>
+                @if (Model.ShowSWD) { <th>SWD</th> }
+                @if (Model.ShowSED) { <th>SED</th> }
+                @if (Model.ShowEth) { <th>Ethnicity</th> }
+                @if (Model.ShowRace) { <th>Race</th> }
+                @if (Model.ShowLang) { <th>Language Fluency</th> }
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -20,24 +35,21 @@
         {
             <tr>
                 <td>@student.LocalStudentID</td>
-                <td>@student.LastName</td>
+                <td><a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.STU_ID">@student.LastName</a></td>
                 <td>@student.FirstName</td>
                 <td>@student.Grade</td>
-                <td>
-                    <button class="btn btn-sm btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#profileModal"
-                            data-student-id="@student.STU_ID">
-                        View
-                    </button>
-                </td>
+                @if (Model.ShowSWD) { <td>@(student.SWD == true ? "Yes" : "No")</td> }
+                @if (Model.ShowSED) { <td>@(student.SED == true ? "Yes" : "No")</td> }
+                @if (Model.ShowEth) { <td>@(student.Ethnicity == true ? "Yes" : "No")</td> }
+                @if (Model.ShowRace) { <td>@student.RaceCode</td> }
+                @if (Model.ShowLang) { <td>@student.LanguageFluency</td> }
+                <td><a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.STU_ID">Profile</a></td>
             </tr>
         }
         </tbody>
     </table>
 </div>
 
-<!-- Modal -->
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -46,9 +58,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="profileContent">
-          <p>Loading student profile...</p>
-        </div>
+        <div id="profileContent">Loading...</div>
       </div>
     </div>
   </div>
@@ -56,19 +66,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var profileModal = document.getElementById('profileModal');
-    profileModal.addEventListener('show.bs.modal', function (event) {
+    var modal = document.getElementById('profileModal');
+    modal.addEventListener('show.bs.modal', function (event) {
         var button = event.relatedTarget;
         var studentId = button.getAttribute('data-student-id');
-        var modalBody = profileModal.querySelector('#profileContent');
-
-        fetch(`/students/profilecard/${studentId}`)
+        fetch(`/Students/ProfileCard/${studentId}`)
             .then(response => response.text())
             .then(html => {
-                modalBody.innerHTML = html;
-            })
-            .catch(() => {
-                modalBody.innerHTML = "<p>Error loading student profile.</p>";
+                document.getElementById('profileContent').innerHTML = html;
             });
     });
 });
