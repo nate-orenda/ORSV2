@@ -1,0 +1,75 @@
+@page "{districtId:guid}/{schoolId:guid}"
+@model ORSV2.Pages.Students.IndexModel
+@{
+    ViewData["Title"] = "Student List";
+}
+<div class="container mt-5">
+    <h2 class="mb-4">Students</h2>
+    <table class="table table-hover table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Student ID</th>
+                <th>Last</th>
+                <th>First</th>
+                <th>Grade</th>
+                <th>Profile</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var student in Model.Students)
+        {
+            <tr>
+                <td>@student.LocalStudentID</td>
+                <td>@student.LastName</td>
+                <td>@student.FirstName</td>
+                <td>@student.Grade</td>
+                <td>
+                    <button class="btn btn-sm btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#profileModal"
+                            data-student-id="@student.STU_ID">
+                        View
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="profileContent">
+          <p>Loading student profile...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var profileModal = document.getElementById('profileModal');
+    profileModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var studentId = button.getAttribute('data-student-id');
+        var modalBody = profileModal.querySelector('#profileContent');
+
+        fetch(`/students/profilecard/${studentId}`)
+            .then(response => response.text())
+            .then(html => {
+                modalBody.innerHTML = html;
+            })
+            .catch(() => {
+                modalBody.innerHTML = "<p>Error loading student profile.</p>";
+            });
+    });
+});
+</script>

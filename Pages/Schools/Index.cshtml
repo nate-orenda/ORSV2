@@ -16,18 +16,21 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var school in Model.Schools)
-    {
-        <tr>
-            <td>@school.Name</td>
-            <td>@school.LocalSchoolId</td>
-            <td>@school.SchoolType</td>
-            <td>
-                <a asp-page="Edit" asp-route-id="@school.Id">Edit</a> |
-                <a asp-page="Delete" asp-route-id="@school.Id">Delete</a>
-            </td>
-        </tr>
-    }
+        @foreach (var school in Model.Schools)
+        {
+            <tr>
+                <td>@school.Name</td>
+                <td>@school.LocalSchoolId</td>
+                <td>@school.SchoolType</td>
+                <td>
+                    <a asp-page="Edit" asp-route-id="@school.Id">Edit</a> |
+                    <a asp-page="Delete" asp-route-id="@school.Id">Delete</a> |
+                    <a asp-page="/Students/Index" asp-route-districtId="@Model.DistrictId"
+                        asp-route-schoolId="@school.Id">View Students</a>
+                </td>
+
+            </tr>
+        }
     </tbody>
 </table>
 

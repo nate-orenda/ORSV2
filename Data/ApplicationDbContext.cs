@@ -10,11 +10,14 @@ namespace ORSV2.Data
 
         public DbSet<District> Districts { get; set; }
         public DbSet<School> Schools { get; set; }
+        public DbSet<STU> STU { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
+            // Stu_ID
+            builder.Entity<STU>()
+                .HasKey(s => s.STU_ID);
             // District Relationships
             builder.Entity<District>()
                 .HasMany(d => d.Schools)

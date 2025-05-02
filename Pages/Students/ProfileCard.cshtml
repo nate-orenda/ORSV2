@@ -1,0 +1,21 @@
+@page "{id:guid}"
+@model ORSV2.Pages.Students.ProfileCardModel
+@{
+    Layout = null;
+}
+
+<div>
+    <h5>@Model.Student.FirstName @Model.Student.LastName</h5>
+    <dl class="row">
+        <dt class="col-sm-4">Student ID</dt>
+        <dd class="col-sm-8">@Model.Student.LocalStudentID</dd>
+        <dt class="col-sm-4">Grade</dt>
+        <dd class="col-sm-8">@Model.Student.Grade</dd>
+        <dt class="col-sm-4">GPA</dt>
+        <dd class="col-sm-8">@Model.Student.CumulativeGPA</dd>
+        <dt class="col-sm-4">Birth Date</dt>
+        <dd class="col-sm-8">@Model.Student.BirthDate?.ToShortDateString()</dd>
+        <dt class="col-sm-4">Counselor</dt>
+        <dd class="col-sm-8">@Model.Student.Counselor</dd>
+    </dl>
+</div>

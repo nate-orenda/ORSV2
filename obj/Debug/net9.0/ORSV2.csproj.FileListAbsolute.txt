@@ -407,3 +407,4 @@
 /Users/nate/workspace/ORSV2/obj/Debug/net9.0/ORSV2.pdb
 /Users/nate/workspace/ORSV2/obj/Debug/net9.0/ORSV2.genruntimeconfig.cache
 /Users/nate/workspace/ORSV2/obj/Debug/net9.0/ref/ORSV2.dll
+/Users/nate/workspace/ORSV2/obj/Debug/net9.0/ORSV2.sourcelink.json
