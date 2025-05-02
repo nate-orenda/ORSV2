@@ -23,6 +23,15 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToAreaFolder("Identity", "/Account");
 });
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(20);        // Short session lifespan
+    options.SlidingExpiration = false;                        // Prevent session extension
+    options.Cookie.HttpOnly = true;                           // Prevent JS access
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Only transmit via HTTPS
+    options.Cookie.SameSite = SameSiteMode.Strict;            // Block cross-origin access
+});
+
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
@@ -36,6 +45,7 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
+
 
 var app = builder.Build();
 app.UseStaticFiles();
