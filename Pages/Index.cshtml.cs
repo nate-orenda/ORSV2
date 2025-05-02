@@ -9,8 +9,14 @@ public class IndexModel : PageModel
 {
     public IActionResult OnPostLogin()
     {
-        return Challenge(new AuthenticationProperties { RedirectUri = "/" }, "Google");
+        return Challenge(new AuthenticationProperties
+        {
+            RedirectUri = "/",
+            IsPersistent = false, // Don't persist login across browser restarts
+            Items = { { "prompt", "select_account" } } // Always show account chooser
+        }, "Google");
     }
+
 
     public IActionResult OnPostLogout()
     {
