@@ -10,15 +10,23 @@ namespace ORSV2.Data
 
         public DbSet<District> Districts { get; set; }
         public DbSet<School> Schools { get; set; }
-        public DbSet<STU> STU { get; set; } 
+        public DbSet<STU> STU => Set<STU>();
+
+        public DbSet<UserSchool> UserSchools { get; set; } // ✅ Add this line
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            // Stu_ID
-            builder.Entity<STU>()
-                .HasKey(s => s.STU_ID);
-            // District Relationships
+
+            // STU primary key
+            builder.Entity<STU>(entity =>
+            {
+                entity.HasKey(s => s.STU_ID);      // ✅ needed to enable LINQ and sorting
+                entity.ToTable("STU", t => t.ExcludeFromMigrations());  // ✅ prevents EF from trying to create/update the table
+            });
+
+
+            // District relationships
             builder.Entity<District>()
                 .HasMany(d => d.Schools)
                 .WithOne(s => s.District)
@@ -29,13 +37,21 @@ namespace ORSV2.Data
                 .WithOne(u => u.District)
                 .HasForeignKey(u => u.DistrictId);
 
-            // School Relationships
-            builder.Entity<School>()
-                .HasMany(s => s.Users)
-                .WithOne(u => u.School)
-                .HasForeignKey(u => u.SchoolId);
+            // User ↔ School (many-to-many) via UserSchools
+            builder.Entity<UserSchool>()
+                .HasKey(us => new { us.UserId, us.SchoolId });
 
-            // Default SQL values for District
+            builder.Entity<UserSchool>()
+                .HasOne(us => us.User)
+                .WithMany(u => u.UserSchools)
+                .HasForeignKey(us => us.UserId);
+
+            builder.Entity<UserSchool>()
+                .HasOne(us => us.School)
+                .WithMany()
+                .HasForeignKey(us => us.SchoolId);
+
+            // Defaults for District
             builder.Entity<District>()
                 .Property(d => d.Inactive)
                 .HasDefaultValue(false);
@@ -48,7 +64,7 @@ namespace ORSV2.Data
                 .Property(d => d.DateUpdated)
                 .HasDefaultValueSql("SYSUTCDATETIME()");
 
-            // Default SQL values for School
+            // Defaults for School
             builder.Entity<School>()
                 .Property(s => s.Inactive)
                 .HasDefaultValue(false);
@@ -61,7 +77,5 @@ namespace ORSV2.Data
                 .Property(s => s.DateUpdated)
                 .HasDefaultValueSql("SYSUTCDATETIME()");
         }
-
     }
-
 }

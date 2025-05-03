@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ORSV2.Data;
 
@@ -11,9 +12,11 @@ using ORSV2.Data;
 namespace ORSV2.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250503051307_CleanMigration")]
+    partial class CleanMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -294,10 +297,6 @@ namespace ORSV2.Migrations
 
             modelBuilder.Entity("ORSV2.Models.STU", b =>
                 {
-                    b.Property<Guid>("STU_ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Affiliation")
                         .HasColumnType("nvarchar(max)");
 
@@ -375,6 +374,9 @@ namespace ORSV2.Migrations
                     b.Property<bool?>("SED")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("STU_ID")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool?>("SWD")
                         .HasColumnType("bit");
 
@@ -384,12 +386,9 @@ namespace ORSV2.Migrations
                     b.Property<DateTime?>("USSchoolEnterDate")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("STU_ID");
+                    b.ToTable((string)null);
 
-                    b.ToTable("STU", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
+                    b.ToView(null, (string)null);
                 });
 
             modelBuilder.Entity("ORSV2.Models.School", b =>

@@ -45,8 +45,16 @@ namespace ORSV2.Pages.Students
             {
                 if (user.DistrictId.HasValue && user.DistrictId.Value != districtId)
                     return Forbid();
-                if (user.SchoolId.HasValue && user.SchoolId.Value != schoolId)
+                var userSchoolIds = await _context.UserSchools
+                    .Where(us => us.UserId == user.Id)
+                    .Select(us => us.SchoolId)
+                    .ToListAsync();
+
+                if (!userSchoolIds.Contains(schoolId))
+                {
                     return Forbid();
+                }
+
             }
 
             Students = await _context.STU

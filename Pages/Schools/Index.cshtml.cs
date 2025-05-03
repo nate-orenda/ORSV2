@@ -4,29 +4,76 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace ORSV2.Pages.Schools
 {
-    [Authorize(Roles = "OrendaAdmin,OrendaManager")]
+    [Authorize(Roles = "OrendaAdmin,OrendaManager,DistrictAdmin,SchoolAdmin")]
     public class IndexModel : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public IndexModel(ApplicationDbContext context)
+        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         public Guid DistrictId { get; set; }
-        public List<School> Schools { get; set; } = new List<School>();
+        public List<School> Schools { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(Guid districtId)
         {
             DistrictId = districtId;
-            Schools = await _context.Schools
-                .Where(s => s.DistrictId == districtId)
-                .ToListAsync();
+
+            var user = await _userManager.Users
+                .Include(u => u.UserSchools)
+                .ThenInclude(us => us.School)
+                .FirstOrDefaultAsync(u => u.UserName == User.Identity!.Name);
+
+            if (user == null) return Forbid();
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager"))
+            {
+                Schools = await _context.Schools
+                    .Where(s => s.DistrictId == districtId)
+                    .ToListAsync();
+            }
+            else if (roles.Contains("DistrictAdmin"))
+            {
+                if (user.DistrictId != districtId)
+                {
+                    return Forbid();
+                }
+
+                Schools = await _context.Schools
+                    .Where(s => s.DistrictId == districtId)
+                    .ToListAsync();
+            }
+            else if (roles.Contains("SchoolAdmin"))
+            {
+                var schoolIds = user.UserSchools.Select(us => us.SchoolId).ToList();
+
+                Schools = await _context.Schools
+                    .Where(s => s.DistrictId == districtId && schoolIds.Contains(s.Id))
+                    .ToListAsync();
+
+                if (!Schools.Any())
+                {
+                    return Forbid();
+                }
+            }
+            else
+            {
+                return Forbid();
+            }
+
             return Page();
         }
+
     }
+
 }

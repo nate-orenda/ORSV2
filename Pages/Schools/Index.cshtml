@@ -1,7 +1,14 @@
 @page "{districtId:guid}"
 @model ORSV2.Pages.Schools.IndexModel
+@using ORSV2.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
 @{
     ViewData["Title"] = "Schools";
+    var user = await UserManager.GetUserAsync(User);
+    var roles = await UserManager.GetRolesAsync(user);
+    bool canEdit = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager");
 }
 
 <h1>Schools in District</h1>
@@ -23,15 +30,19 @@
                 <td>@school.LocalSchoolId</td>
                 <td>@school.SchoolType</td>
                 <td>
-                    <a asp-page="Edit" asp-route-id="@school.Id">Edit</a> |
-                    <a asp-page="Delete" asp-route-id="@school.Id">Delete</a> |
+                    @if (canEdit)
+                    {
+                        <a asp-page="Edit" asp-route-id="@school.Id">Edit</a>
+                        <span class="mx-1">|</span>
+                        <a asp-page="Delete" asp-route-id="@school.Id">Delete</a>
+                        <span class="mx-1">|</span>
+                    }
                     <a asp-page="/Students/Index" asp-route-districtId="@Model.DistrictId"
                         asp-route-schoolId="@school.Id">View Students</a>
                 </td>
-
             </tr>
         }
     </tbody>
 </table>
 
-<a asp-page="Create" asp-route-districtId="@Model.DistrictId" class="btn btn-primary">Add New School</a>
+@* <a asp-page="Create" asp-route-districtId="@Model.DistrictId" class="btn btn-primary">Add New School</a> *@

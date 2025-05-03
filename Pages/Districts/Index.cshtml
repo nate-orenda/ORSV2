@@ -1,7 +1,16 @@
 @page
 @model ORSV2.Pages.Districts.IndexModel
+@using ORSV2.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
 @{
     ViewData["Title"] = "Districts";
+    var user = await UserManager.GetUserAsync(User);
+    var roles = await UserManager.GetRolesAsync(user);
+    bool canEdit = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager");
+}
+
 }
 
 <h1>Districts</h1>
@@ -22,20 +31,26 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var district in Model.Districts)
-    {
-        <tr>
-            <td>@district.Name</td>
-            <td>@district.CDSCode</td>
-            <td>@district.SISBaseUrl</td>
-            <td>@district.SISApiKey</td>
-            <td>@district.Notes</td>
-            <td>
-                <a asp-page="Edit" asp-route-id="@district.Id">Edit</a> |
-                <a asp-page="Delete" asp-route-id="@district.Id">Delete</a> | 
-                <a asp-page="/Schools/Index" asp-route-districtId="@district.Id">View Schools</a>
-            </td>
-        </tr>
-    }
+        @foreach (var district in Model.Districts)
+        {
+            <tr>
+                <td>@district.Name</td>
+                <td>@district.CDSCode</td>
+                <td>@district.SISBaseUrl</td>
+                <td>@district.SISApiKey</td>
+                <td>@district.Notes</td>
+                <td>
+                    @if (canEdit)
+                    {
+                        <a asp-page="Edit" asp-route-id="@district.Id">Edit</a>
+                        <span class="mx-1">|</span>
+                        <a asp-page="Delete" asp-route-id="@district.Id">Delete</a>
+                        <span class="mx-1">|</span>
+                    }
+                    <a asp-page="/Schools/Index" asp-route-districtId="@district.Id">View Schools</a>
+                </td>
+
+            </tr>
+        }
     </tbody>
 </table>

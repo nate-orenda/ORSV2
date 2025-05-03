@@ -23,39 +23,38 @@ namespace ORSV2.Pages.Admin.Users
 
         public async Task OnGetAsync()
         {
-            var currentUser = await _userManager.GetUserAsync(User);
+            var currentUser = await _userManager.Users
+                .Include(u => u.UserSchools)
+                .FirstOrDefaultAsync(u => u.UserName == User.Identity!.Name);
 
-            var allUsers = await _context.Users
+            var query = _context.Users
                 .Include(u => u.District)
-                .Include(u => u.School)
-                .ToListAsync();
-
-            var filtered = allUsers;
+                .Include(u => u.UserSchools)
+                    .ThenInclude(us => us.School)
+                .AsQueryable();
 
             if (User.IsInRole("DistrictAdmin"))
             {
-                filtered = allUsers.Where(u =>
-                    u.DistrictId == currentUser.DistrictId
-                ).ToList();
+                query = query.Where(u => u.DistrictId == currentUser!.DistrictId);
             }
             else if (User.IsInRole("SchoolAdmin"))
             {
-                filtered = allUsers.Where(u =>
-                    u.SchoolId == currentUser.SchoolId
-                ).ToList();
+                var schoolIds = currentUser!.UserSchools.Select(us => us.SchoolId).ToList();
+                query = query.Where(u => u.UserSchools.Any(us => schoolIds.Contains(us.SchoolId)));
             }
 
-            Users = new List<UserDisplay>();
-            foreach (var user in filtered)
+            var filteredUsers = await query.ToListAsync();
+
+            foreach (var user in filteredUsers)
             {
                 var roles = await _userManager.GetRolesAsync(user);
                 Users.Add(new UserDisplay
                 {
                     Id = user.Id,
-                    Email = user.Email,
+                    Email = user.Email ?? "",
                     Roles = roles.ToList(),
                     DistrictName = user.District?.Name ?? "",
-                    SchoolName = user.School?.Name ?? ""
+                    SchoolName = string.Join(", ", user.UserSchools.Select(us => us.School.Name))
                 });
             }
         }

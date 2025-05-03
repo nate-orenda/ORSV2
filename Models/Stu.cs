@@ -1,7 +1,10 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ORSV2.Models
 {
+    [Keyless]
     public class STU
     {
         public Guid STU_ID { get; set; }
@@ -29,6 +32,7 @@ namespace ORSV2.Models
         public DateTime? USSchoolEnterDate { get; set; }
         public bool? SWD { get; set; }
 
+        [Precision(5, 2)] // ✅ Matches decimal(5,2) in SQL
         public decimal? CreditsCompleted { get; set; }
 
         public double? CurrentGPA { get; set; }
