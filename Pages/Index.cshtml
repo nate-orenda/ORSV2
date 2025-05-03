@@ -7,13 +7,13 @@
 @if (User.Identity?.IsAuthenticated ?? false)
 {
     <h2>Welcome, @User.Identity.Name!</h2>
-    <form method="post" asp-page-handler="Logout">
+    @* <form method="post" asp-page-handler="Logout">
         <button type="submit">Logout</button>
-    </form>
+    </form> *@
 }
-else
+@* else
 {
     <form method="post" asp-page-handler="Login">
         <button type="submit">Login with Google</button>
     </form>
-}
+} *@

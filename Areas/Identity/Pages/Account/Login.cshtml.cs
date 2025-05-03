@@ -116,7 +116,15 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
-                    return LocalRedirect(returnUrl);
+                    if (Url.IsLocalUrl(returnUrl) && !returnUrl.Contains("/Account/Login", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return LocalRedirect(returnUrl);
+                    }
+                    else
+                    {
+                        return RedirectToPage("/Index"); // or use Redirect("~/")
+                    }
+
                 }
                 if (result.RequiresTwoFactor)
                 {

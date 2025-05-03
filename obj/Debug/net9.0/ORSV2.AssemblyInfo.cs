@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ORSV2")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3fe5fe59774b92e527e5d72bec5c082dc7433729")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ec9b8bd6f20779f1a3f960b5216d190f6dd3601d")]
 [assembly: System.Reflection.AssemblyProductAttribute("ORSV2")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ORSV2")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

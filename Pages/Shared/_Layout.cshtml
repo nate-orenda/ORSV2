@@ -50,6 +50,7 @@
                     <span class="text-white small">@User.Identity?.Name</span>
                     <form method="post" asp-area="Identity" asp-page="/Account/Logout" class="d-inline">
                         <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                        @Html.AntiForgeryToken()
                     </form>
                 </div>
             </div>

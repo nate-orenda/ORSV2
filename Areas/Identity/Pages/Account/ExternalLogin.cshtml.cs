@@ -117,7 +117,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 _logger.LogInformation("{Name} logged in with {LoginProvider} provider.", info.Principal.Identity.Name, info.LoginProvider);
-                return LocalRedirect(returnUrl);
+                return LocalRedirect(returnUrl ?? "/");
             }
             if (result.IsLockedOut)
             {
@@ -183,7 +183,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             return RedirectToPage("./RegisterConfirmation", new { Email = Input.Email });
                         }
 
-                        await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
+                        await _signInManager.SignInAsync(user, isPersistent: true, info.LoginProvider);
                         return LocalRedirect(returnUrl);
                     }
                 }
