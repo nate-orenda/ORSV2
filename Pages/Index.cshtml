@@ -1,19 +1,76 @@
 ﻿@page
-@model IndexModel
+@model ORSV2.Pages.IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Dashboard";
 }
 
-@if (User.Identity?.IsAuthenticated ?? false)
-{
-    <h2>Welcome, @User.Identity.Name!</h2>
-    @* <form method="post" asp-page-handler="Logout">
-        <button type="submit">Logout</button>
-    </form> *@
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="display-6">Welcome, <strong>@Model.UserName</strong> 👋</h2>
+            <p class="text-muted">Here's a quick snapshot of enrollment data.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm rounded-3">
+                <div class="card-header bg-primary text-white">
+                    Enrollment by @Model.ScopeLabel
+                </div>
+                <div class="card-body">
+                    <canvas id="enrollmentChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const labels = [@Html.Raw(Model.ChartLabels)];
+        const data = [@Html.Raw(Model.ChartData)];
+
+        new Chart(document.getElementById('enrollmentChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Students',
+                    data: data,
+                    backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Students'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 90,
+                            minRotation: 45
+                        },
+                        title: {
+                            display: true,
+                            text: '@Model.ScopeLabel Name'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 }
-@* else
-{
-    <form method="post" asp-page-handler="Login">
-        <button type="submit">Login with Google</button>
-    </form>
-} *@
+
