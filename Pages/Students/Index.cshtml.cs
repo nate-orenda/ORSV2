@@ -35,28 +35,48 @@ namespace ORSV2.Pages.Students
 
 
         public List<STU> Students { get; set; } = new();
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
+
 
         public async Task<IActionResult> OnGetAsync(Guid districtId, Guid schoolId)
         {
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user);
 
+            // ✅ Fetch district and school names from the DB
+            var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId);
+            var school = await _context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId);
+
+            if (district == null || school == null)
+                return NotFound();
+
+            var districtName = district.Name;
+            var schoolName = school.Name;
+
+            // ✅ Then build breadcrumbs
+            Breadcrumbs = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
+        new BreadcrumbItem { Title = districtName, Url = Url.Page("/Schools/Index", new { districtId }) },
+        new BreadcrumbItem { Title = schoolName } // current page
+    };
+
+            // 🔐 Access control
             if (!roles.Contains("OrendaAdmin") && !roles.Contains("OrendaManager"))
             {
                 if (user.DistrictId.HasValue && user.DistrictId.Value != districtId)
                     return Forbid();
+
                 var userSchoolIds = await _context.UserSchools
                     .Where(us => us.UserId == user.Id)
                     .Select(us => us.SchoolId)
                     .ToListAsync();
 
                 if (!userSchoolIds.Contains(schoolId))
-                {
                     return Forbid();
-                }
-
             }
 
+            // ✅ Load students
             Students = await _context.STU
                 .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId)
                 .OrderBy(s => s.LastName)
@@ -65,6 +85,7 @@ namespace ORSV2.Pages.Students
 
             return Page();
         }
+
 
     }
 }
