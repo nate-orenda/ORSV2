@@ -1,0 +1,22 @@
+@model List<ORSV2.Models.BreadcrumbItem>
+
+@if (Model?.Any() == true)
+{
+    <nav aria-label="breadcrumb" class="mt-2">
+        <ol class="breadcrumb">
+            @foreach (var item in Model)
+            {
+                if (!string.IsNullOrEmpty(item.Url))
+                {
+                    <li class="breadcrumb-item">
+                        <a href="@item.Url">@item.Title</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@item.Title</li>
+                }
+            }
+        </ol>
+    </nav>
+}
