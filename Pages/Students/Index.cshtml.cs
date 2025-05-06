@@ -55,11 +55,11 @@ namespace ORSV2.Pages.Students
 
             // ✅ Then build breadcrumbs
             Breadcrumbs = new List<BreadcrumbItem>
-    {
-        new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
-        new BreadcrumbItem { Title = districtName, Url = Url.Page("/Schools/Index", new { districtId }) },
-        new BreadcrumbItem { Title = schoolName } // current page
-    };
+            {
+                new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
+                new BreadcrumbItem { Title = districtName, Url = Url.Page("/Schools/Index", new { districtId }) },
+                new BreadcrumbItem { Title = schoolName } // current page
+            };
 
             // 🔐 Access control
             if (!roles.Contains("OrendaAdmin") && !roles.Contains("OrendaManager"))

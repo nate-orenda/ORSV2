@@ -17,62 +17,62 @@
         }
     </style>
 </head>
-<body>
-@if (User.Identity?.IsAuthenticated == true)
-{
-    <header style="background-color: #0022C5;">
-        <div class="container-fluid py-3 px-4 text-white d-flex justify-content-between align-items-center">
-            <!-- Logo and Title -->
-            <a asp-page="/Index" class="d-flex align-items-center text-white text-decoration-none">
-                <img src="~/images/orenda-logo.png" alt="Orenda Logo" style="height: 48px;" class="me-2" />
-            </a>
+<body class="d-flex flex-column min-vh-100">
 
-            <!-- Navigation + Logout/User -->
-            <div class="d-flex align-items-center gap-4 text-center">
-                <nav class="d-flex align-items-center gap-4">
-                    <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Index">Home</a>
-                    <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Districts/Index">Districts</a>
-                    <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Schools/Index">Schools</a>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <header style="background-color: #0022C5;">
+            <div class="container-fluid py-3 px-4 text-white d-flex justify-content-between align-items-center">
+                <!-- Logo and Title -->
+                <a asp-page="/Index" class="d-flex align-items-center text-white text-decoration-none">
+                    <img src="~/images/orenda-logo.png" alt="Orenda Logo" style="height: 48px;" class="me-2" />
+                </a>
 
-                    <div class="dropdown">
-                        <a class="text-white text-uppercase fw-semibold text-decoration-none dropdown-toggle"
-                           href="#" role="button" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            Admin
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
-                            <li><a class="dropdown-item" asp-page="/Admin/Users/Index">Users</a></li>
-                        </ul>
+                <!-- Navigation + Logout/User -->
+                <div class="d-flex align-items-center gap-4 text-center">
+                    <nav class="d-flex align-items-center gap-4">
+                        <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Index">Home</a>
+                        <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Districts/Index">Districts</a>
+                        <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Schools/Index">Schools</a>
+
+                        <div class="dropdown">
+                            <a class="text-white text-uppercase fw-semibold text-decoration-none dropdown-toggle"
+                               href="#" role="button" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Admin
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+                                <li><a class="dropdown-item" asp-page="/Admin/Users/Index">Users</a></li>
+                            </ul>
+                        </div>
+                    </nav>
+
+                    <!-- User Info + Logout -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-white small">@User.Identity?.Name</span>
+                        <form method="post" asp-area="Identity" asp-page="/Account/Logout" class="d-inline">
+                            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                            @Html.AntiForgeryToken()
+                        </form>
                     </div>
-                </nav>
-
-                <!-- User Info + Logout -->
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-white small">@User.Identity?.Name</span>
-                    <form method="post" asp-area="Identity" asp-page="/Account/Logout" class="d-inline">
-                        <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                        @Html.AntiForgeryToken()
-                    </form>
                 </div>
             </div>
+        </header>
+    }
+
+    <main class="container mt-4">
+        @RenderBody()
+    </main>
+
+    <footer class="border-top footer text-muted py-3 mt-auto">
+        <div class="container">
+            &copy; 2025 - ORSV2
         </div>
-    </header>
-}
+    </footer>
 
-
-<main class="container mt-4">
-    @RenderBody()
-</main>
-
-<footer class="border-top footer text-muted mt-5 py-3">
-    <div class="container">
-        &copy; 2025 - ORSV2
-    </div>
-</footer>
-
-<script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="~/js/site.js" asp-append-version="true"></script>
-
-@await RenderSectionAsync("Scripts", required: false)
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
+
 </html>

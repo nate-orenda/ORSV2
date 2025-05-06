@@ -13,6 +13,7 @@ namespace ORSV2.Pages.Schools
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
         public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
@@ -26,6 +27,21 @@ namespace ORSV2.Pages.Schools
         public async Task<IActionResult> OnGetAsync(Guid districtId)
         {
             DistrictId = districtId;
+
+            // ✅ Fetch district and school names from the DB
+            var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId);
+            
+            if (district == null)
+                return NotFound();
+
+            var districtName = district.Name;
+
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
+                new BreadcrumbItem { Title = district.Name } // current page
+            };
+
 
             var user = await _userManager.Users
                 .Include(u => u.UserSchools)
