@@ -174,8 +174,8 @@ namespace ORSV2.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("DistrictId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -215,8 +215,8 @@ namespace ORSV2.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<Guid?>("SchoolId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("SchoolId")
+                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -247,9 +247,11 @@ namespace ORSV2.Migrations
 
             modelBuilder.Entity("ORSV2.Models.District", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CDSCode")
                         .HasMaxLength(14)
@@ -298,9 +300,11 @@ namespace ORSV2.Migrations
 
             modelBuilder.Entity("ORSV2.Models.STU", b =>
                 {
-                    b.Property<Guid>("STU_ID")
+                    b.Property<int>("STU_ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("STU_ID"));
 
                     b.Property<string>("Affiliation")
                         .HasColumnType("nvarchar(max)");
@@ -330,8 +334,8 @@ namespace ORSV2.Migrations
                     b.Property<DateTime?>("DateUpdated")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("DistrictID")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("DistrictID")
+                        .HasColumnType("int");
 
                     b.Property<bool?>("Ethnicity")
                         .HasColumnType("bit");
@@ -382,8 +386,8 @@ namespace ORSV2.Migrations
                     b.Property<bool?>("SWD")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("SchoolID")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("SchoolID")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("USSchoolEnterDate")
                         .HasColumnType("datetime2");
@@ -398,9 +402,11 @@ namespace ORSV2.Migrations
 
             modelBuilder.Entity("ORSV2.Models.School", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CDSCode")
                         .HasMaxLength(14)
@@ -416,8 +422,8 @@ namespace ORSV2.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<Guid>("DistrictId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("Inactive")
                         .ValueGeneratedOnAdd()
@@ -453,8 +459,8 @@ namespace ORSV2.Migrations
                     b.Property<string>("UserId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
 
                     b.HasKey("UserId", "SchoolId");
 

@@ -29,25 +29,24 @@ namespace ORSV2.Pages.Districts
 
             if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager"))
             {
-                Districts = await _context.Districts.OrderBy(d => d.Name).ToListAsync();
+                Districts = await _context.Districts
+                    .Where(d => !d.Inactive)
+                    .OrderBy(d => d.Name)
+                    .ToListAsync();
             }
-            else if (roles.Contains("DistrictAdmin") && user.DistrictId != null)
+            else if ((roles.Contains("DistrictAdmin") || roles.Contains("SchoolAdmin")) && user.DistrictId != null)
             {
-                var district = await _context.Districts.FindAsync(user.DistrictId);
-                if (district != null)
-                {
-                    Districts.Add(district);
-                }
-            }
-            else if (roles.Contains("SchoolAdmin") && user.DistrictId != null)
-            {
-                var district = await _context.Districts.FindAsync(user.DistrictId);
+                var district = await _context.Districts
+                    .Where(d => d.Id == user.DistrictId && !d.Inactive)
+                    .FirstOrDefaultAsync();
+
                 if (district != null)
                 {
                     Districts.Add(district);
                 }
             }
         }
+
     }
 
 

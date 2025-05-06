@@ -24,7 +24,7 @@ namespace ORSV2.Pages.Districts
         public string? ErrorMessage { get; set; }
 
 
-        public async Task<IActionResult> OnGetAsync(Guid id)
+        public async Task<IActionResult> OnGetAsync(int id)
         {
             var district = await _context.Districts.FindAsync(id);
             if (district == null)

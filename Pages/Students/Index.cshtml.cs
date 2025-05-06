@@ -38,14 +38,14 @@ namespace ORSV2.Pages.Students
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
 
-        public async Task<IActionResult> OnGetAsync(Guid districtId, Guid schoolId)
+        public async Task<IActionResult> OnGetAsync(int districtId, int schoolId)
         {
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user);
 
             // ✅ Fetch district and school names from the DB
-            var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId);
-            var school = await _context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId);
+            var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId && !d.Inactive);
+            var school = await _context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId && !s.Inactive);
 
             if (district == null || school == null)
                 return NotFound();
@@ -78,7 +78,7 @@ namespace ORSV2.Pages.Students
 
             // ✅ Load students
             Students = await _context.STU
-                .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId)
+                .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId && !s.Inactive)
                 .OrderBy(s => s.LastName)
                 .ThenBy(s => s.FirstName)
                 .ToListAsync();

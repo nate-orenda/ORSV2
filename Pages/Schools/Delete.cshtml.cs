@@ -19,7 +19,7 @@ namespace ORSV2.Pages.Schools
         [BindProperty]
         public School School { get; set; } = new School();
 
-        public async Task<IActionResult> OnGetAsync(Guid id)
+        public async Task<IActionResult> OnGetAsync(int id)
         {
             var school = await _context.Schools.FindAsync(id);
             if (school == null)

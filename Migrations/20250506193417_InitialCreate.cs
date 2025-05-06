@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ORSV2.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateIdentitySchema : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,6 +16,7 @@ namespace ORSV2.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
@@ -26,28 +27,24 @@ namespace ORSV2.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUsers",
+                name: "Districts",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CDSCode = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: true),
+                    SISApiKey = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    SISApiSecret = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    SISBaseUrl = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Inactive = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "SYSUTCDATETIME()"),
+                    DateUpdated = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "SYSUTCDATETIME()")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.PrimaryKey("PK_Districts", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -69,6 +66,72 @@ namespace ORSV2.Migrations
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Schools",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DistrictId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    LocalSchoolId = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: true),
+                    SchoolType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CDSCode = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: true),
+                    Inactive = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "SYSUTCDATETIME()"),
+                    DateUpdated = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "SYSUTCDATETIME()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Schools", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Schools_Districts_DistrictId",
+                        column: x => x.DistrictId,
+                        principalTable: "Districts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    DistrictId = table.Column<int>(type: "int", nullable: true),
+                    SchoolId = table.Column<int>(type: "int", nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_Districts_DistrictId",
+                        column: x => x.DistrictId,
+                        principalTable: "Districts",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_Schools_SchoolId",
+                        column: x => x.SchoolId,
+                        principalTable: "Schools",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -156,6 +219,30 @@ namespace ORSV2.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "UserSchools",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SchoolId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserSchools", x => new { x.UserId, x.SchoolId });
+                    table.ForeignKey(
+                        name: "FK_UserSchools_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserSchools_Schools_SchoolId",
+                        column: x => x.SchoolId,
+                        principalTable: "Schools",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -189,11 +276,31 @@ namespace ORSV2.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_DistrictId",
+                table: "AspNetUsers",
+                column: "DistrictId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_SchoolId",
+                table: "AspNetUsers",
+                column: "SchoolId");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true,
                 filter: "[NormalizedUserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Schools_DistrictId",
+                table: "Schools",
+                column: "DistrictId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserSchools_SchoolId",
+                table: "UserSchools",
+                column: "SchoolId");
         }
 
         /// <inheritdoc />
@@ -215,10 +322,19 @@ namespace ORSV2.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "UserSchools");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Schools");
+
+            migrationBuilder.DropTable(
+                name: "Districts");
         }
     }
 }

@@ -31,7 +31,6 @@ namespace ORSV2.Pages.Districts
                 return Page();
             }
 
-            District.Id = Guid.NewGuid(); // Set new ID
             _context.Districts.Add(District);
             await _context.SaveChangesAsync();
 

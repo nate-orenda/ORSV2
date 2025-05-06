@@ -2,7 +2,7 @@ namespace ORSV2.Models.ViewModels
 {
     public class StudentListViewModel
     {
-        public Guid STU_ID { get; set; }
+        public int STU_ID { get; set; }
         public string LocalStudentID { get; set; } = string.Empty;
         public string? FirstName { get; set; }
         public string? LastName { get; set; }

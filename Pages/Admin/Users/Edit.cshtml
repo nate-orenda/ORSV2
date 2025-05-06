@@ -23,7 +23,7 @@
         <label>Assigned Schools</label>
         @foreach (var school in Model.Schools)
         {
-            var isChecked = Model.Input.SelectedSchoolIds.Contains(Guid.Parse(school.Value));
+            var isChecked = Model.Input.SelectedSchoolIds.Contains(int.Parse(school.Value));
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="Input.SelectedSchoolIds" value="@school.Value"
                     checked="@(isChecked)" />

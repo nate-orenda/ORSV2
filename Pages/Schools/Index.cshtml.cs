@@ -21,10 +21,10 @@ namespace ORSV2.Pages.Schools
             _userManager = userManager;
         }
 
-        public Guid DistrictId { get; set; }
+        public int DistrictId { get; set; }
         public List<School> Schools { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync(Guid districtId)
+        public async Task<IActionResult> OnGetAsync(int districtId)
         {
             DistrictId = districtId;
 
@@ -55,7 +55,7 @@ namespace ORSV2.Pages.Schools
             if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager"))
             {
                 Schools = await _context.Schools
-                    .Where(s => s.DistrictId == districtId)
+                    .Where(s => s.DistrictId == districtId && !s.Inactive)
                     .ToListAsync();
             }
             else if (roles.Contains("DistrictAdmin"))
@@ -66,7 +66,7 @@ namespace ORSV2.Pages.Schools
                 }
 
                 Schools = await _context.Schools
-                    .Where(s => s.DistrictId == districtId)
+                    .Where(s => s.DistrictId == districtId && !s.Inactive)
                     .ToListAsync();
             }
             else if (roles.Contains("SchoolAdmin"))
@@ -74,7 +74,7 @@ namespace ORSV2.Pages.Schools
                 var schoolIds = user.UserSchools.Select(us => us.SchoolId).ToList();
 
                 Schools = await _context.Schools
-                    .Where(s => s.DistrictId == districtId && schoolIds.Contains(s.Id))
+                    .Where(s => s.DistrictId == districtId && schoolIds.Contains(s.Id) && !s.Inactive)
                     .ToListAsync();
 
                 if (!Schools.Any())

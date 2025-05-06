@@ -7,9 +7,9 @@ namespace ORSV2.Models
     [Keyless]
     public class STU
     {
-        public Guid STU_ID { get; set; }
-        public Guid DistrictID { get; set; }
-        public Guid SchoolID { get; set; }
+        public int STU_ID { get; set; }
+        public int DistrictID { get; set; }
+        public int SchoolID { get; set; }
 
         public string? LocalDistrictCode { get; set; }
         public string? LocalSchoolCode { get; set; }
@@ -46,7 +46,7 @@ namespace ORSV2.Models
         public string? Affiliation { get; set; }
         public string? CollegeApplication { get; set; }
 
-        public bool? Inactive { get; set; }
+        public bool Inactive { get; set; }
 
         public DateTime? DateUpdated { get; set; }
         public DateTime? DateCreated { get; set; }

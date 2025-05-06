@@ -19,7 +19,7 @@ namespace ORSV2.Pages.Schools
         [BindProperty]
         public School School { get; set; } = new School();
 
-        public IActionResult OnGet(Guid districtId)
+        public IActionResult OnGet(int districtId)
         {
             School.DistrictId = districtId;
             return Page();
@@ -30,7 +30,6 @@ namespace ORSV2.Pages.Schools
             if (!ModelState.IsValid)
                 return Page();
 
-            School.Id = Guid.NewGuid();
             _context.Schools.Add(School);
             await _context.SaveChangesAsync();
 

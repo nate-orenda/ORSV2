@@ -5,7 +5,7 @@ namespace ORSV2.Models
 {
     public class District
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; } // Changed from Guid to int
 
         [Required]
         [MaxLength(100)]
@@ -34,4 +34,5 @@ namespace ORSV2.Models
         public ICollection<School> Schools { get; set; } = new List<School>();
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
     }
+
 }

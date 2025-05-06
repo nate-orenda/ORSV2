@@ -36,8 +36,8 @@ namespace ORSV2.Pages.Admin.Users
         {
             public string Id { get; set; } = "";
             public string Email { get; set; } = "";
-            public Guid? DistrictId { get; set; }
-            public List<Guid> SelectedSchoolIds { get; set; } = new();
+            public int? DistrictId { get; set; }
+            public List<int> SelectedSchoolIds { get; set; } = new();
             public List<string> SelectedRoles { get; set; } = new();
         }
 

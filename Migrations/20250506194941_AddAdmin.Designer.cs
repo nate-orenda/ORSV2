@@ -12,8 +12,8 @@ using ORSV2.Data;
 namespace ORSV2.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250430213230_AddFieldsToSchool")]
-    partial class AddFieldsToSchool
+    [Migration("20250506194941_AddAdmin")]
+    partial class AddAdmin
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -177,12 +177,8 @@ namespace ORSV2.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("DistrictId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -190,6 +186,14 @@ namespace ORSV2.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -214,8 +218,8 @@ namespace ORSV2.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<Guid?>("SchoolId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("SchoolId")
+                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -246,13 +250,30 @@ namespace ORSV2.Migrations
 
             modelBuilder.Entity("ORSV2.Models.District", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CDSCode")
                         .HasMaxLength(14)
                         .HasColumnType("nvarchar(14)");
+
+                    b.Property<DateTime>("DateCreated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("DateUpdated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<bool>("Inactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -280,18 +301,137 @@ namespace ORSV2.Migrations
                     b.ToTable("Districts");
                 });
 
+            modelBuilder.Entity("ORSV2.Models.STU", b =>
+                {
+                    b.Property<int>("STU_ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("STU_ID"));
+
+                    b.Property<string>("Affiliation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CollegeApplication")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Counselor")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("CreditsCompleted")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<double?>("CumulativeGPA")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("CurrentGPA")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DistrictID")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("Ethnicity")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("FAFSA")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FirstName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("GradYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Grade")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("Inactive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LanguageFluency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalDistrictCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalSchoolCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalStudentID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MiddleName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RaceCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("SED")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("SWD")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SchoolID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("USSchoolEnterDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("STU_ID");
+
+                    b.ToTable("STU", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
             modelBuilder.Entity("ORSV2.Models.School", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CDSCode")
                         .HasMaxLength(14)
                         .HasColumnType("nvarchar(14)");
 
-                    b.Property<Guid>("DistrictId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("DateCreated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("DateUpdated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Inactive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("LocalSchoolId")
                         .HasMaxLength(5)
@@ -315,6 +455,21 @@ namespace ORSV2.Migrations
                     b.HasIndex("DistrictId");
 
                     b.ToTable("Schools");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.UserSchool", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "SchoolId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("UserSchools");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -392,6 +547,30 @@ namespace ORSV2.Migrations
                         .IsRequired();
 
                     b.Navigation("District");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.UserSchool", b =>
+                {
+                    b.HasOne("ORSV2.Models.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ORSV2.Models.ApplicationUser", "User")
+                        .WithMany("UserSchools")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("UserSchools");
                 });
 
             modelBuilder.Entity("ORSV2.Models.District", b =>

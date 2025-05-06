@@ -4,10 +4,10 @@ namespace ORSV2.Models
 {
     public class School
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; } // Changed from Guid to int
 
         [Required]
-        public Guid DistrictId { get; set; }
+        public int DistrictId { get; set; } // Changed from Guid to int
 
         [Required]
         [MaxLength(100)]
@@ -29,9 +29,8 @@ namespace ORSV2.Models
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }
 
-
         public District? District { get; set; }
-
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
     }
+
 }
