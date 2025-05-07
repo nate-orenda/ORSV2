@@ -19,7 +19,7 @@ namespace ORSV2.Pages.Students
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
-            Student = await _context.STU.FirstOrDefaultAsync(s => s.STU_ID == id);
+            Student = await _context.STU.FirstOrDefaultAsync(s => s.StuId == id);
             if (Student == null) return NotFound();
             return Page();
         }

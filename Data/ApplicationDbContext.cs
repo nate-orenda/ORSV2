@@ -11,7 +11,7 @@ namespace ORSV2.Data
         public DbSet<District> Districts { get; set; }
         public DbSet<School> Schools { get; set; }
         public DbSet<STU> STU => Set<STU>();
-
+        public DbSet<Courses> Courses => Set<Courses>();
         public DbSet<UserSchool> UserSchools { get; set; } // ✅ Add this line
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -21,8 +21,8 @@ namespace ORSV2.Data
             // STU primary key
             builder.Entity<STU>(entity =>
             {
-                entity.HasKey(s => s.STU_ID);      // ✅ needed to enable LINQ and sorting
-                entity.ToTable("STU", t => t.ExcludeFromMigrations());  // ✅ prevents EF from trying to create/update the table
+                entity.HasKey(s => s.StuId);      // ✅ needed to enable LINQ and sorting
+                entity.ToTable("Students", t => t.ExcludeFromMigrations());  // ✅ prevents EF from trying to create/update the table
             });
 
 

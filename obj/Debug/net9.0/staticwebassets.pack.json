@@ -1,10 +1,6 @@
 {
   "Files": [
     {
-      "Id": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css",
-      "PackagePath": "staticwebassets\\ORSV2.sv3at5v4x7.bundle.scp.css"
-    },
-    {
       "Id": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\css\\site.css",
       "PackagePath": "staticwebassets\\css\\site.css"
     },

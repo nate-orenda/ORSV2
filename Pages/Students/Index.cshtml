@@ -36,7 +36,7 @@
         {
             <tr>
                 <td>@student.LocalStudentID</td>
-                <td><a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.STU_ID">@student.LastName</a></td>
+                <td><a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.StuId">@student.LastName</a></td>
                 <td>@student.FirstName</td>
                 <td>@student.Grade</td>
                 @if (Model.ShowSWD) { <td>@(student.SWD == true ? "Yes" : "No")</td> }
@@ -44,7 +44,7 @@
                 @if (Model.ShowEth) { <td>@(student.Ethnicity == true ? "Yes" : "No")</td> }
                 @if (Model.ShowRace) { <td>@student.RaceCode</td> }
                 @if (Model.ShowLang) { <td>@student.LanguageFluency</td> }
-                <td><a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.STU_ID">Profile</a></td>
+                <td><a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#profileModal" data-student-id="@student.StuId">Profile</a></td>
             </tr>
         }
         </tbody>

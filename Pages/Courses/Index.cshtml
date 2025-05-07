@@ -1,0 +1,125 @@
+@page
+@model CoursesModel
+@{
+    ViewData["Title"] = "Courses for District";
+}
+
+<partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+
+<h2>Courses</h2>
+
+<table id="coursesTable" class="display nowrap table table-striped" style="width:100%">
+    <thead>
+        <tr>
+            <th><input type="checkbox" id="select-all" /></th> <!-- Select all -->
+            <th>Course #</th>
+            <th>Title</th>
+            <th>Department</th>
+            <th>Validation</th>
+            <th>A-G</th>
+            <th>Elective</th>
+            <th>Credit</th>
+            <th>Status</th>
+            <th>Updated</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model.Courses)
+        {
+            <tr>
+                <td></td> <!-- Checkboxes will be added via JS -->
+                <td>@c.CourseNumber</td>
+                <td>@c.Title</td>
+                <td>@c.DepartmentCode</td>
+                <td>@c.Validation</td>
+                <td>@c.AG</td>
+                <td>@c.Elective</td>
+                <td>@c.CreditDefault</td>
+                <td>@c.InactiveStatusCode</td>
+                <td>@c.DateUpdated?.ToString("yyyy-MM-dd")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Add filter row
+            $('#coursesTable thead tr')
+                .clone(true)
+                .addClass('filters')
+                .appendTo('#coursesTable thead');
+
+            var table = $('#coursesTable').DataTable({
+                dom: 'Bfrtip',
+                scrollX: true,
+                colReorder: true,
+                orderCellsTop: true,
+                fixedHeader: true,
+                select: {
+                    style: 'multi',
+                    selector: 'td:first-child'
+                },
+                columnDefs: [
+                    {
+                        orderable: false,
+                        className: 'select-checkbox',
+                        targets: 0
+                    }
+                ],
+                buttons: [
+                    {
+                        extend: 'copyHtml5',
+                        exportOptions: { columns: ':visible:not(:first-child)' }
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        exportOptions: { columns: ':visible:not(:first-child)' }
+                    },
+                    {
+                        extend: 'csvHtml5',
+                        exportOptions: { columns: ':visible:not(:first-child)' }
+                    },
+                    {
+                        extend: 'print',
+                        exportOptions: { columns: ':visible:not(:first-child)' }
+                    },
+                    'colvis',
+                    {
+                        text: 'Get Selected',
+                        action: function () {
+                            var rows = table.rows({ selected: true }).data().toArray();
+                            console.log('Selected rows:', rows);
+                            alert(`${rows.length} row(s) selected.`);
+                        }
+                    }
+                ],
+                initComplete: function () {
+                    var api = this.api();
+
+                    // Build search boxes
+                    api.columns().eq(0).each(function (colIdx) {
+                        var cell = $('.filters th').eq(colIdx).empty();
+                        if (colIdx === 0) return; // Skip select column
+                        var input = $('<input type="text" placeholder="Search" />')
+                            .appendTo(cell)
+                            .on('keyup change clear', function () {
+                                api.column(colIdx).search(this.value).draw();
+                            });
+                    });
+                }
+            });
+
+            // Handle "select all" checkbox
+            $('#select-all').on('click', function () {
+                if (this.checked) {
+                    table.rows({ search: 'applied' }).select();
+                } else {
+                    table.rows().deselect();
+                }
+            });
+        });
+
+    </script>
+}

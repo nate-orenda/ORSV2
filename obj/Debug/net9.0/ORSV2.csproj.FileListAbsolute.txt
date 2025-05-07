@@ -671,9 +671,7 @@ C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/ORSV2.MvcApplicationPartsAssembl
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/ORSV2.RazorAssemblyInfo.cache
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/ORSV2.RazorAssemblyInfo.cs
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/ORSV2.sourcelink.json
-C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/scopedcss/Pages/Shared/_Layout.cshtml.rz.scp.css
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/scopedcss/bundle/ORSV2.styles.css
-C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/scopedcss/projectbundle/ORSV2.bundle.scp.css
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/compressed/ofa40bqe71-b9sayid5wm.gz
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/compressed/j9swiz3yzq-90yqlj465b.gz
 C:/Users/natef/workspace/ORSV2/obj/Debug/net9.0/compressed/vltxs1u3vm-xtxxf3hu2r.gz
@@ -1084,9 +1082,7 @@ C:\Users\natef\workspace\ORSV2\bin\Debug\net9.0\runtimes\win-arm64\native\Micros
 C:\Users\natef\workspace\ORSV2\bin\Debug\net9.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\natef\workspace\ORSV2\bin\Debug\net9.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\natef\workspace\ORSV2\bin\Debug\net9.0\runtimes\win\lib\net6.0\System.Runtime.Caching.dll
-C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\scopedcss\bundle\ORSV2.styles.css
-C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\scopedcss\projectbundle\ORSV2.bundle.scp.css
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\ofa40bqe71-b9sayid5wm.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\j9swiz3yzq-90yqlj465b.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\vltxs1u3vm-xtxxf3hu2r.gz
@@ -1149,7 +1145,6 @@ C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\a3ygkwa5zy-2z0ns9nrw6
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\nezrqnk58p-muycvpuwrr.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\v0zgfp0y55-87fc7y1x7t.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\yfc7ypekbg-mlv21k5csn.gz
-C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\0w6zzxvu5p-t1v3mgkr9g.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\45eimnjbwd-61n19gt1b8.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\vmna8vkouo-xtxxf3hu2r.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\cl96feb86o-t1cqhe9u97.gz
@@ -1211,8 +1206,6 @@ C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\vwa7rq00mw-jjsuc0puko
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\2cqtzdd8rt-9vr69e8ynj.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\igjlslnaiw-87fc7y1x7t.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\cnz89u9wop-mlv21k5csn.gz
-C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\1e5bfpwz6u-sv3at5v4x7.gz
-C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\9c00faakx9-sv3at5v4x7.gz
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\staticwebassets.build.json
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\staticwebassets.development.json
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\staticwebassets.build.endpoints.json
@@ -1225,3 +1218,4 @@ C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\staticwebassets.pack.json
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\ORSV2.csproj.Up2Date
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\ORSV2.genruntimeconfig.cache
 C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\ref\ORSV2.dll
+C:\Users\natef\workspace\ORSV2\obj\Debug\net9.0\compressed\0w6zzxvu5p-ts3wz8u13w.gz

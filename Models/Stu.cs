@@ -7,7 +7,7 @@ namespace ORSV2.Models
     [Keyless]
     public class STU
     {
-        public int STU_ID { get; set; }
+        public int StuId { get; set; }
         public int DistrictID { get; set; }
         public int SchoolID { get; set; }
 

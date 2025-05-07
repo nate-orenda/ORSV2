@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "/LDTdVYni8IzE5MygEBZYrjKD6sVaIjFSFl7FweCVDg=",
+  "Hash": "u8XlLL+X936iHxqP0AbbB66yRRNB12QNzDhoPpJ/31E=",
   "Source": "ORSV2",
   "BasePath": "_content/ORSV2",
   "Mode": "Default",
@@ -1403,12 +1403,12 @@
       "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-reboot.css.map"
     },
     {
-      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-t1v3mgkr9g.gz",
+      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-ts3wz8u13w.gz",
       "SourceId": "ORSV2",
       "SourceType": "Discovered",
       "ContentRoot": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\",
       "BasePath": "_content/ORSV2",
-      "RelativePath": "css/site#[.{fingerprint=t1v3mgkr9g}]?.css.gz",
+      "RelativePath": "css/site#[.{fingerprint=ts3wz8u13w}]?.css.gz",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Alternative",
@@ -1417,8 +1417,8 @@
       "RelatedAsset": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\css\\site.css",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "th2a75u87t",
-      "Integrity": "31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE=",
+      "Fingerprint": "oshastebb3",
+      "Integrity": "aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\css\\site.css"
@@ -1443,27 +1443,6 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "C:\\Users\\natef\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\9.0.4\\staticwebassets\\V5\\lib\\bootstrap\\dist\\css\\bootstrap-grid.css"
-    },
-    {
-      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1e5bfpwz6u-sv3at5v4x7.gz",
-      "SourceId": "ORSV2",
-      "SourceType": "Computed",
-      "ContentRoot": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\",
-      "BasePath": "_content/ORSV2",
-      "RelativePath": "ORSV2#[.{fingerprint=sv3at5v4x7}]?.styles.css.gz",
-      "AssetKind": "All",
-      "AssetMode": "CurrentProject",
-      "AssetRole": "Alternative",
-      "AssetMergeBehavior": "",
-      "AssetMergeSource": "",
-      "RelatedAsset": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css",
-      "AssetTraitName": "Content-Encoding",
-      "AssetTraitValue": "gzip",
-      "Fingerprint": "fmtkcvbch4",
-      "Integrity": "CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css"
     },
     {
       "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1fc4q00scq-khv3u5hwcm.gz",
@@ -1947,27 +1926,6 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "C:\\Users\\natef\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\9.0.4\\staticwebassets\\V5\\lib\\bootstrap\\dist\\css\\bootstrap-utilities.css.map"
-    },
-    {
-      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9c00faakx9-sv3at5v4x7.gz",
-      "SourceId": "ORSV2",
-      "SourceType": "Computed",
-      "ContentRoot": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\",
-      "BasePath": "_content/ORSV2",
-      "RelativePath": "ORSV2#[.{fingerprint=sv3at5v4x7}]!.bundle.scp.css.gz",
-      "AssetKind": "All",
-      "AssetMode": "Reference",
-      "AssetRole": "Alternative",
-      "AssetMergeBehavior": "",
-      "AssetMergeSource": "",
-      "RelatedAsset": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css",
-      "AssetTraitName": "Content-Encoding",
-      "AssetTraitValue": "gzip",
-      "Fingerprint": "fmtkcvbch4",
-      "Integrity": "CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css"
     },
     {
       "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9glsckmvxo-aexeepp0ev.gz",
@@ -3986,48 +3944,6 @@
       "OriginalItemSpec": "C:\\Users\\natef\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\9.0.4\\staticwebassets\\V5\\lib\\bootstrap\\dist\\js\\bootstrap.js"
     },
     {
-      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css",
-      "SourceId": "ORSV2",
-      "SourceType": "Computed",
-      "ContentRoot": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\",
-      "BasePath": "_content/ORSV2",
-      "RelativePath": "ORSV2#[.{fingerprint}]?.styles.css",
-      "AssetKind": "All",
-      "AssetMode": "CurrentProject",
-      "AssetRole": "Primary",
-      "AssetMergeBehavior": "",
-      "AssetMergeSource": "",
-      "RelatedAsset": "",
-      "AssetTraitName": "ScopedCss",
-      "AssetTraitValue": "ApplicationBundle",
-      "Fingerprint": "sv3at5v4x7",
-      "Integrity": "2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css"
-    },
-    {
-      "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css",
-      "SourceId": "ORSV2",
-      "SourceType": "Computed",
-      "ContentRoot": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\",
-      "BasePath": "_content/ORSV2",
-      "RelativePath": "ORSV2#[.{fingerprint}]!.bundle.scp.css",
-      "AssetKind": "All",
-      "AssetMode": "Reference",
-      "AssetRole": "Primary",
-      "AssetMergeBehavior": "",
-      "AssetMergeSource": "",
-      "RelatedAsset": "",
-      "AssetTraitName": "ScopedCss",
-      "AssetTraitValue": "ProjectBundle",
-      "Fingerprint": "sv3at5v4x7",
-      "Integrity": "2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=",
-      "CopyToOutputDirectory": "Never",
-      "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css"
-    },
-    {
       "Identity": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\css\\site.css",
       "SourceId": "ORSV2",
       "SourceType": "Discovered",
@@ -4042,8 +3958,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "t1v3mgkr9g",
-      "Integrity": "DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg=",
+      "Fingerprint": "ts3wz8u13w",
+      "Integrity": "PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\css\\site.css"
@@ -5433,12 +5349,12 @@
     },
     {
       "Route": "css/site.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-t1v3mgkr9g.gz",
+      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-ts3wz8u13w.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.002785515320"
+          "Quality": "0.001418439716"
         }
       ],
       "ResponseHeaders": [
@@ -5448,15 +5364,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "358"
+          "Value": "704"
         },
         {
           "Name": "ETag",
-          "Value": "\"31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE=\""
+          "Value": "\"aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5476,13 +5392,13 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg=\""
+          "Value": "W/\"PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg="
+          "Value": "sha256-PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk="
         }
       ]
     },
@@ -5497,7 +5413,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "785"
+          "Value": "1672"
         },
         {
           "Name": "Content-Type",
@@ -5505,11 +5421,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg=\""
+          "Value": "\"PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5519,13 +5435,13 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg="
+          "Value": "sha256-PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk="
         }
       ]
     },
     {
       "Route": "css/site.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-t1v3mgkr9g.gz",
+      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-ts3wz8u13w.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -5534,7 +5450,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "358"
+          "Value": "704"
         },
         {
           "Name": "Content-Type",
@@ -5542,11 +5458,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE=\""
+          "Value": "\"aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5564,18 +5480,18 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE="
+          "Value": "sha256-aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys="
         }
       ]
     },
     {
-      "Route": "css/site.t1v3mgkr9g.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-t1v3mgkr9g.gz",
+      "Route": "css/site.ts3wz8u13w.css",
+      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-ts3wz8u13w.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.002785515320"
+          "Quality": "0.001418439716"
         }
       ],
       "ResponseHeaders": [
@@ -5585,15 +5501,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "358"
+          "Value": "704"
         },
         {
           "Name": "ETag",
-          "Value": "\"31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE=\""
+          "Value": "\"aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5613,13 +5529,13 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg=\""
+          "Value": "W/\"PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "t1v3mgkr9g"
+          "Value": "ts3wz8u13w"
         },
         {
           "Name": "label",
@@ -5627,12 +5543,12 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg="
+          "Value": "sha256-PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk="
         }
       ]
     },
     {
-      "Route": "css/site.t1v3mgkr9g.css",
+      "Route": "css/site.ts3wz8u13w.css",
       "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\wwwroot\\css\\site.css",
       "Selectors": [],
       "ResponseHeaders": [
@@ -5642,7 +5558,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "785"
+          "Value": "1672"
         },
         {
           "Name": "Content-Type",
@@ -5650,11 +5566,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg=\""
+          "Value": "\"PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5664,7 +5580,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "t1v3mgkr9g"
+          "Value": "ts3wz8u13w"
         },
         {
           "Name": "label",
@@ -5672,13 +5588,13 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-DypoBV48Gg+ClDqQS+WgTeNI3VojAMGHB4lW9E/yyDg="
+          "Value": "sha256-PR5itd5/oKt3yAk/vyD41pnQ+II2suqFdE9Ngy9m1vk="
         }
       ]
     },
     {
-      "Route": "css/site.t1v3mgkr9g.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-t1v3mgkr9g.gz",
+      "Route": "css/site.ts3wz8u13w.css.gz",
+      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\0w6zzxvu5p-ts3wz8u13w.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -5687,7 +5603,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "358"
+          "Value": "704"
         },
         {
           "Name": "Content-Type",
@@ -5695,11 +5611,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE=\""
+          "Value": "\"aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
+          "Value": "Wed, 07 May 2025 17:47:03 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -5717,7 +5633,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "t1v3mgkr9g"
+          "Value": "ts3wz8u13w"
         },
         {
           "Name": "label",
@@ -5725,7 +5641,7 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-31nf7CVlyPuUT+BEAI0jTlt5gGcyF8qmiUvj9yCW9gE="
+          "Value": "sha256-aLcvfTDGwLvJNZMFFlMpjjFzb/RmoWMA8YAxUZHNwys="
         }
       ]
     },
@@ -34975,602 +34891,6 @@
         {
           "Name": "integrity",
           "Value": "sha256-F1wMlgb/juW08DFUssW6Pm9EBKfjXXRiSK0F5FgXxJU="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.bundle.scp.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9c00faakx9-sv3at5v4x7.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.001992031873"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.bundle.scp.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "1050"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.bundle.scp.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9c00faakx9-sv3at5v4x7.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.styles.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1e5bfpwz6u-sv3at5v4x7.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.001992031873"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.styles.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "1050"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.styles.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1e5bfpwz6u-sv3at5v4x7.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "no-cache"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "integrity",
-          "Value": "sha256-CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.bundle.scp.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9c00faakx9-sv3at5v4x7.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.001992031873"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.bundle.scp.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.bundle.scp.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\ORSV2.bundle.scp.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "1050"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.bundle.scp.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.bundle.scp.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\9c00faakx9-sv3at5v4x7.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.bundle.scp.css.gz"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.styles.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1e5bfpwz6u-sv3at5v4x7.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.001992031873"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.styles.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.styles.css",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\scopedcss\\bundle\\ORSV2.styles.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "1050"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.styles.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-2GwDat83jMC4ZN8P207aNP2e/+MfKXoQFjS16HqRcf8="
-        }
-      ]
-    },
-    {
-      "Route": "ORSV2.sv3at5v4x7.styles.css.gz",
-      "AssetFile": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\Debug\\net9.0\\compressed\\1e5bfpwz6u-sv3at5v4x7.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "501"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Tue, 06 May 2025 15:56:29 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "sv3at5v4x7"
-        },
-        {
-          "Name": "label",
-          "Value": "ORSV2.styles.css.gz"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-CRXCbe/PKWa0fKo+uHw1/50GMxT47oZ+2XJuNeLsrVM="
         }
       ]
     }
