@@ -12,7 +12,8 @@ namespace ORSV2.Data
         public DbSet<School> Schools { get; set; }
         public DbSet<STU> STU => Set<STU>();
         public DbSet<Courses> Courses => Set<Courses>();
-        public DbSet<UserSchool> UserSchools { get; set; } // ✅ Add this line
+        public DbSet<UserSchool> UserSchools { get; set; }
+        public DbSet<Staff> Staff { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -23,6 +24,12 @@ namespace ORSV2.Data
             {
                 entity.HasKey(s => s.StuId);      // ✅ needed to enable LINQ and sorting
                 entity.ToTable("Students", t => t.ExcludeFromMigrations());  // ✅ prevents EF from trying to create/update the table
+            });
+
+            builder.Entity<Staff>(builder =>
+            {
+                builder.ToTable("Staff", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
+                builder.HasKey(s => s.StaffId); // Only if there's a real primary key
             });
 
 

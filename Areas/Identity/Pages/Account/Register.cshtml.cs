@@ -12,13 +12,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using ORSV2.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ORSV2.Data;
+using ORSV2.Models;
+using System.Text.Json;
 
 namespace ORSV2.Areas.Identity.Pages.Account
 {
@@ -30,13 +33,15 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly ApplicationDbContext _context;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -44,62 +49,41 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _context = context;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public string ReturnUrl { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [EmailAddress]
             [Display(Name = "Email")]
             public string Email { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [DataType(DataType.Password)]
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
         }
 
+        private class SchoolAccessEntry
+        {
+            public int SchoolCode { get; set; }
+            public bool ReadOnlyAccess { get; set; }
+            public bool CommunicationGroup { get; set; }
+        }
 
         public async Task OnGetAsync(string returnUrl = null)
         {
@@ -111,12 +95,57 @@ namespace ORSV2.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
-
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+                var staff = await _context.Staff.FirstOrDefaultAsync(s => s.EmailAddress == Input.Email);
+                if (staff != null && staff.Inactive != true)
+                {
+                    user.FirstName = staff.FirstName;
+                    user.LastName = staff.LastName;
+                    user.DistrictId = staff.DistrictId;
+
+                    // Add Primary School
+                    var primarySchool = await _context.Schools.FirstOrDefaultAsync(s => s.LocalSchoolId.ToString() == staff.PrimarySchool && s.DistrictId == staff.DistrictId);
+                    if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
+                    {
+                        user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
+                    }
+
+                    // Add from SchoolAccess
+                    if (!string.IsNullOrWhiteSpace(staff.SchoolAccess))
+                    {
+                        try
+                        {
+                            var accessList = JsonSerializer.Deserialize<List<SchoolAccessEntry>>(staff.SchoolAccess);
+                            if (accessList != null)
+                            {
+                                foreach (var entry in accessList)
+                                {
+                                    var school = await _context.Schools.FirstOrDefaultAsync(s => s.LocalSchoolId == entry.SchoolCode.ToString() && s.DistrictId == staff.DistrictId);
+                                    if (school != null && !user.UserSchools.Any(us => us.SchoolId == school.Id))
+                                    {
+                                        user.UserSchools.Add(new UserSchool { SchoolId = school.Id, User = user });
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning("Failed to parse SchoolAccess for {Email}: {Error}", staff.EmailAddress, ex.Message);
+                        }
+                    }
+                }
+                else
+                {
+                    user.LockoutEnabled = true;
+                    user.LockoutEnd = DateTimeOffset.MaxValue;
+                }
+
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
                 if (result.Succeeded)
@@ -151,7 +180,6 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
             }
 
-            // If we got this far, something failed, redisplay form
             return Page();
         }
 
@@ -163,9 +191,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             }
             catch
             {
-                throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                    $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor, or alternatively " +
-                    $"override the register page in /Areas/Identity/Pages/Account/Register.cshtml");
+                throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. Ensure it has a parameterless constructor.");
             }
         }
 
