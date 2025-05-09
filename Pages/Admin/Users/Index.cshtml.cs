@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ORSV2.Pages.Admin.Users
 {
@@ -12,6 +13,7 @@ namespace ORSV2.Pages.Admin.Users
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        public string? CurrentUserId { get; set; }
 
         public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
@@ -23,9 +25,12 @@ namespace ORSV2.Pages.Admin.Users
 
         public async Task OnGetAsync()
         {
+
             var currentUser = await _userManager.Users
                 .Include(u => u.UserSchools)
                 .FirstOrDefaultAsync(u => u.UserName == User.Identity!.Name);
+                
+            CurrentUserId = currentUser?.Id;
 
             var query = _context.Users
                 .Include(u => u.District)
@@ -66,6 +71,35 @@ namespace ORSV2.Pages.Admin.Users
             public List<string> Roles { get; set; } = new();
             public string DistrictName { get; set; }
             public string SchoolName { get; set; }
+        }
+
+        [TempData]
+        public string? StatusMessage { get; set; }
+
+        public async Task<IActionResult> OnPostDeleteAsync(string id)
+        {
+            if (!User.IsInRole("OrendaAdmin"))
+                return Forbid();
+
+            var currentUserId = _userManager.GetUserId(User);
+            if (id == currentUserId)
+            {
+                StatusMessage = "❌ You cannot delete your own account.";
+                return RedirectToPage();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user != null)
+            {
+                await _userManager.DeleteAsync(user);
+                StatusMessage = $"✅ User '{user.Email}' was successfully deleted.";
+            }
+            else
+            {
+                StatusMessage = "⚠️ User not found.";
+            }
+
+            return RedirectToPage();
         }
     }
 }

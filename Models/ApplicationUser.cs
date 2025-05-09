@@ -10,19 +10,17 @@ namespace ORSV2.Models
 
         [MaxLength(150)]
         public string? LastName { get; set; }
-
         public int? DistrictId { get; set; }              
         public District? District { get; set; }
-
         public ICollection<UserSchool> UserSchools { get; set; } = new List<UserSchool>();
         public School? School { get; set; }
+        public int? StaffId { get; set; }
     }
 
     public class UserSchool
     {
         public string UserId { get; set; } = null!;
         public ApplicationUser User { get; set; } = null!;
-
         public int SchoolId { get; set; }                
         public School School { get; set; } = null!;
     }

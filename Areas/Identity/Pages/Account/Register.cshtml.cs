@@ -108,6 +108,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     user.FirstName = staff.FirstName;
                     user.LastName = staff.LastName;
                     user.DistrictId = staff.DistrictId;
+                    user.StaffId = staff.StaffId;
 
                     // Add Primary School
                     var primarySchool = await _context.Schools.FirstOrDefaultAsync(s => s.LocalSchoolId.ToString() == staff.PrimarySchool && s.DistrictId == staff.DistrictId);

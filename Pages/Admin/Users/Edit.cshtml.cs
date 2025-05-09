@@ -1,4 +1,3 @@
-// Pages/Admin/Users/Edit.cshtml.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,11 +6,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ORSV2.Pages.Admin.Users
 {
-    [Authorize(Roles = "OrendaAdmin,DistrictAdmin,SchoolAdmin")]
+    [Authorize(Roles = "OrendaAdmin,DistrictAdmin")]
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -25,96 +23,90 @@ namespace ORSV2.Pages.Admin.Users
             _roleManager = roleManager;
         }
 
-        [BindProperty]
-        public InputModel Input { get; set; } = new();
-
-        public SelectList Districts { get; set; } = null!;
-        public MultiSelectList Schools { get; set; } = null!;
-        public List<string> AllRoles { get; set; } = new();
-
-        public class InputModel
+        public class EditInputModel
         {
             public string Id { get; set; } = "";
-            public string Email { get; set; } = "";
+            public string? Email { get; set; }
+            public string? FirstName { get; set; }
+            public string? LastName { get; set; }
             public int? DistrictId { get; set; }
-            public List<int> SelectedSchoolIds { get; set; } = new();
-            public List<string> SelectedRoles { get; set; } = new();
+            public List<int> SchoolIds { get; set; } = new();
+            public List<string> Roles { get; set; } = new();
+            public int? StaffId { get; set; }
         }
+
+        [BindProperty]
+        public EditInputModel Input { get; set; } = new();
+
+        public SelectList Districts { get; set; } = null!;
+        public List<SelectListItem> AllRoles { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await _userManager.Users
+                .Include(u => u.UserSchools)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
             if (user == null) return NotFound();
 
-            var currentUser = await _userManager.GetUserAsync(User);
-            var currentUserRoles = await _userManager.GetRolesAsync(currentUser);
-            var targetUserRoles = await _userManager.GetRolesAsync(user);
-
-            if (User.IsInRole("DistrictAdmin") && user.DistrictId != currentUser.DistrictId)
-                return Forbid();
-
-            if (User.IsInRole("SchoolAdmin")) return Forbid();
-
-            Input = new InputModel
+            Input = new EditInputModel
             {
                 Id = user.Id,
-                Email = user.Email ?? "",
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 DistrictId = user.DistrictId,
-                SelectedSchoolIds = await _context.UserSchools
-                    .Where(us => us.UserId == user.Id)
-                    .Select(us => us.SchoolId)
-                    .ToListAsync(),
-                SelectedRoles = targetUserRoles.ToList()
+                SchoolIds = user.UserSchools.Select(us => us.SchoolId).ToList(),
+                Roles = (await _userManager.GetRolesAsync(user)).ToList(),
+                StaffId = user.StaffId
             };
 
             Districts = new SelectList(await _context.Districts.ToListAsync(), "Id", "Name");
-            Schools = new MultiSelectList(await _context.Schools.ToListAsync(), "Id", "Name");
-
-            var allRoles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
-            AllRoles = currentUserRoles.Contains("OrendaAdmin") ? allRoles : allRoles.Where(r => r is "SchoolAdmin" or "Counselor" or "Teacher").ToList();
+            AllRoles = await _roleManager.Roles
+                .Select(r => new SelectListItem { Value = r.Name!, Text = r.Name! })
+                .ToListAsync();
 
             return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            var user = await _userManager.FindByIdAsync(Input.Id);
+            var user = await _userManager.Users
+                .Include(u => u.UserSchools)
+                .FirstOrDefaultAsync(u => u.Id == Input.Id);
+
             if (user == null) return NotFound();
 
-            var currentUser = await _userManager.GetUserAsync(User);
-            var currentUserRoles = await _userManager.GetRolesAsync(currentUser);
-            var targetUserRoles = await _userManager.GetRolesAsync(user);
-
-            if (User.IsInRole("DistrictAdmin") && user.DistrictId != currentUser.DistrictId)
-                return Forbid();
-
-            if (User.IsInRole("SchoolAdmin")) return Forbid();
-
+            user.Email = Input.Email;
+            user.FirstName = Input.FirstName;
+            user.LastName = Input.LastName;
             user.DistrictId = Input.DistrictId;
+
             await _userManager.UpdateAsync(user);
 
-            // Remove all existing school links and re-add
-            var existingLinks = _context.UserSchools.Where(us => us.UserId == user.Id);
-            _context.UserSchools.RemoveRange(existingLinks);
-            foreach (var sid in Input.SelectedSchoolIds.Distinct())
+            _context.UserSchools.RemoveRange(user.UserSchools);
+            foreach (var sid in Input.SchoolIds.Distinct())
             {
                 _context.UserSchools.Add(new UserSchool { UserId = user.Id, SchoolId = sid });
             }
+
+            var existingRoles = await _userManager.GetRolesAsync(user);
+            await _userManager.RemoveFromRolesAsync(user, existingRoles);
+            await _userManager.AddToRolesAsync(user, Input.Roles);
+
             await _context.SaveChangesAsync();
 
-            var allowedRoles = currentUserRoles.Contains("OrendaAdmin")
-                ? await _roleManager.Roles.Select(r => r.Name!).ToListAsync()
-                : new List<string> { "SchoolAdmin", "Counselor", "Teacher" };
-
-            Input.SelectedRoles = Input.SelectedRoles.Where(r => allowedRoles.Contains(r)).ToList();
-
-            var toRemove = targetUserRoles.Except(Input.SelectedRoles);
-            var toAdd = Input.SelectedRoles.Except(targetUserRoles);
-
-            await _userManager.RemoveFromRolesAsync(user, toRemove);
-            await _userManager.AddToRolesAsync(user, toAdd);
-
             return RedirectToPage("Index");
+        }
+
+        public async Task<JsonResult> OnGetSchoolsAsync(int districtId)
+        {
+            var schools = await _context.Schools
+                .Where(s => s.DistrictId == districtId && !s.Inactive)
+                .Select(s => new { id = s.Id, name = s.Name })
+                .ToListAsync();
+
+            return new JsonResult(schools);
         }
     }
 }

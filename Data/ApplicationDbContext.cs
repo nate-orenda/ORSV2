@@ -11,7 +11,7 @@ namespace ORSV2.Data
         public DbSet<District> Districts { get; set; }
         public DbSet<School> Schools { get; set; }
         public DbSet<STU> STU => Set<STU>();
-        public DbSet<Courses> Courses => Set<Courses>();
+        public DbSet<Courses> Courses { get; set; }
         public DbSet<UserSchool> UserSchools { get; set; }
         public DbSet<Staff> Staff { get; set; }
 
@@ -32,6 +32,11 @@ namespace ORSV2.Data
                 builder.HasKey(s => s.StaffId); // Only if there's a real primary key
             });
 
+            builder.Entity<Courses>(builder =>
+            {
+                builder.ToTable("Courses", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
+                builder.HasKey(c => c.Id); // Only if there's a real primary key
+            });
 
             // District relationships
             builder.Entity<District>()

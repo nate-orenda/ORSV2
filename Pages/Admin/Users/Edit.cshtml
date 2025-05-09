@@ -1,79 +1,84 @@
-@page "{id}"
+@page
 @model ORSV2.Pages.Admin.Users.EditModel
 @{
     ViewData["Title"] = "Edit User";
 }
 
-<h1>Edit User</h1>
+<h2>Edit User</h2>
 
 <form method="post">
     <input type="hidden" asp-for="Input.Id" />
 
     <div class="form-group">
-        <label>Email</label>
-        <input class="form-control" value="@Model.Input.Email" readonly />
+        <label asp-for="Input.Email"></label>
+        <input asp-for="Input.Email" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label asp-for="Input.DistrictId"></label>
-        <select asp-for="Input.DistrictId" asp-items="Model.Districts" class="form-control"></select>
+        <label asp-for="Input.FirstName"></label>
+        <input asp-for="Input.FirstName" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label>Assigned Schools</label>
-        @foreach (var school in Model.Schools)
-        {
-            var isChecked = Model.Input.SelectedSchoolIds.Contains(int.Parse(school.Value));
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="Input.SelectedSchoolIds" value="@school.Value"
-                    checked="@(isChecked)" />
-                <label class="form-check-label">@school.Text</label>
-            </div>
-        }
+        <label asp-for="Input.LastName"></label>
+        <input asp-for="Input.LastName" class="form-control" />
     </div>
 
-
+    <div class="form-group">
+        <label>Staff ID</label>
+        <p class="form-control-plaintext text-muted">@Model.Input.StaffId</p>
+    </div>
 
     <div class="form-group">
-        <label>Roles</label>
-        @{
-            var allowedRoles = new List<string>();
+        <label asp-for="Input.DistrictId">District</label>
+        <select asp-for="Input.DistrictId" asp-items="Model.Districts" class="form-control" id="districtDropdown"></select>
+    </div>
 
-            if (User.IsInRole("OrendaAdmin"))
-            {
-                allowedRoles = Model.AllRoles;
-            }
-            else if (User.IsInRole("DistrictAdmin"))
-            {
-                allowedRoles = new List<string> { "SchoolAdmin", "Counselor", "Teacher" };
-            }
-            else if (User.IsInRole("SchoolAdmin"))
-            {
-                allowedRoles = new List<string> { "Counselor", "Teacher" };
-            }
-        }
+    <div class="form-group">
+        <label>Schools</label>
+        <div id="schoolCheckboxList" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
 
-        @foreach (var role in Model.AllRoles)
-        {
-            if (allowedRoles.Contains(role))
-            {
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="Input.SelectedRoles" value="@role"
-                        checked="@Model.Input.SelectedRoles.Contains(role)" />
-                    <label class="form-check-label">@role</label>
-                </div>
-            }
-            else
-            {
-                <div class="form-check text-muted">
-                    <input class="form-check-input" type="checkbox" disabled />
-                    <label class="form-check-label">@role (restricted)</label>
-                </div>
-            }
-        }
-
+    <div class="form-group">
+        <label asp-for="Input.Roles">Roles</label>
+        <select asp-for="Input.Roles" asp-items="Model.AllRoles" class="form-control" multiple></select>
     </div>
 
     <button type="submit" class="btn btn-primary">Save</button>
     <a asp-page="Index" class="btn btn-secondary">Cancel</a>
 </form>
+
+@section Scripts {
+<script>
+    const selectedSchoolIds = @Html.Raw(Json.Serialize(Model.Input.SchoolIds));
+
+    function renderSchoolsCheckboxList(schools) {
+        const container = document.getElementById("schoolCheckboxList");
+        container.innerHTML = '';
+
+        schools.forEach(school => {
+            const isChecked = selectedSchoolIds.includes(school.id);
+            const html = `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="Input.SchoolIds" value="${school.id}" id="school-${school.id}" ${isChecked ? 'checked' : ''}>
+                    <label class="form-check-label" for="school-${school.id}">${school.name}</label>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    document.getElementById('districtDropdown').addEventListener('change', function () {
+        const districtId = this.value;
+        fetch(`?handler=Schools&districtId=${districtId}`)
+            .then(res => res.json())
+            .then(data => {
+                renderSchoolsCheckboxList(data);
+            });
+    });
+
+    // Load schools immediately if editing existing user
+    document.getElementById('districtDropdown').dispatchEvent(new Event('change'));
+</script>
+}
