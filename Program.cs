@@ -23,6 +23,7 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Register");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ExternalLogin");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/AccessDenied");
     options.Conventions.AllowAnonymousToAreaFolder("Identity", "/Account");
 });
@@ -43,17 +44,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 
 // Add Google authentication
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ExternalScheme; // ✅ add this
-}).AddCookie()
-.AddGoogle(options =>
-{
-    options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-});
-
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    });
 
 // Require authentication globally
 builder.Services.AddAuthorization(options =>

@@ -4,7 +4,8 @@
     ViewData["Title"] = "Log in";
 }
 
-    <div class="position-absolute top-50 start-50 translate-middle card shadow p-4" style="width: 100%; max-width: 400px;">
+<div class="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+    <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
         <div class="text-center mb-4">
             <img src="~/images/orenda-login.png" alt="Orenda Logo" style="height: 64px;" />
             <p class="text-muted">Sign in to continue</p>
@@ -15,13 +16,13 @@
 
             <div class="form-floating mb-3">
                 <input asp-for="Input.Email" class="form-control" autocomplete="username" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
+                <label asp-for="Input.Email" class="form-label">Email</label>
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
 
             <div class="form-floating mb-3">
                 <input asp-for="Input.Password" class="form-control" autocomplete="current-password" placeholder="password" />
-                <label asp-for="Input.Password">Password</label>
+                <label asp-for="Input.Password" class="form-label">Password</label>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
@@ -57,7 +58,7 @@
             </form>
         }
     </div>
-
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
