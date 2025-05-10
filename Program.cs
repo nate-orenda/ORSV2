@@ -23,7 +23,6 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Register");
-    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ExternalLogin");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/AccessDenied");
     options.Conventions.AllowAnonymousToAreaFolder("Identity", "/Account");
 });

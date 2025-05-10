@@ -92,6 +92,10 @@ namespace ORSV2.Areas.Identity.Pages.Account
             }
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
+            TempData["LoginProvider"] = info.LoginProvider;
+            TempData["ProviderKey"] = info.ProviderKey;
+            TempData["ProviderDisplayName"] = info.ProviderDisplayName;
+
             if (info == null)
             {
                 ErrorMessage = "Error loading external login information.";
@@ -131,7 +135,19 @@ namespace ORSV2.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostConfirmationAsync(string returnUrl = null)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
-            var info = await _signInManager.GetExternalLoginInfoAsync();
+            var loginProvider = TempData["LoginProvider"] as string;
+            var providerKey = TempData["ProviderKey"] as string;
+
+            if (loginProvider == null || providerKey == null)
+            {
+                ErrorMessage = "Session expired. Please try signing in with Google again.";
+                return RedirectToPage("./Login");
+            }
+
+            var info = new ExternalLoginInfo(
+                new ClaimsPrincipal(), loginProvider, providerKey, loginProvider
+            );
+
             if (info == null)
             {
                 ErrorMessage = "Error loading external login information during confirmation.";

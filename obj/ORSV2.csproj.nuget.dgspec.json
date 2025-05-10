@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj": {}
+    "/Users/nate/workspace/ORSV2/ORSV2.csproj": {}
   },
   "projects": {
-    "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj": {
+    "/Users/nate/workspace/ORSV2/ORSV2.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj",
+        "projectUniqueName": "/Users/nate/workspace/ORSV2/ORSV2.csproj",
         "projectName": "ORSV2",
-        "projectPath": "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj",
-        "packagesPath": "C:\\Users\\natef\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\",
+        "projectPath": "/Users/nate/workspace/ORSV2/ORSV2.csproj",
+        "packagesPath": "/Users/nate/.nuget/packages/",
+        "outputPath": "/Users/nate/workspace/ORSV2/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\natef\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/nate/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -96,7 +90,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.203/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
