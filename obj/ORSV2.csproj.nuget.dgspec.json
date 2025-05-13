@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/nate/workspace/ORSV2/ORSV2.csproj": {}
+    "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj": {}
   },
   "projects": {
-    "/Users/nate/workspace/ORSV2/ORSV2.csproj": {
+    "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/nate/workspace/ORSV2/ORSV2.csproj",
+        "projectUniqueName": "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj",
         "projectName": "ORSV2",
-        "projectPath": "/Users/nate/workspace/ORSV2/ORSV2.csproj",
-        "packagesPath": "/Users/nate/.nuget/packages/",
-        "outputPath": "/Users/nate/workspace/ORSV2/obj/",
+        "projectPath": "C:\\Users\\natef\\workspace\\ORSV2\\ORSV2.csproj",
+        "packagesPath": "C:\\Users\\natef\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\natef\\workspace\\ORSV2\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/nate/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\natef\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -90,7 +90,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.203/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
