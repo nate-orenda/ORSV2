@@ -1,0 +1,88 @@
+# .NET build folders
+bin/
+obj/
+[Ll]og/
+TestResults/
+.vs/
+*.dbmdl
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+$RECYCLE.BIN/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Rider (JetBrains)
+.idea/
+*.sln.iml
+
+# ASP.NET
+wwwroot/node_modules/
+wwwroot/lib/
+
+# NPM/Yarn
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build results
+*.dll
+*.exe
+*.app
+*.out
+*.pidb
+*.pdb
+*.cache
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Entity Framework
+Migrations/
+
+# Publish directory
+publish/
+out/
+dist/
+
+# dotCover
+*.dotCover
+
+# Azure functions local settings
+local.settings.json
+
+# Resharper / DotTrace / DotMemory
+_ReSharper*/
+*.DotSettings.user
+
+# Visual Studio for Mac
+.idea/
+*.pidb
+*.userprefs
+
+# Rider
+.idea/
+*.sln.iml
+
+# Workaround for Git-ignored directories showing up anyway
+**/[Bb]in/
+**/[Oo]bj/
