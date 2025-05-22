@@ -40,6 +40,7 @@
                 <td>
                     <a asp-page="/Schools/Index" asp-route-districtId="@district.Id">View Schools</a> | 
                     <a asp-page="/Courses/Index" asp-route-districtId="@district.Id">View Courses</a> | 
+                    <a asp-page="/Districts/CheckpointSchedules" asp-route-DistrictId="@district.Id">Edit Checkpoint Dates</a> |
                     @if (canEdit)
                     {
                         <a asp-page="Edit" asp-route-id="@district.Id">Edit</a>

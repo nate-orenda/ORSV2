@@ -1,0 +1,65 @@
+@page
+@model ORSV2.Pages.Districts.CheckpointSchedulesModel
+@{
+    ViewData["Title"] = "Edit Checkpoint Schedules";
+}
+
+@if (TempData["Saved"] is true)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ Checkpoint dates saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-page="/Districts/Index">Districts</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit Checkpoints</li>
+    </ol>
+</nav>
+
+<h2>Checkpoint Schedules for @Model.DistrictName</h2>
+
+<form method="post">
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>School</th>
+                <th>CP1</th>
+                <th>CP2</th>
+                <th>CP3</th>
+                <th>CP4</th>
+                <th>CP5</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Schedules.Count; i++)
+            {
+                <tr>
+                    <td>@Model.Schedules[i].SchoolName</td>
+                    <td><input asp-for="Schedules[@i].Checkpoint1Date" class="form-control" type="date" disabled="@(Model.CanEdit ? null : "disabled")" /></td>
+                    <td><input asp-for="Schedules[@i].Checkpoint2Date" class="form-control" type="date" disabled="@(Model.CanEdit ? null : "disabled")" /></td>
+                    <td><input asp-for="Schedules[@i].Checkpoint3Date" class="form-control" type="date" disabled="@(Model.CanEdit ? null : "disabled")" /></td>
+                    <td><input asp-for="Schedules[@i].Checkpoint4Date" class="form-control" type="date" disabled="@(Model.CanEdit ? null : "disabled")" /></td>
+                    <td><input asp-for="Schedules[@i].Checkpoint5Date" class="form-control" type="date" disabled="@(Model.CanEdit ? null : "disabled")" /></td>
+                    <input type="hidden" asp-for="Schedules[@i].ScheduleId" />
+                    <input type="hidden" asp-for="Schedules[@i].DistrictId" />
+                    <input type="hidden" asp-for="Schedules[@i].SchoolId" />
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (Model.CanEdit)
+    {
+        <button type="submit" class="btn btn-primary">Save All Changes</button>
+    }
+</form>
+@section Scripts {
+    <script>
+        setTimeout(() => {
+            const alert = document.querySelector('.alert');
+            if (alert) alert.remove();
+        }, 3000);
+    </script>
+}

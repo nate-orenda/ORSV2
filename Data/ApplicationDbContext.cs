@@ -14,6 +14,7 @@ namespace ORSV2.Data
         public DbSet<Courses> Courses { get; set; }
         public DbSet<UserSchool> UserSchools { get; set; }
         public DbSet<Staff> Staff { get; set; }
+        public DbSet<GACheckpointSchedule> GACheckpointSchedule { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -37,6 +38,12 @@ namespace ORSV2.Data
                 builder.ToTable("Courses", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
                 builder.HasKey(c => c.Id); // Only if there's a real primary key
             });
+
+            builder.Entity<GACheckpointSchedule>()
+            .HasOne(s => s.School)
+            .WithMany() // or .WithMany(s => s.GACheckpointSchedules) if reverse nav exists
+            .HasForeignKey(s => s.SchoolId);
+
 
             // District relationships
             builder.Entity<District>()
