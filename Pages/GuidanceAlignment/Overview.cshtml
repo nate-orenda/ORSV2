@@ -1,0 +1,53 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.OverviewModel
+@{
+    ViewData["Title"] = "School Overview";
+}
+
+<nav>
+    <a asp-page="/GuidanceAlignment/Index">Guidance Alignment</a>
+    <span> / </span>
+    <a asp-page="/GuidanceAlignment/Schools" asp-route-districtId="@Model.School.DistrictId">
+        @Model.School.District?.Name
+    </a>
+    <span> / </span>
+    <span>@Model.School.Name</span>
+</nav>
+
+<h2>@Model.School.Name - Guidance Alignment Overview</h2>
+<p><strong>Current Checkpoint:</strong> @( "CP" + Model.CurrentCheckpoint )</p>
+
+<div style="max-width: 500px; margin: auto;">
+    <canvas id="gradeChart"></canvas>
+</div>
+
+@if (!Model.GradeDistribution.Any())
+{
+    <p>No grade data found for this school/year.</p>
+}
+
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    const ctx = document.getElementById('gradeChart');
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => "Grade " + g.Grade))),
+            datasets: [{
+                label: 'Enrollment by Grade',
+                data: @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Count))),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+</script>
+
+}

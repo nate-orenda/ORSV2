@@ -15,6 +15,7 @@ namespace ORSV2.Data
         public DbSet<UserSchool> UserSchools { get; set; }
         public DbSet<Staff> Staff { get; set; }
         public DbSet<GACheckpointSchedule> GACheckpointSchedule { get; set; }
+        public DbSet<GAResults> GAResults { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -44,6 +45,11 @@ namespace ORSV2.Data
             .WithMany() // or .WithMany(s => s.GACheckpointSchedules) if reverse nav exists
             .HasForeignKey(s => s.SchoolId);
 
+            builder.Entity<GAResults>()
+            .HasOne(r => r.District)
+            .WithMany()
+            .HasForeignKey(r => r.DistrictId)
+            .OnDelete(DeleteBehavior.Restrict);
 
             // District relationships
             builder.Entity<District>()

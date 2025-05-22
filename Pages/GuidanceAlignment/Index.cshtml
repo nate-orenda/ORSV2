@@ -1,0 +1,15 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.IndexModel
+@{
+    ViewData["Title"] = "Guidance Alignment - Select District";
+}
+
+<h2>Select a District</h2>
+<ul>
+@foreach (var district in Model.Districts)
+{
+    <li>
+        <a asp-page="/GuidanceAlignment/Schools" asp-route-districtId="@district.Id">@district.Name</a>
+    </li>
+}
+</ul>
