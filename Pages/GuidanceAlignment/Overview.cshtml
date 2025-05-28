@@ -17,37 +17,45 @@
 <h2>@Model.School.Name - Guidance Alignment Overview</h2>
 <p><strong>Current Checkpoint:</strong> @( "CP" + Model.CurrentCheckpoint )</p>
 
-<div style="max-width: 500px; margin: auto;">
+<div style="max-width: 500px; height: 300px; margin: auto;">
     <canvas id="gradeChart"></canvas>
 </div>
-
-@if (!Model.GradeDistribution.Any())
-{
-    <p>No grade data found for this school/year.</p>
-}
-
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    const ctx = document.getElementById('gradeChart');
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => "Grade " + g.Grade))),
-            datasets: [{
-                label: 'Enrollment by Grade',
-                data: @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Count))),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
-        }
-    });
-</script>
+        const labels = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => "Grade " + g.Grade)));
+        const data = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Count)));
+        const grades = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Grade)));
 
+        const ctx = document.getElementById('gradeChart');
+        const chart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Enrollment by Grade',
+                    data: data,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                onClick: function (evt, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const selectedGrade = grades[index];
+                        const schoolId = @Model.School.Id;
+
+                        const url = `/GuidanceAlignment/Students?schoolId=${schoolId}&grade=${selectedGrade}`;
+                        window.location.href = url;
+                    }
+                }
+            }
+        });
+    </script>
 }

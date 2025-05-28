@@ -12,7 +12,7 @@ namespace ORSV2.Models
         public int SchoolID { get; set; }
 
         public string? LocalDistrictCode { get; set; }
-        public string? LocalSchoolCode { get; set; }
+        public string? LocalSchoolId { get; set; }
         public string LocalStudentID { get; set; } = default!;
 
         public string? FirstName { get; set; }

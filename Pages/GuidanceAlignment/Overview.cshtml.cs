@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
+using ORSV2.Utilities;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
@@ -44,28 +45,11 @@ namespace ORSV2.Pages.GuidanceAlignment
                 .ToList();
 
 
-            // Determine current checkpoint
             var schedule = await _context.GACheckpointSchedule
                 .FirstOrDefaultAsync(s => s.SchoolId == SchoolId);
 
-            if (schedule != null)
-            {
-                var dates = new[]
-                {
-                    (1, schedule.Checkpoint1Date),
-                    (2, schedule.Checkpoint2Date),
-                    (3, schedule.Checkpoint3Date),
-                    (4, schedule.Checkpoint4Date),
-                    (5, schedule.Checkpoint5Date)
-                };
-
-                CurrentCheckpoint = dates
-                .Where(d => d.Item2.HasValue && today <= d.Item2.Value)
-                .Select(d => d.Item1.ToString())
-                .FirstOrDefault() ?? "5";
-
-                if (string.IsNullOrEmpty(CurrentCheckpoint)) CurrentCheckpoint = "5"; // fallback
-            }
+            int cp = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, today);
+            CurrentCheckpoint = cp.ToString();
 
             return Page();
         }

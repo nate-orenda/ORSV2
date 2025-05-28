@@ -1,7 +1,4 @@
-// Models/GAResults.cs
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ORSV2.Models
 {
@@ -58,10 +55,43 @@ namespace ORSV2.Models
         public bool? Migrant { get; set; }
         public bool? Homeless { get; set; }
 
-        public int CP { get; set; }
+        public int CP { get; set; }  // Checkpoint (e.g., 1–5)
         public int SchoolYear { get; set; }
 
-        public School School { get; set; } // Navigation
+        public DateTime DateInserted { get; set; }
+        public DateTime? DateLastUpdated { get; set; }
+
+        [MaxLength(100)]
+        public string? UpdatedBy { get; set; }
+
+        public bool? FAFSA { get; set; }
+        public bool? CollegeApplication { get; set; }
+
+        public bool? AGGrades { get; set; }
+        public bool? AGSchedule { get; set; }
+        public bool? OnTrack { get; set; }
+
+        public decimal? GPA { get; set; }
+        public decimal? AssessmentsELA { get; set; }
+        public decimal? AssessmentsMath { get; set; }
+        public decimal? Grades { get; set; }
+
+        public int? Referrals { get; set; }
+        public int? Attendance { get; set; }
+
+        public bool? Affiliation { get; set; }
+
+        [MaxLength(10)]
+        public string? Quadrant { get; set; }
+
+        [MaxLength(255)]
+        public string? RowHash { get; set; }
+
+        [MaxLength(100)]
+        public string? CounselorName { get; set; }
+
+        // Navigation
+        public School School { get; set; }
         public District District { get; set; }
     }
 }

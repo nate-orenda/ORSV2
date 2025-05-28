@@ -1,0 +1,23 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.GAProfileCardModel
+@{
+    Layout = null;
+}
+
+<div>
+    <dl class="row mt-3">
+        <dt class="col-sm-4">Grade</dt><dd class="col-sm-8">@Model.Student.Grade</dd>
+        <dt class="col-sm-4">Race / Ethncity</dt><dd class="col-sm-8">@Model.Student.RaceEthnicity</dd>
+        <dt class="col-sm-4">Language Fluency</dt><dd class="col-sm-8">@Model.Student.LF</dd>
+        <dt class="col-sm-4">Years in Program</dt><dd class="col-sm-8">@Model.Student.YrsInProgram</dd>
+        <dt class="col-sm-4">Counselor</dt><dd class="col-sm-8">@Model.Student.Counselor</dd>
+    </dl>
+    <div class="text-end text-muted small mt-4">
+        Last Updated: @Model.Student.DateLastUpdated?.ToString("g")
+    </div>
+</div>
+
+<script>
+    const modalTitle = "@Model.Student.FirstName @Model.Student.LastName (@Model.Student.LocalStudentId)";
+    document.getElementById("profileModalLabel").textContent = modalTitle;
+</script>

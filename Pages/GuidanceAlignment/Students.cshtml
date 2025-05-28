@@ -1,0 +1,76 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.StudentsModel
+@{
+    ViewData["Title"] = "Students";
+}
+
+<partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+
+<h2>@Model.SchoolName - Grade @Model.Grade (Checkpoint: @("CP" + Model.CurrentCheckpoint))</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>SWD</th>
+            <th>SED</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var student in Model.Students)
+        {
+            <tr>
+                <td>@student.LastName, @student.FirstName</td>
+                <td>@student.Gender</td>
+                <td>@(student.SWD == true ? "Yes" : "")</td>
+                <td>@(student.SED == true ? "Yes" : "")</td>
+                <td>
+                    <a href="#" class="view-profile" data-bs-toggle="modal" data-bs-target="#profileModal"
+                        data-student-id="@student.ResultId">View</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="profileContent">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modal = document.getElementById('profileModal');
+            modal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var studentId = button.getAttribute('data-student-id');
+                fetch(`/GuidanceAlignment/GAProfileCard?id=${studentId}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById("profileContent").innerHTML = html;
+
+                        // ✅ Extract and execute the script manually
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        const scriptTag = tempDiv.querySelector('script');
+                        if (scriptTag) {
+                            eval(scriptTag.textContent);
+                        }
+                    });
+
+            });
+        });
+    </script>
+}
