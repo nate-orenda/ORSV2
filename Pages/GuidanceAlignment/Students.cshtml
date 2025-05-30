@@ -1,35 +1,68 @@
 @page
 @model ORSV2.Pages.GuidanceAlignment.StudentsModel
+@using System.Text.Json
 @{
-    ViewData["Title"] = "Students";
+    ViewData["Title"] = $"Students - Grade {Model.Grade}";
 }
 
+<!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
 
-<h2>@Model.SchoolName - Grade @Model.Grade (Checkpoint: @("CP" + Model.CurrentCheckpoint))</h2>
+<div class="row">
+    <!-- Left: Indicator Bar Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm p-3">
+            <h6 class="text-center mb-3">Indicators Met – Grade @Model.Grade</h6>
+            @if (Model.IndicatorSummaries?.Any() == true)
+            {
+                <canvas id="indicatorChart"></canvas>
+            }
+            else
+            {
+                <div class="alert alert-info text-center mb-0">
+                    No indicators found for this grade/checkpoint.
+                </div>
+            }
+        </div>
+    </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Gender</th>
-            <th>SWD</th>
-            <th>SED</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var student in Model.Students)
+    <!-- Right: Quadrant Pie Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm p-3">
+            <h6 class="text-center mb-3">Quadrant Distribution – Grade @Model.Grade</h6>
+                <canvas id="quadrantPie"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Existing student table stays below -->
+<div class="card shadow-sm mb-4 p-4">
+    <h5 class="mb-3">Student List – Grade @Model.Grade</h5>
+    <table class="table table-bordered table-striped">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Local ID</th>
+                <th>Quadrant</th>
+                <th>OnTrack</th>
+                <!-- Add more columns as needed -->
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var s in Model.Students)
         {
             <tr>
                 <td><a href="#" class="view-profile" data-bs-toggle="modal" data-bs-target="#profileModal"
-                        data-student-id="@student.ResultId">@student.LastName, @student.FirstName</a></td>
-                <td>@student.Gender</td>
-                <td>@(student.SWD == true ? "Yes" : "")</td>
-                <td>@(student.SED == true ? "Yes" : "")</td>
+                    data-student-id="@s.ResultId">@s.LastName, @s.FirstName</a>
+                </td>
+                <td>@s.LocalStudentId</td>
+                <td>@s.Quadrant</td>
+                <td>@(s.OnTrack == true ? "Yes" : "No")</td>
             </tr>
         }
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>
 
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -69,4 +102,92 @@
             });
         });
     </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const indicatorData = [{},{},{},{}];
+        const indicatorLabels = indicatorData.map(i => i.Name);
+        const indicatorPercents = indicatorData.map(i => i.PercentMet.toFixed(1));
+
+        if (indicatorData.length > 0) {
+            new Chart(document.getElementById('indicatorChart'), {
+                type: 'bar',
+                data: {
+                    labels: indicatorLabels,
+                    datasets: [{
+                        label: '% Met',
+                        data: indicatorPercents,
+                        backgroundColor: '#0d6efd'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: '% Met' }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+
+<script>
+    const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));
+    const aboveCount = @Model.AboveTheLineCount;
+    const belowCount = @Model.BelowTheLineCount;
+    const total = @Model.TotalCount;
+
+    const quadrantPie = new Chart(document.getElementById('quadrantPie'), {
+        type: 'pie',
+        data: {
+            labels: [
+                `Challenge (${quadrantCounts["Challenge"] || 0})`,
+                `Benchmark (${quadrantCounts["Benchmark"] || 0})`,
+                `Strategic (${quadrantCounts["Strategic"] || 0})`,
+                `Intensive (${quadrantCounts["Intensive"] || 0})`
+            ],
+            datasets: [{
+                data: [
+                    quadrantCounts["Challenge"] || 0,
+                    quadrantCounts["Benchmark"] || 0,
+                    quadrantCounts["Strategic"] || 0,
+                    quadrantCounts["Intensive"] || 0
+                ],
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'center'  // this is default, but makes intent clear
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value} (${percent}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+
 }

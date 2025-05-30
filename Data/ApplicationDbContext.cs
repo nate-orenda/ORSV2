@@ -16,6 +16,7 @@ namespace ORSV2.Data
         public DbSet<Staff> Staff { get; set; }
         public DbSet<GACheckpointSchedule> GACheckpointSchedule { get; set; }
         public DbSet<GAResults> GAResults { get; set; }
+        public DbSet<GAQuadrantIndicators> GAQuadrantIndicators { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
