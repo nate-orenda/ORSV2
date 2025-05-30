@@ -71,14 +71,12 @@ namespace ORSV2.Models
         public bool? AGSchedule { get; set; }
         public bool? OnTrack { get; set; }
 
-        public decimal? GPA { get; set; }
-        public decimal? AssessmentsELA { get; set; }
-        public decimal? AssessmentsMath { get; set; }
-        public decimal? Grades { get; set; }
-
-        public int? Referrals { get; set; }
-        public int? Attendance { get; set; }
-
+        public bool? GPA { get; set; }
+        public string? AssessmentsELA { get; set; }
+        public string? AssessmentsMath { get; set; }
+        public string? Grades { get; set; }
+        public bool? Referrals { get; set; }
+        public bool? Attendance { get; set; }
         public bool? Affiliation { get; set; }
 
         [MaxLength(10)]

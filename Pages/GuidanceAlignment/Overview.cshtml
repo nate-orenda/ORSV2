@@ -1,61 +1,135 @@
 @page
 @model ORSV2.Pages.GuidanceAlignment.OverviewModel
+@using System.Text.Json
 @{
-    ViewData["Title"] = "School Overview";
+    ViewData["Title"] = "Guidance Alignment - Overview";
 }
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+<div class="card shadow-sm mb-4 p-4">
+    <div class="text-center mb-4">
+        <h5 class="mb-1">@Model.School.Name</h5>
+        <h6 class="text-muted">Quadrant Summary – Checkpoint @Model.CurrentCheckpoint</h6>
+    </div>
+    @if (Model.QuadrantCounts != null && Model.QuadrantCounts.Any())
+    {
+    <div class="row align-items-start">
+        <!-- Left Column: Stats -->
+        <div class="col-md-6 mb-4 mb-md-0 text-center">
+            <div class="row text-center mb-3">
+                <div class="col-6 mb-2">
+                    <span class="badge bg-primary w-100">
+                        Challenge: @Model.QuadrantCounts.GetValueOrDefault("Challenge", 0)
+                        (@Model.FormatPercentage(Model.QuadrantCounts.GetValueOrDefault("Challenge", 0)))
+                    </span>
+                </div>
+                <div class="col-6 mb-2">
+                    <span class="badge bg-success w-100">
+                        Benchmark: @Model.QuadrantCounts.GetValueOrDefault("Benchmark", 0)
+                        (@Model.FormatPercentage(Model.QuadrantCounts.GetValueOrDefault("Benchmark", 0)))
+                    </span>
+                </div>
+                <div class="col-6 mb-2">
+                    <span class="badge bg-warning text-dark w-100">
+                        Strategic: @Model.QuadrantCounts.GetValueOrDefault("Strategic", 0)
+                        (@Model.FormatPercentage(Model.QuadrantCounts.GetValueOrDefault("Strategic", 0)))
+                    </span>
+                </div>
+                <div class="col-6 mb-2">
+                    <span class="badge bg-danger w-100">
+                        Intensive: @Model.QuadrantCounts.GetValueOrDefault("Intensive", 0)
+                        (@Model.FormatPercentage(Model.QuadrantCounts.GetValueOrDefault("Intensive", 0)))
+                    </span>
+                </div>
+            </div>
 
-<nav>
-    <a asp-page="/GuidanceAlignment/Index">Guidance Alignment</a>
-    <span> / </span>
-    <a asp-page="/GuidanceAlignment/Schools" asp-route-districtId="@Model.School.DistrictId">
-        @Model.School.District?.Name
-    </a>
-    <span> / </span>
-    <span>@Model.School.Name</span>
-</nav>
+            <div>
+                <strong>Above the Line:</strong>
+                @Model.AboveTheLineCount (@Model.FormatPercentage(Model.AboveTheLineCount))<br />
+                <strong>Below the Line:</strong>
+                @Model.BelowTheLineCount (@Model.FormatPercentage(Model.BelowTheLineCount))<br />
+                <strong>Total:</strong> @Model.TotalCount students
+                <div class="mt-3">
+                    <strong>Select a Grade:</strong>
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                        @foreach (var grade in Model.GradeDistribution.Select(g => g.Grade).OrderBy(g => g))
+                        {
+                            <a class="btn btn-sm btn-outline-primary"
+                            asp-page="/GuidanceAlignment/Students"
+                            asp-route-schoolId="@Model.School.Id"
+                            asp-route-grade="@grade">
+                                Grade @grade
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<h2>@Model.School.Name - Guidance Alignment Overview</h2>
-<p><strong>Current Checkpoint:</strong> @( "CP" + Model.CurrentCheckpoint )</p>
-
-<div style="max-width: 500px; height: 300px; margin: auto;">
-    <canvas id="gradeChart"></canvas>
+        <!-- Right Column: Chart -->
+        <div class="col-md-6 d-flex justify-content-center">
+            <div style="max-width: 100%; width: 100%; max-height: 400px;">
+                <canvas id="quadrantPie"></canvas>
+            </div>
+        </div>
+    </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            Quadrant data is not yet available for this checkpoint at @Model.School.Name.
+        </div>
+    }
 </div>
 
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const labels = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => "Grade " + g.Grade)));
-        const data = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Count)));
-        const grades = @Html.Raw(Json.Serialize(Model.GradeDistribution.Select(g => g.Grade)));
 
-        const ctx = document.getElementById('gradeChart');
-        const chart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Enrollment by Grade',
-                    data: data,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));
+    const aboveCount = @Model.AboveTheLineCount;
+    const belowCount = @Model.BelowTheLineCount;
+    const total = @Model.TotalCount;
+
+    const quadrantPie = new Chart(document.getElementById('quadrantPie'), {
+        type: 'pie',
+        data: {
+            labels: [
+                `Challenge (${quadrantCounts["Challenge"] || 0})`,
+                `Benchmark (${quadrantCounts["Benchmark"] || 0})`,
+                `Strategic (${quadrantCounts["Strategic"] || 0})`,
+                `Intensive (${quadrantCounts["Intensive"] || 0})`
+            ],
+            datasets: [{
+                data: [
+                    quadrantCounts["Challenge"] || 0,
+                    quadrantCounts["Benchmark"] || 0,
+                    quadrantCounts["Strategic"] || 0,
+                    quadrantCounts["Intensive"] || 0
+                ],
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'], // Blue, Green, Yellow, Red
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
                 },
-                onClick: function (evt, elements) {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const selectedGrade = grades[index];
-                        const schoolId = @Model.School.Id;
-
-                        const url = `/GuidanceAlignment/Students?schoolId=${schoolId}&grade=${selectedGrade}`;
-                        window.location.href = url;
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value} (${percent}%)`;
+                        }
                     }
                 }
             }
-        });
-    </script>
-}
+        }
+    });
+</script>

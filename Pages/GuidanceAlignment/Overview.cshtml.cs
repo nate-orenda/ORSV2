@@ -18,11 +18,23 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         [BindProperty(SupportsGet = true)]
         public int SchoolId { get; set; }
-
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
         public School School { get; set; } = new();
         public string CurrentCheckpoint { get; set; } = string.Empty;
         public List<(int Grade, int Count)> GradeDistribution { get; set; } = new();
+        public record QuadrantSummary(int Grade, string Quadrant, int Count);
+        public List<QuadrantSummary> QuadrantSummaries { get; set; } = new();
+        public int AboveTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Challenge" or "Benchmark").Sum(q => q.Count);
+        public int BelowTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Strategic" or "Intensive").Sum(q => q.Count);
+        public int TotalCount => AboveTheLineCount + BelowTheLineCount;
 
+        public Dictionary<string, int> QuadrantCounts => QuadrantSummaries
+            .Where(q => !string.IsNullOrEmpty(q.Quadrant))
+            .GroupBy(q => q.Quadrant!)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+
+        public string FormatPercentage(int part) =>
+            TotalCount > 0 ? $"{(part * 100.0 / TotalCount):0.#}%" : "0%";
         public async Task<IActionResult> OnGetAsync()
         {
             var today = DateTime.Today;
@@ -50,6 +62,19 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             int cp = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, today);
             CurrentCheckpoint = cp.ToString();
+
+            QuadrantSummaries = await _context.GAResults
+                .Where(r => r.SchoolId == SchoolId && r.CP == cp)
+                .GroupBy(r => new { r.Grade, r.Quadrant })
+                .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant, g.Count()))
+                .ToListAsync();
+
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
+                new BreadcrumbItem { Title = School.District.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = School.DistrictId }) },
+                new BreadcrumbItem { Title = School.Name }
+            };
 
             return Page();
         }

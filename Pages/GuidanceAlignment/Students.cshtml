@@ -15,21 +15,17 @@
             <th>Gender</th>
             <th>SWD</th>
             <th>SED</th>
-            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var student in Model.Students)
         {
             <tr>
-                <td>@student.LastName, @student.FirstName</td>
+                <td><a href="#" class="view-profile" data-bs-toggle="modal" data-bs-target="#profileModal"
+                        data-student-id="@student.ResultId">@student.LastName, @student.FirstName</a></td>
                 <td>@student.Gender</td>
                 <td>@(student.SWD == true ? "Yes" : "")</td>
                 <td>@(student.SED == true ? "Yes" : "")</td>
-                <td>
-                    <a href="#" class="view-profile" data-bs-toggle="modal" data-bs-target="#profileModal"
-                        data-student-id="@student.ResultId">View</a>
-                </td>
             </tr>
         }
     </tbody>
