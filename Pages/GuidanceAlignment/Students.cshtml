@@ -13,6 +13,8 @@
     <div class="col-md-6 mb-4">
         <div class="card shadow-sm p-3">
             <h6 class="text-center mb-3">Indicators Met – Grade @Model.Grade</h6>
+            <pre>@JsonSerializer.Serialize(Model.IndicatorSummaries)</pre>
+
             @if (Model.IndicatorSummaries?.Any() == true)
             {
                 <canvas id="indicatorChart"></canvas>
@@ -78,6 +80,11 @@
     </div>
 </div>
 
+<style>
+    #indicatorChart {
+        max-height: 300px;
+    }
+</style>
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -106,12 +113,16 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const indicatorData = [{},{},{},{}];
+        const indicatorData = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorSummaries));
         const indicatorLabels = indicatorData.map(i => i.Name);
         const indicatorPercents = indicatorData.map(i => i.PercentMet.toFixed(1));
 
         if (indicatorData.length > 0) {
-            new Chart(document.getElementById('indicatorChart'), {
+            if (window.indicatorChartInstance) {
+                window.indicatorChartInstance.destroy();
+            }
+
+            window.indicatorChartInstance = new Chart(document.getElementById('indicatorChart'), {
                 type: 'bar',
                 data: {
                     labels: indicatorLabels,
@@ -123,18 +134,23 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
                             max: 100,
                             title: { display: true, text: '% Met' }
                         }
+                    },
+                    plugins: {
+                        legend: { display: false }
                     }
                 }
             });
         }
     });
 </script>
+
 
 <script>
     const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));

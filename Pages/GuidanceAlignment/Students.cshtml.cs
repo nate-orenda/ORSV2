@@ -18,7 +18,12 @@ namespace ORSV2.Pages.GuidanceAlignment
         public string SchoolName { get; set; } = "";
         public List<GAResults> Students { get; set; } = new();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
-        public class IndicatorSummary { public string Name = string.Empty; public double PercentMet; }
+        public class IndicatorSummary
+        {
+            public string Name { get; set; } = string.Empty;
+            public double PercentMet { get; set; }
+        }
+
         public List<IndicatorSummary> IndicatorSummaries { get; set; } = new();
         public record QuadrantSummary(int Grade, string Quadrant, int Count);
         public List<QuadrantSummary> QuadrantSummaries { get; set; } = new();
