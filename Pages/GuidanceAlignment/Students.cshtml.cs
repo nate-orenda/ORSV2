@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
@@ -7,10 +6,9 @@ using ORSV2.Utilities;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
-    public class StudentsModel : PageModel
+    public class StudentsModel : GABasePageModel
     {
-        private readonly ApplicationDbContext _context;
-        public StudentsModel(ApplicationDbContext context) => _context = context;
+        public StudentsModel(ApplicationDbContext context) : base(context) {}
 
         [BindProperty(SupportsGet = true)] public int SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public int Grade { get; set; }
@@ -22,8 +20,8 @@ namespace ORSV2.Pages.GuidanceAlignment
         {
             public string Name { get; set; } = string.Empty;
             public double PercentMet { get; set; }
+            public int CountMet { get; set; }
         }
-
         public List<IndicatorSummary> IndicatorSummaries { get; set; } = new();
         public record QuadrantSummary(int Grade, string Quadrant, int Count);
         public List<QuadrantSummary> QuadrantSummaries { get; set; } = new();
@@ -40,6 +38,9 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         public async Task<IActionResult> OnGetAsync()
         {
+            if (!await AuthorizeAsync(SchoolId))
+                return Forbid();
+
             var today = DateTime.Today;
             var school = await _context.Schools.Include(s => s.District).FirstOrDefaultAsync(s => s.Id == SchoolId);
             if (school == null) return NotFound();
@@ -89,7 +90,8 @@ namespace ORSV2.Pages.GuidanceAlignment
                 IndicatorSummaries.Add(new IndicatorSummary
                 {
                     Name = ind.IndicatorName,
-                    PercentMet = Students.Count > 0 ? (metCount * 100.0 / Students.Count) : 0
+                    PercentMet = Students.Count > 0 ? (metCount * 100.0 / Students.Count) : 0,
+                    CountMet = (int)metCount
                 });
             }
 

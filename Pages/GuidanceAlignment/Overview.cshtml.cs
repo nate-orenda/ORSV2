@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
@@ -7,14 +6,9 @@ using ORSV2.Utilities;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
-    public class OverviewModel : PageModel
+    public class OverviewModel : GABasePageModel
     {
-        private readonly ApplicationDbContext _context;
-
-        public OverviewModel(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        public OverviewModel(ApplicationDbContext context) : base(context) {}
 
         [BindProperty(SupportsGet = true)]
         public int SchoolId { get; set; }
@@ -37,6 +31,10 @@ namespace ORSV2.Pages.GuidanceAlignment
             TotalCount > 0 ? $"{(part * 100.0 / TotalCount):0.#}%" : "0%";
         public async Task<IActionResult> OnGetAsync()
         {
+
+            if (!await AuthorizeAsync(SchoolId))
+                return Forbid();
+
             var today = DateTime.Today;
             School = await _context.Schools.Include(s => s.District)
                 .FirstOrDefaultAsync(s => s.Id == SchoolId);

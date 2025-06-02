@@ -6,26 +6,28 @@ using ORSV2.Models;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
-    public class SchoolsModel : PageModel
+    public class SchoolsModel : GABasePageModel
     {
-        private readonly ApplicationDbContext _context;
-
-        public SchoolsModel(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        public SchoolsModel(ApplicationDbContext context) : base(context) {}
 
         [BindProperty(SupportsGet = true)]
         public int DistrictId { get; set; }
 
         public List<School> Schools { get; set; } = new();
 
-        public async Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync()
         {
+            if (!await AuthorizeAsync())
+                return Forbid();
+
             Schools = await _context.Schools
-                .Where(s => s.DistrictId == DistrictId && !s.Inactive)
+                .Where(s => !s.Inactive &&
+                    s.DistrictId == DistrictId &&
+                    AllowedSchoolIds.Contains(s.Id))
                 .OrderBy(s => s.Name)
                 .ToListAsync();
+
+            return Page();
         }
     }
 }

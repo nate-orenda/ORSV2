@@ -8,10 +8,46 @@
 <!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
 
-<div class="row align-items-stretch">
+<div class="row">
     <!-- Left: Indicator Bar Chart -->
     <div class="col-md-6 mb-4 d-flex">
-        <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-end">
+        <div class="card shadow-sm p-3 w-100 d-flex flex-column align-self-end">
+            <!-- Summary Table (no header) -->
+            <table class="table table-sm mb-2">
+                <tr>
+                    <td><strong>Grade:</strong> @Model.Grade</td>
+                    <td><strong>Checkpoint:</strong> @Model.CurrentCheckpoint</td>
+                    <td><strong>Above %:</strong> @Model.FormatPercentage(@Model.AboveTheLineCount)</td>
+                    <td><strong>Above #:</strong> @Model.AboveTheLineCount</td>
+                    <td><strong>Total:</strong> @Model.TotalCount</td>
+                </tr>
+            </table>
+
+            <!-- Detailed Indicator Table -->
+            <table class="table table-sm table-bordered text-center mb-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Grade</th>
+                        <th>CP</th>
+                        <th>Indicator</th>
+                        <th>% Met</th>
+                        <th># Met</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in Model.IndicatorSummaries)
+                    {
+                        <tr>
+                            <td>@Model.Grade</td>
+                            <td>@Model.CurrentCheckpoint</td>
+                            <td>@i.Name</td>
+                            <td>@i.PercentMet.ToString("0.0")%</td>
+                            <td>@i.CountMet</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
             <h6 class="text-center mb-3">Indicators Met – Grade @Model.Grade</h6>
             @if (Model.IndicatorSummaries?.Any() == true)
             {
