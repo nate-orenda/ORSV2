@@ -84,6 +84,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                     "Affiliation" => Students.Count(s => s.Affiliation == true),
                     "FAFSA" => Students.Count(s => s.FAFSA == true),
                     "CollegeApplication" => Students.Count(s => s.CollegeApplication == true),
+                    "Attendance" => Students.Count(s => s.Attendance == true), // ✅ Added line
                     _ => 0
                 };
 
