@@ -87,6 +87,9 @@ namespace ORSV2.Models
 
         [MaxLength(100)]
         public string? CounselorName { get; set; }
+        public double? CurrentGPA { get; set; }
+        public double? CumulativeGPA { get; set; }
+        public decimal? CreditsCompleted { get; set; }
 
         // Navigation
         public School School { get; set; }

@@ -80,6 +80,16 @@
             <tr>
                 <th>Name</th>
                 <th>Local ID</th>
+                <th>Grade</th>
+                <th>Counselor</th>
+                <th>Race/Ethnicity</th>
+                <th>SWD</th>
+                <th>SED</th>
+                <th>LF</th>
+                <th>Years In Program</th>
+                <th>Current GPA</th>
+                <th>Cumulative GPA</th>
+                <th>Credits Completed</th>
                 <th>Quadrant</th>
                 <th>OnTrack</th>
                 <!-- Add more columns as needed -->
@@ -93,6 +103,16 @@
                     data-student-id="@s.ResultId">@s.LastName, @s.FirstName</a>
                 </td>
                 <td>@s.LocalStudentId</td>
+                <td>@s.Grade</td>
+                <td>@s.CounselorName</td>
+                <td>@s.RaceEthnicity</td>
+                <td>@s.SWD</td>
+                <td>@s.SED</td>
+                <td>@s.LF</td>
+                <td>@s.YrsInProgram</td>
+                <td>@s.CurrentGPA</td>
+                <td>@s.CumulativeGPA</td>
+                <td>@s.CreditsCompleted</td>
                 <td>@s.Quadrant</td>
                 <td>@(s.OnTrack == true ? "Yes" : "No")</td>
             </tr>
