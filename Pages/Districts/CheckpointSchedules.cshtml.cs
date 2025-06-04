@@ -13,20 +13,18 @@ namespace ORSV2.Pages.Districts
     public class CheckpointSchedulesModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-
+    
+        [BindProperty(SupportsGet = true)]
+        public int DistrictId { get; set; }
+        [BindProperty]
+        public List<GACheckpointScheduleViewModel> Schedules { get; set; } = new();
         public CheckpointSchedulesModel(ApplicationDbContext context)
         {
             _context = context;
         }
-
-        [BindProperty(SupportsGet = true)]
-        public int DistrictId { get; set; }
-
-        [BindProperty]
-        public List<GACheckpointScheduleViewModel> Schedules { get; set; }
-
         public string DistrictName { get; set; } = "";
-
+        [BindProperty]
+        public List<DateTime?> CheckpointDates { get; set; } = new() { null, null, null, null, null };
         public bool CanEdit => User.IsInRole("OrendaAdmin") || User.IsInRole("DistrictAdmin");
 
         public async Task<IActionResult> OnGetAsync()
@@ -83,6 +81,28 @@ namespace ORSV2.Pages.Districts
 
             await _context.SaveChangesAsync();
             TempData["Saved"] = true;
+            return RedirectToPage(new { DistrictId });
+        }
+        public async Task<IActionResult> OnPostApplyToAllAsync()
+        {
+            if (!CanEdit) return Forbid();
+
+            var schedules = await _context.GACheckpointSchedule
+                .Where(s => s.DistrictId == DistrictId)
+                .ToListAsync();
+
+            foreach (var s in schedules)
+            {
+                if (CheckpointDates[0] is DateTime cp1) s.Checkpoint1Date = cp1;
+                if (CheckpointDates[1] is DateTime cp2) s.Checkpoint2Date = cp2;
+                if (CheckpointDates[2] is DateTime cp3) s.Checkpoint3Date = cp3;
+                if (CheckpointDates[3] is DateTime cp4) s.Checkpoint4Date = cp4;
+                if (CheckpointDates[4] is DateTime cp5) s.Checkpoint5Date = cp5;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Saved"] = true;
+
             return RedirectToPage(new { DistrictId });
         }
     }

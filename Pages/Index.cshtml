@@ -1,27 +1,48 @@
 ﻿@page
 @model ORSV2.Pages.IndexModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Welcome";
+    Layout = "_Layout";
 }
+<div class="container py-4">
 
-<div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="display-6">Welcome, <strong>@Model.UserName</strong> 👋</h2>
-            <p class="text-muted">Here's a quick snapshot of enrollment data.</p>
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="mb-3">Welcome, @Model.UserName</h4>
+            <canvas id="enrollmentChart" height="120"></canvas>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm rounded-3">
-                <div class="card-header bg-primary text-white">
-                    Enrollment by @Model.ScopeLabel
-                </div>
-                <div class="card-body">
-                    <canvas id="enrollmentChart" height="200"></canvas>
-                </div>
-            </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="mb-3">Accessible Schools</h5>
+            @if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser"))
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var district in Model.DistrictSchools)
+                    {
+                        <li class="list-group-item">
+                            <strong>@district.Key</strong>
+                            <ul class="ms-3 mt-1">
+                                @foreach (var schoolName in district.Value)
+                                {
+                                    <li>@schoolName</li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var school in Model.EnrollmentSummaries)
+                    {
+                        <li class="list-group-item">@school.Name (@school.Count students)</li>
+                    }
+                </ul>
+            }
+
         </div>
     </div>
 </div>
@@ -29,48 +50,37 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const labels = [@Html.Raw(Model.ChartLabels)];
-        const data = [@Html.Raw(Model.ChartData)];
-
-        new Chart(document.getElementById('enrollmentChart'), {
+        const ctx = document.getElementById('enrollmentChart').getContext('2d');
+        const chart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels: [@Html.Raw(Model.ChartLabels)],
                 datasets: [{
-                    label: 'Students',
-                    data: data,
-                    backgroundColor: 'rgba(13, 110, 253, 0.6)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
+                    label: 'Enrollment',
+                    data: [@Html.Raw(Model.ChartData)],
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Students'
-                        }
-                    },
                     x: {
                         ticks: {
-                            maxRotation: 90,
-                            minRotation: 45
-                        },
-                        title: {
-                            display: true,
-                            text: '@Model.ScopeLabel Name'
+                            autoSkip: false,
+                            maxRotation: 0,
+                            font: { size: 10 }
                         }
+                    },
+                    y: {
+                        beginAtZero: true
                     }
                 }
             }
         });
     </script>
 }
-

@@ -14,6 +14,7 @@ namespace ORSV2.Pages
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         public string ScopeLabel { get; set; } = "District";
+        public Dictionary<string, List<string>> DistrictSchools { get; set; } = new();
 
         public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
@@ -48,6 +49,13 @@ namespace ORSV2.Pages
             if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager") || roles.Contains("OrendaUser"))
             {
                 ScopeLabel = "District";
+
+                var districts = await _context.Districts.ToDictionaryAsync(d => d.Id, d => d.Name);
+                var schools = await _context.Schools.ToListAsync();
+
+                DistrictSchools = schools
+                    .GroupBy(s => districts.ContainsKey(s.DistrictId) ? districts[s.DistrictId] : "Unknown")
+                    .ToDictionary(g => g.Key, g => g.Select(s => s.Name).OrderBy(n => n).ToList());
 
                 var districtNames = await _context.Districts
                     .ToDictionaryAsync(d => d.Id, d => d.Name);

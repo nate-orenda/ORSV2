@@ -72,9 +72,9 @@ namespace ORSV2.Models
         public bool? OnTrack { get; set; }
 
         public bool? GPA { get; set; }
-        public string? AssessmentsELA { get; set; }
-        public string? AssessmentsMath { get; set; }
-        public string? Grades { get; set; }
+        public bool? AssessmentsELA { get; set; }
+        public bool? AssessmentsMath { get; set; }
+        public bool? Grades { get; set; }
         public bool? Referrals { get; set; }
         public bool? Attendance { get; set; }
         public bool? Affiliation { get; set; }

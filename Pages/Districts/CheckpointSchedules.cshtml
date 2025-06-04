@@ -11,6 +11,23 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
+@if (Model.CanEdit)
+{
+    <form method="post" asp-page-handler="ApplyToAll" class="mb-4">
+        <h5>Apply Checkpoint Date to All Schools</h5>
+        <div class="row g-2">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <div class="col-md-2">
+                    <label class="form-label">Checkpoint @i</label>
+                    <input type="date" class="form-control" name="CheckpointDates[@(i - 1)]" />
+                </div>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Apply to All</button>
+        <input type="hidden" name="DistrictId" value="@Model.DistrictId" />
+    </form>
+}
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
