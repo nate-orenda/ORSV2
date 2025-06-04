@@ -12,6 +12,19 @@
         <dt class="col-sm-4">Years in Program</dt><dd class="col-sm-8">@Model.Student.YrsInProgram</dd>
         <dt class="col-sm-4">Counselor</dt><dd class="col-sm-8">@Model.Student.Counselor</dd>
     </dl>
+    <h5 class="mt-4">Checkpoint Indicators</h5>
+    <ul class="list-group list-group-flush">
+        @foreach (var indicator in Model.StudentIndicators)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                @indicator.Name
+                <span class="badge bg-@(indicator.Met ? "success" : "secondary")">
+                    @(indicator.Met ? "Met" : "Not Met")
+                </span>
+            </li>
+        }
+    </ul>
+
     <div class="text-end text-muted small mt-4">
         Last Updated: @Model.Student.DateLastUpdated?.ToString("g")
     </div>

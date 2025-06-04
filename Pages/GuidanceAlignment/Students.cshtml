@@ -73,53 +73,82 @@
 
 
 <!-- Existing student table stays below -->
-<div class="card shadow-sm mb-4 p-4">
-    <h5 class="mb-3">Student List – Grade @Model.Grade</h5>
-    <table class="table table-bordered table-striped">
-        <thead class="table-light">
-            <tr>
-                <th>Name</th>
-                <th>Local ID</th>
-                <th>Grade</th>
-                <th>Counselor</th>
-                <th>Race/Ethnicity</th>
-                <th>SWD</th>
-                <th>SED</th>
-                <th>LF</th>
-                <th>Years In Program</th>
-                <th>Current GPA</th>
-                <th>Cumulative GPA</th>
-                <th>Credits Completed</th>
-                <th>Quadrant</th>
-                <th>OnTrack</th>
-                <!-- Add more columns as needed -->
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var s in Model.Students)
-        {
-            <tr>
-                <td><a href="#" class="view-profile" data-bs-toggle="modal" data-bs-target="#profileModal"
-                    data-student-id="@s.ResultId">@s.LastName, @s.FirstName</a>
-                </td>
-                <td>@s.LocalStudentId</td>
-                <td>@s.Grade</td>
-                <td>@s.CounselorName</td>
-                <td>@s.RaceEthnicity</td>
-                <td>@s.SWD</td>
-                <td>@s.SED</td>
-                <td>@s.LF</td>
-                <td>@s.YrsInProgram</td>
-                <td>@s.CurrentGPA</td>
-                <td>@s.CumulativeGPA</td>
-                <td>@s.CreditsCompleted</td>
-                <td>@s.Quadrant</td>
-                <td>@(s.OnTrack == true ? "Yes" : "No")</td>
-            </tr>
-        }
-        </tbody>
-    </table>
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+        <h5 class="card-title mb-4">Student List – Grade @Model.Grade</h5>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="schoolsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Local ID</th>
+                        <th>Grade</th>
+                        <th>Counselor</th>
+                        <th>Race / Ethnicity</th>
+                        <th>SWD</th>
+                        <th>SED</th>
+                        <th>LF</th>
+                        <th>Years in Program</th>
+                        <th>Current GPA</th>
+                        <th>Cumulative GPA</th>
+                        <th>Credits</th>
+                        <th>On Track</th>
+                        <th>Quadrant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Students)
+                    {
+                        <tr>
+                            <td>
+                                <a href="#" class="fw-semibold text-decoration-none view-profile" data-bs-toggle="modal"
+                                   data-bs-target="#profileModal" data-student-id="@s.ResultId">
+                                    @s.LastName, @s.FirstName
+                                </a>
+                            </td>
+                            <td><span class="badge bg-secondary">@s.LocalStudentId</span></td>
+                            <td>@s.Grade</td>
+                            <td>@s.CounselorName</td>
+                            <td>@s.RaceEthnicity</td>
+                            <td>
+                                <span class="badge bg-@(s.SWD == true ? "warning" : "light text-muted")">
+                                    @(s.SWD == true ? "Yes" : "No")
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-@(s.SED == true ? "info" : "light text-muted")">
+                                    @(s.SED == true ? "Yes" : "No")
+                                </span>
+                            </td>
+                            <td>@s.LF</td>
+                            <td>@s.YrsInProgram</td>
+                            <td>@(s.CurrentGPA?.ToString("0.00") ?? "-")</td>
+                            <td>@(s.CumulativeGPA?.ToString("0.00") ?? "-")</td>
+                            <td>@(s.CreditsCompleted?.ToString("0.#") ?? "-")</td>
+                            <td>
+                                <span class="badge bg-@(s.OnTrack == true ? "success" : "secondary")">
+                                    @(s.OnTrack == true ? "Yes" : "No")
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
+                                    s.Quadrant == "Benchmark" ? "bg-success" :
+                                    s.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                                    s.Quadrant == "Intensive" ? "bg-danger" :
+                                    "bg-secondary")">
+                                    @s.Quadrant
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
 
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
