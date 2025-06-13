@@ -36,7 +36,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         }
         public List<IndicatorRequirement> IndicatorRequirements { get; set; } = new();
         public GAAGProgress? AGProgress { get; set; }
-
+        public List<SubjectGrade> NonAGGrades { get; set; } = new();
         public string QuadrantLevel => Student.Quadrant ?? "Unknown";
 
         public string QuadrantColorClass => (Student.Quadrant ?? "").ToLower() switch
@@ -193,6 +193,31 @@ namespace ORSV2.Pages.GuidanceAlignment
                 })
                 .ToList();
 
+                NonAGGrades = (await (
+                    from g in _context.Grades
+                    join c in _context.Courses
+                        on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, c.CourseNumber }
+                    where g.StudentId == Student.StudentId
+                        && g.DistrictId == school.DistrictId
+                        && string.IsNullOrEmpty(c.CSU_SubjectAreaCode)
+                        && string.IsNullOrEmpty(c.UC_SubjectAreaCode)
+                    select new SubjectGrade
+                    {
+                        SchoolYear = g.SchoolYear,
+                        Term = g.Term,
+                        CourseNumber = g.CN,
+                        Title = c.Title,
+                        GradeLevel = g.GradeLevel,
+                        Mark = g.Mark,
+                        Type = g.Type,
+                        CreditsEarned = g.CC
+                    }).ToListAsync())
+                    .Where(g => int.TryParse(g.GradeLevel, out var gl) && gl > 8)
+                    .OrderBy(g => g.SchoolYear)
+                    .ThenBy(g => g.Term)
+                    .ThenBy(g => g.GradeLevel)
+                    .ThenBy(g => g.Title)
+                    .ToList();
 
             return Page();
         }

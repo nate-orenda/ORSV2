@@ -148,7 +148,7 @@
                                 @(Model.Student.Referrals == true ? "Met" : "Not Met")
                             </span>
                         </div>
-                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Referrals")</em></p>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Discipline")</em></p>
                     </div>
                 </div>
             </div>
@@ -206,6 +206,8 @@
         }
     </div>
 
+ @if (HasIndicator("AGGrades"))
+        {
     <h5 class="text-center mt-5 mb-3">
             A–G Grades
             <span class="badge @(Model.Student.AGGrades == true ? "bg-success" : "bg-danger") ms-2">
@@ -272,7 +274,43 @@
         </div>
     </div> <br/>
 }
+@if (Model.NonAGGrades.Any())
+{
+    <h5 class="text-center mt-5 mb-3">Non-A–G Courses</h5>
 
+    <div class="table-responsive">
+        <table class="table table-sm table-striped small">
+            <thead>
+                <tr>
+                    <th>School Year</th>
+                    <th>Term</th>
+                    <th>Course #</th>
+                    <th>Title</th>
+                    <th>Grade</th>
+                    <th>Mark</th>
+                    <th>Type</th>
+                    <th>Credits</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.NonAGGrades)
+            {
+                <tr>
+                    <td>@row.SchoolYear</td>
+                    <td>@row.Term</td>
+                    <td>@row.CourseNumber</td>
+                    <td>@row.Title</td>
+                    <td>@row.GradeLevel</td>
+                    <td>@row.Mark</td>
+                    <td>@row.Type</td>
+                    <td>@row.CreditsEarned</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+}
 
     @if (HasIndicator("AGSchedule") && Model.AGProgress != null)
     {
