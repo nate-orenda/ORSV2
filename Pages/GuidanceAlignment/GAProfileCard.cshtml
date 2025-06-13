@@ -3,6 +3,11 @@
 @{
     Layout = null;
 }
+@functions {
+    bool HasIndicator(string name) => Model.StudentIndicators.Any(i => i.Name == name);
+    string GetRequirementText(string name) =>
+        Model.IndicatorRequirements.FirstOrDefault(r => r.Name == name)?.RequirementText ?? "";
+}
 
 <div>
     <dl class="row mt-3">
@@ -12,18 +17,294 @@
         <dt class="col-sm-4">Years in Program</dt><dd class="col-sm-8">@Model.Student.YrsInProgram</dd>
         <dt class="col-sm-4">Counselor</dt><dd class="col-sm-8">@Model.Student.Counselor</dd>
     </dl>
-    <h5 class="mt-4">Checkpoint Indicators</h5>
-    <ul class="list-group list-group-flush">
+    <h5 class="text-center mt-5 mb-3">Checkpoint Indicators</h5>
+    @* <ul class="list-group list-group-flush">
         @foreach (var indicator in Model.StudentIndicators)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                @indicator.Name
-                <span class="badge bg-@(indicator.Met ? "success" : "secondary")">
-                    @(indicator.Met ? "Met" : "Not Met")
-                </span>
-            </li>
+            <div>
+                <strong>
+                    <a href="#" class="indicator-link" data-indicator="@indicator.Name" data-studentid="@Model.Student.ResultId">
+                        @indicator.Name
+                    </a>
+                </strong>:
+                @indicator.Met
+            </div>
         }
-    </ul>
+    </ul> *@
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+
+        @if (HasIndicator("Attendance"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Attendance</h6>
+                            <span class="badge @(Model.Student.Attendance == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.Attendance == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-1"><strong>Total Absences:</strong> @Model.AttendanceAbsences</p>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Attendance")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+        @if (HasIndicator("GPA"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">GPA</h6>
+                            <span class="badge @(Model.Student.GPA == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.GPA == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-1"><strong>Cumulative GPA:</strong> @Model.CumulativeGPA</p>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("GPA")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+        @if (HasIndicator("OnTrack"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">On Track</h6>
+                            <span class="badge @(Model.Student.OnTrack == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.OnTrack == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-1"><strong>Credits Completed:</strong> @Model.CreditsCompleted</p>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("OnTrack")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("Affiliation"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Affiliation</h6>
+                            <span class="badge @(Model.Student.Affiliation == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.Affiliation == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Affiliation")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("FAFSA"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">FAFSA</h6>
+                            <span class="badge @(Model.Student.FAFSA == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.FAFSA == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("FAFSA")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("CollegeApplication"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">College Application</h6>
+                            <span class="badge @(Model.Student.CollegeApplication == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.CollegeApplication == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("CollegeApplication")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("Referrals"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Referrals</h6>
+                            <span class="badge @(Model.Student.Referrals == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.Referrals == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Referrals")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("Grades"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Grades</h6>
+                            <span class="badge @(Model.Student.Grades == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.Grades == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Grades")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("ELA"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">ELA</h6>
+                            <span class="badge @(Model.Student.AssessmentsELA == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.AssessmentsELA == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("ELA")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (HasIndicator("Math"))
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm rounded-3 border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Math</h6>
+                            <span class="badge @(Model.Student.AssessmentsMath == true ? "bg-success" : "bg-danger")">
+                                @(Model.Student.AssessmentsMath == true ? "Met" : "Not Met")
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small"><em>Requirement: @GetRequirementText("Math")</em></p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <h5 class="text-center mt-5 mb-3">
+            A–G Grades
+            <span class="badge @(Model.Student.AGGrades == true ? "bg-success" : "bg-danger") ms-2">
+                @(Model.Student.AGGrades == true ? "Met" : "Not Met")
+            </span>
+        </h5>
+@foreach (var (code, name, actual, target) in new[] {
+
+    ("A", "A. History", Model.AGProgress.CreditsEarned_HIS, Model.AGProgress.TargetEarned_HIS),
+    ("B", "B. English", Model.AGProgress.CreditsEarned_ELA, Model.AGProgress.TargetEarned_ELA),
+    ("C", "C. Math", Model.AGProgress.CreditsEarned_MATH, Model.AGProgress.TargetEarned_MATH),
+    ("D", "D. Science", Model.AGProgress.CreditsEarned_SCI, Model.AGProgress.TargetEarned_SCI),
+    ("E", "E. Foreign Language", Model.AGProgress.CreditsEarned_FL, Model.AGProgress.TargetEarned_FL),
+    ("F", "F. VAPA", Model.AGProgress.CreditsEarned_VA, Model.AGProgress.TargetEarned_VA),
+    ("G", "G. College-Prep Elective", Model.AGProgress.CreditsEarned_PREP, Model.AGProgress.TargetEarned_PREP)
+}) {
+    var gradeGroup = Model.SubjectGradesByArea.FirstOrDefault(g => g.SubjectCode == code);
+
+    <div class="col">
+        <div class="card h-100 border-0 shadow-sm rounded-3">
+            <div class="card-body">
+                <h6 class="card-title mb-2">@name</h6>
+                <p class="mb-2"><strong>Earned:</strong> @actual / @target</p>
+
+                @if (gradeGroup != null && gradeGroup.Grades.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped small mb-0">
+                            <thead>
+                                <tr>
+                                    <th>School Year</th>
+                                    <th>Term</th>
+                                    <th>Course #</th>
+                                    <th>Title</th>
+                                    <th>Grade</th>
+                                    <th>Mark</th>
+                                    <th>Type</th>
+                                    <th>Credits</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in gradeGroup.Grades)
+                                {
+                                    <tr>
+                                        <td>@row.SchoolYear</td>
+                                        <td>@row.Term</td>
+                                        <td>@row.CourseNumber</td>
+                                        <td>@row.Title</td>
+                                        <td>@row.GradeLevel</td>
+                                        <td>@row.Mark</td>
+                                        <td>@row.Type</td>
+                                        <td>@row.CreditsEarned</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0">No grades found for this subject.</p>
+                }
+            </div>
+        </div>
+    </div> <br/>
+}
+
+
+    @if (HasIndicator("AGSchedule") && Model.AGProgress != null)
+    {
+        <h5 class="text-center mt-5 mb-3">
+            A–G Schedule
+            <span class="badge @(Model.Student.AGSchedule == true ? "bg-success" : "bg-danger") ms-2">
+                @(Model.Student.AGSchedule == true ? "Met" : "Not Met")
+            </span>
+        </h5>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+
+            @foreach (var (name, actual, target) in new[] {
+                ("A. History", Model.AGProgress.CreditsScheduled_HIS, Model.AGProgress.TargetScheduled_HIS),
+                ("B. English (ELA)", Model.AGProgress.CreditsScheduled_ELA, Model.AGProgress.TargetScheduled_ELA),
+                ("C. Math", Model.AGProgress.CreditsScheduled_MATH, Model.AGProgress.TargetScheduled_MATH),
+                ("D. Science", Model.AGProgress.CreditsScheduled_SCI, Model.AGProgress.TargetScheduled_SCI),
+                ("E. Foreign Language", Model.AGProgress.CreditsScheduled_FL, Model.AGProgress.TargetScheduled_FL),
+                ("F. VAPA", Model.AGProgress.CreditsScheduled_VA, Model.AGProgress.TargetScheduled_VA),
+                ("G. College-Prep Elective", Model.AGProgress.CreditsScheduled_PREP, Model.AGProgress.TargetScheduled_PREP)
+            }) {
+                <div class="col">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">@name</h6>
+                            <p class="mb-0"><strong>Scheduled:</strong> @actual / @target</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     <div class="text-end text-muted small mt-4">
         Last Updated: @Model.Student.DateLastUpdated?.ToString("g")
@@ -31,6 +312,9 @@
 </div>
 
 <script>
-    const modalTitle = "@Model.Student.FirstName @Model.Student.LastName (@Model.Student.LocalStudentId)";
-    document.getElementById("profileModalLabel").textContent = modalTitle;
+    const quadrant = "@Model.QuadrantLevel";
+    const colorClass = "@Model.QuadrantColorClass";
+    const fullName = "@Model.Student.FirstName @Model.Student.LastName (@Model.Student.LocalStudentId)";
+    document.getElementById("profileModalLabel").innerHTML =
+        `${fullName} <span class="badge ${colorClass} ms-2">${quadrant}</span>`;
 </script>

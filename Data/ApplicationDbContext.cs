@@ -17,6 +17,11 @@ namespace ORSV2.Data
         public DbSet<GACheckpointSchedule> GACheckpointSchedule { get; set; }
         public DbSet<GAResults> GAResults { get; set; }
         public DbSet<GAQuadrantIndicators> GAQuadrantIndicators { get; set; }
+        public DbSet<StudentAttendance> StudentAttendance { get; set; }
+        public DbSet<GAMatrix> GAMatrix { get; set; }
+        public DbSet<GAAGProgress> GAAGProgress { get; set; }
+        public DbSet<Grades> Grades { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

@@ -13,6 +13,7 @@ namespace ORSV2.Models
         public string DepartmentCode { get; set; }
         public string CSU_Rule_ValidationLevelCode { get; set; }
         public string CSU_SubjectAreaCode { get; set; }
+        public string UC_SubjectAreaCode { get; set; }
         public string UC_Rule_CanBeAnElective { get; set; }
         public decimal? CreditDefault { get; set; }
         public string InactiveStatusCode { get; set; }
