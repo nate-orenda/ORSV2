@@ -7,7 +7,6 @@ namespace ORSV2.Data
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
         public DbSet<District> Districts { get; set; }
         public DbSet<School> Schools { get; set; }
         public DbSet<STU> STU => Set<STU>();
@@ -21,7 +20,6 @@ namespace ORSV2.Data
         public DbSet<GAMatrix> GAMatrix { get; set; }
         public DbSet<GAAGProgress> GAAGProgress { get; set; }
         public DbSet<Grades> Grades { get; set; }
-
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -45,6 +43,8 @@ namespace ORSV2.Data
                 builder.ToTable("Courses", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
                 builder.HasKey(c => c.Id); // Only if there's a real primary key
             });
+
+            builder.Entity<GAAGProgress>().ToTable("GAAGProgress").HasNoKey();
 
             builder.Entity<GACheckpointSchedule>()
             .HasOne(s => s.School)

@@ -22,6 +22,39 @@ namespace ORSV2.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("GACheckpointSchedule", b =>
+                {
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("Checkpoint1Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Checkpoint2Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Checkpoint3Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Checkpoint4Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Checkpoint5Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ScheduleId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("GACheckpointSchedule");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -290,6 +323,10 @@ namespace ORSV2.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UC_SubjectAreaCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Courses", null, t =>
@@ -349,6 +386,443 @@ namespace ORSV2.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Districts");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.GAAGProgress", b =>
+                {
+                    b.Property<int>("CP")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("CreditsEarned_ELA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_FL")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_HIS")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_MATH")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_PREP")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_SCI")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsEarned_VA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_ELA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_FL")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_HIS")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_MATH")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_PREP")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_SCI")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CreditsScheduled_VA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("DateCalculated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("MetAllGradeBenchmarks")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("MetAllScheduleBenchmarks")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TargetEarned_ELA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_FL")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_HIS")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_MATH")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_PREP")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_SCI")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetEarned_VA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_ELA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_FL")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_HIS")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_MATH")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_PREP")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_SCI")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TargetScheduled_VA")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.ToTable("GAAGProgress", (string)null);
+                });
+
+            modelBuilder.Entity("ORSV2.Models.GAMatrix", b =>
+                {
+                    b.Property<int>("MatrixId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatrixId"));
+
+                    b.Property<int>("CP")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double?>("DefaultValue")
+                        .HasColumnType("float");
+
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DistrictKey")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Indicator")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IndicatorDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LCAPPriority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReadableValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolKey")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolYear")
+                        .HasColumnType("int");
+
+                    b.HasKey("MatrixId");
+
+                    b.ToTable("GAMatrix");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.GAQuadrantIndicators", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CP")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IndicatorName")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool?>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GAQuadrantIndicators");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.GAResults", b =>
+                {
+                    b.Property<int>("ResultId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ResultId"));
+
+                    b.Property<bool?>("AGGrades")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("AGSchedule")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("Affiliation")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("Age")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool?>("AssessmentsELA")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("AssessmentsMath")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("Attendance")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("CP")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("CollegeApplication")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Counselor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CounselorName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("CreditsCompleted")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<double?>("CumulativeGPA")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("CurrentGPA")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("DateInserted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateLastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ELPACLevel")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool?>("FAFSA")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool?>("Foster")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("GPA")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int?>("GradYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Grade")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("Grades")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("Homeless")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LF")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LocalSchoolId")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("LocalStudentId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool?>("Migrant")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("OnTrack")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Quadrant")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("RaceEthnicity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool?>("Referrals")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RowHash")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool?>("SED")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("SWD")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("YrsInProgram")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ResultId");
+
+                    b.HasIndex("DistrictId");
+
+                    b.HasIndex("SchoolId");
+
+                    b.ToTable("GAResults");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.Grades", b =>
+                {
+                    b.Property<int>("GradeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GradeId"));
+
+                    b.Property<decimal?>("CC")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CN")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("CR")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GradeLevel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalSchoolId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocalStudentID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Mark")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SchoolYear")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TN")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("GradeId");
+
+                    b.ToTable("Grades");
                 });
 
             modelBuilder.Entity("ORSV2.Models.STU", b =>
@@ -420,7 +894,7 @@ namespace ORSV2.Migrations
                     b.Property<string>("LocalDistrictCode")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("LocalSchoolCode")
+                    b.Property<string>("LocalSchoolId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LocalStudentID")
@@ -505,6 +979,34 @@ namespace ORSV2.Migrations
                     b.HasIndex("DistrictId");
 
                     b.ToTable("Schools");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.StudentAttendance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Absences")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SchoolYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StudentAttendance");
                 });
 
             modelBuilder.Entity("ORSV2.Models.UserSchool", b =>
@@ -613,6 +1115,17 @@ namespace ORSV2.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GACheckpointSchedule", b =>
+                {
+                    b.HasOne("ORSV2.Models.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("School");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("ORSV2.Models.ApplicationRole", null)
@@ -673,6 +1186,25 @@ namespace ORSV2.Migrations
                     b.HasOne("ORSV2.Models.School", "School")
                         .WithMany("Users")
                         .HasForeignKey("SchoolId");
+
+                    b.Navigation("District");
+
+                    b.Navigation("School");
+                });
+
+            modelBuilder.Entity("ORSV2.Models.GAResults", b =>
+                {
+                    b.HasOne("ORSV2.Models.District", "District")
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ORSV2.Models.School", "School")
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("District");
 
