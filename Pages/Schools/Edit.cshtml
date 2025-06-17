@@ -30,11 +30,16 @@
         <input asp-for="School.CDSCode" class="form-control" />
     </div>
 
+    <div class="form-group form-check">
+        <input asp-for="School.enabled" class="form-check-input" />
+        <label class="form-check-label" asp-for="School.enabled"></label>
+    </div>
+
     <div class="form-group">
         <label asp-for="School.Notes"></label>
         <textarea asp-for="School.Notes" class="form-control"></textarea>
     </div>
-
+    <br/>
     <button type="submit" class="btn btn-primary">Save Changes</button>
-    <a asp-page="Index" class="btn btn-secondary">Cancel</a>
+    <a asp-page="Index" asp-route-districtId="@Model.School.DistrictId" class="btn btn-secondary">Cancel</a>
 </form>

@@ -24,7 +24,7 @@ namespace ORSV2.Models
 
         [MaxLength(14)]
         public string? CDSCode { get; set; }
-
+        public bool enabled { get; set; } = false;
         public bool Inactive { get; set; } = false;
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }

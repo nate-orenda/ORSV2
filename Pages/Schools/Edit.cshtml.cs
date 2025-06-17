@@ -20,7 +20,7 @@ namespace ORSV2.Pages.Schools
         [BindProperty]
         public School School { get; set; } = new School();
 
-        public async Task<IActionResult> OnGetAsync(Guid id)
+        public async Task<IActionResult> OnGetAsync(int id)
         {
             var school = await _context.Schools.FindAsync(id);
             if (school == null)
@@ -41,6 +41,7 @@ namespace ORSV2.Pages.Schools
             schoolToUpdate.SchoolType = School.SchoolType;
             schoolToUpdate.CDSCode = School.CDSCode;
             schoolToUpdate.Notes = School.Notes;
+            schoolToUpdate.enabled = School.enabled;
 
             await _context.SaveChangesAsync();
             return RedirectToPage("Index", new { districtId = School.DistrictId });
