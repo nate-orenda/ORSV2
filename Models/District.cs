@@ -21,8 +21,18 @@ namespace ORSV2.Models
         public string? SISApiSecret { get; set; }
 
         [MaxLength(255)]
-        [Display(Name = "SIS Base URL")]
+        [Display(Name = "Aeries API Base URL")]
         public string? SISBaseUrl { get; set; }
+
+        [MaxLength(255)]
+        [Display(Name = "OneRoster API Base URL")]
+        public string? OneRosterBaseUrl { get; set; }
+
+        [MaxLength(255)]
+        public string? OneRosterKey { get; set; }
+
+        [MaxLength(255)]
+        public string? OneRosterSecret { get; set; }
 
         [MaxLength(500)]
         public string? Notes { get; set; }
