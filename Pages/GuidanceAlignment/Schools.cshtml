@@ -4,18 +4,25 @@
     ViewData["Title"] = "Select School";
 }
 
-<nav>
-    <a asp-page="/GuidanceAlignment/Index">Guidance Alignment</a>
-    <span> / </span>
-    <span>Select School</span>
-</nav>
+@await Html.PartialAsync("_Breadcrumbs", ViewData["Breadcrumbs"] as List<ORSV2.Models.BreadcrumbItem> ?? new())
 
-<h2>Select a School</h2>
-<ul>
-@foreach (var school in Model.Schools)
-{
-    <li>
-        <a asp-page="/GuidanceAlignment/Overview" asp-route-schoolId="@school.Id">@school.Name</a>
-    </li>
-}
-</ul>
+<h2 class="mb-4">Select a School</h2>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    @foreach (var school in Model.Schools)
+    {
+        <div class="col">
+            <a asp-page="/GuidanceAlignment/Overview"
+               asp-route-schoolId="@school.Id"
+               asp-route-districtId="@Model.DistrictId"
+               class="text-decoration-none text-dark">
+                <div class="card h-100 shadow-sm border-0 rounded-3 bg-white hover-shadow">
+                    <div class="card-body border-start border-5 border-success">
+                        <h5 class="card-title">@school.Name</h5>
+                        <p class="card-text text-muted">@school.SchoolType</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    }
+</div>
