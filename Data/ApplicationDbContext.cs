@@ -20,6 +20,9 @@ namespace ORSV2.Data
         public DbSet<GAMatrix> GAMatrix { get; set; }
         public DbSet<GAAGProgress> GAAGProgress { get; set; }
         public DbSet<Grades> Grades { get; set; }
+        public DbSet<StudentClass> StudentClasses { get; set; }
+        public DbSet<MasterSchedule> MasterSchedule { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

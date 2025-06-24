@@ -5,7 +5,6 @@ using ORSV2.Data;
 using ORSV2.Models;
 using ORSV2.Utilities;
 
-
 namespace ORSV2.Pages.GuidanceAlignment
 {
     public class GAProfileCardModel : PageModel
@@ -18,27 +17,17 @@ namespace ORSV2.Pages.GuidanceAlignment
         }
 
         public GAResults Student { get; set; }
-
         public List<IndicatorSummary> StudentIndicators { get; set; } = new();
-
-        public class IndicatorSummary
-        {
-            public string Name { get; set; } = string.Empty;
-            public bool Met { get; set; }
-        }
         public int? AttendanceAbsences { get; set; }
         public double? CumulativeGPA => Student?.CumulativeGPA;
         public decimal? CreditsCompleted => Student?.CreditsCompleted;
-        public class IndicatorRequirement
-        {
-            public string Name { get; set; } = string.Empty;
-            public string RequirementText { get; set; } = string.Empty;
-        }
         public List<IndicatorRequirement> IndicatorRequirements { get; set; } = new();
         public GAAGProgress? AGProgress { get; set; }
         public List<SubjectGrade> NonAGGrades { get; set; } = new();
-        public string QuadrantLevel => Student.Quadrant ?? "Unknown";
+        public List<SubjectGradesGroup> SubjectGradesByArea { get; set; } = new();
+        public List<SubjectGradesGroup> AGScheduleByArea { get; set; } = new();
 
+        public string QuadrantLevel => Student.Quadrant ?? "Unknown";
         public string QuadrantColorClass => (Student.Quadrant ?? "").ToLower() switch
         {
             "challenge" => "bg-primary",
@@ -47,6 +36,19 @@ namespace ORSV2.Pages.GuidanceAlignment
             "intensive" => "bg-danger",
             _ => "bg-secondary"
         };
+
+        public class IndicatorSummary
+        {
+            public string Name { get; set; } = string.Empty;
+            public bool Met { get; set; }
+        }
+
+        public class IndicatorRequirement
+        {
+            public string Name { get; set; } = string.Empty;
+            public string RequirementText { get; set; } = string.Empty;
+        }
+
         public class SubjectGradesGroup
         {
             public string SubjectCode { get; set; } = "";
@@ -65,7 +67,6 @@ namespace ORSV2.Pages.GuidanceAlignment
             public string Type { get; set; } = "";
             public decimal? CreditsEarned { get; set; }
         }
-        public List<SubjectGradesGroup> SubjectGradesByArea { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
@@ -152,72 +153,136 @@ namespace ORSV2.Pages.GuidanceAlignment
             };
 
             var gradesQuery = from g in _context.Grades
-                            join c in _context.Courses
+                              join c in _context.Courses
                                 on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, CourseNumber = c.CourseNumber }
-                            where g.StudentId == Student.StudentId
+                              where g.StudentId == Student.StudentId
                                     && g.DistrictId == school.DistrictId
                                     && subjectMap.Keys.Contains(c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode)
-                            select new
-                            {
-                                g.SchoolYear,
-                                g.Term,
-                                g.CN,
-                                c.Title,
-                                g.GradeLevel,
-                                g.Mark,
-                                g.Type,
-                                g.CC,
-                                SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode
-                            };
+                              select new
+                              {
+                                  g.SchoolYear,
+                                  g.Term,
+                                  g.CN,
+                                  c.Title,
+                                  g.GradeLevel,
+                                  g.Mark,
+                                  g.Type,
+                                  g.CC,
+                                  SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode
+                              };
 
-            var grouped = await gradesQuery
-                .GroupBy(g => g.SubjectCode)
-                .ToListAsync();
+            var grouped = await gradesQuery.GroupBy(g => g.SubjectCode).ToListAsync();
 
-            SubjectGradesByArea = grouped
-                .Select(g => new SubjectGradesGroup
+            SubjectGradesByArea = grouped.Select(g => new SubjectGradesGroup
+            {
+                SubjectCode = g.Key,
+                SubjectLabel = subjectMap[g.Key],
+                Grades = g.Select(x => new SubjectGrade
                 {
-                    SubjectCode = g.Key,
-                    SubjectLabel = subjectMap[g.Key],
-                    Grades = g.Select(x => new SubjectGrade
-                    {
-                        SchoolYear = x.SchoolYear,
-                        Term = x.Term,
-                        CourseNumber = x.CN,
-                        Title = x.Title,
-                        GradeLevel = x.GradeLevel,
-                        Mark = x.Mark,
-                        Type = x.Type,
-                        CreditsEarned = x.CC
-                    }).OrderByDescending(x => x.SchoolYear).ThenBy(x => x.Term).ToList()
-                })
+                    SchoolYear = x.SchoolYear,
+                    Term = x.Term,
+                    CourseNumber = x.CN,
+                    Title = x.Title,
+                    GradeLevel = x.GradeLevel,
+                    Mark = x.Mark,
+                    Type = x.Type,
+                    CreditsEarned = x.CC
+                }).OrderByDescending(x => x.SchoolYear).ThenBy(x => x.Term).ToList()
+            }).ToList();
+
+            NonAGGrades = (await (
+                from g in _context.Grades
+                join c in _context.Courses
+                  on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, c.CourseNumber }
+                where g.StudentId == Student.StudentId
+                      && g.DistrictId == school.DistrictId
+                      && string.IsNullOrEmpty(c.CSU_SubjectAreaCode)
+                      && string.IsNullOrEmpty(c.UC_SubjectAreaCode)
+                select new SubjectGrade
+                {
+                    SchoolYear = g.SchoolYear,
+                    Term = g.Term,
+                    CourseNumber = g.CN,
+                    Title = c.Title,
+                    GradeLevel = g.GradeLevel,
+                    Mark = g.Mark,
+                    Type = g.Type,
+                    CreditsEarned = g.CC
+                }).ToListAsync())
+                .Where(g => int.TryParse(g.GradeLevel, out var gl) && gl > 8)
+                .OrderBy(g => g.SchoolYear).ThenBy(g => g.Term).ThenBy(g => g.GradeLevel).ThenBy(g => g.Title)
                 .ToList();
 
-                NonAGGrades = (await (
-                    from g in _context.Grades
-                    join c in _context.Courses
-                        on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, c.CourseNumber }
-                    where g.StudentId == Student.StudentId
-                        && g.DistrictId == school.DistrictId
-                        && string.IsNullOrEmpty(c.CSU_SubjectAreaCode)
-                        && string.IsNullOrEmpty(c.UC_SubjectAreaCode)
-                    select new SubjectGrade
-                    {
-                        SchoolYear = g.SchoolYear,
-                        Term = g.Term,
-                        CourseNumber = g.CN,
-                        Title = c.Title,
-                        GradeLevel = g.GradeLevel,
-                        Mark = g.Mark,
-                        Type = g.Type,
-                        CreditsEarned = g.CC
-                    }).ToListAsync())
-                    .Where(g => int.TryParse(g.GradeLevel, out var gl) && gl > 8)
-                    .OrderBy(g => g.SchoolYear)
-                    .ThenBy(g => g.Term)
-                    .ThenBy(g => g.GradeLevel)
-                    .ThenBy(g => g.Title)
-                    .ToList();
+            var studentId = Student.StudentId;
+            var schoolId = Student.SchoolId;
+            var districtId = Student.DistrictId;
+
+            var currentSchedule = from sc in _context.StudentClasses
+                                  join c in _context.Courses on new { sc.DistrictId, CourseNumber = sc.CourseID } equals new { c.DistrictId, c.CourseNumber }
+                                  join ms in _context.MasterSchedule on new { sc.DistrictId, sc.SchoolId, sc.SectionNumber } equals new { ms.DistrictId, ms.SchoolId, ms.SectionNumber }
+                                  where sc.StudentId == studentId
+                                        && sc.SchoolId == schoolId
+                                        && sc.DistrictId == districtId
+                                  select new
+                                  {
+                                      SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode,
+                                      c.Title,
+                                      c.CourseNumber,
+                                      ms.Period
+                                  };
+
+            var scheduledGrouped = currentSchedule
+                .AsEnumerable() // ← forces client-side evaluation
+                .Where(x => x.SubjectCode != null && subjectMap.ContainsKey(x.SubjectCode))
+                .GroupBy(x => x.SubjectCode)
+                .ToList();
+
+
+            var scheduledSubjectGradesByArea = scheduledGrouped.Select(g => new SubjectGradesGroup
+            {
+                SubjectCode = g.Key,
+                SubjectLabel = subjectMap[g.Key],
+                Grades = g.Select(x => new SubjectGrade
+                {
+                    Term = $"Period {x.Period}",
+                    CourseNumber = x.CourseNumber,
+                    Title = x.Title,
+                }).OrderBy(x => x.Term).ToList()
+            }).ToList();
+
+            AGScheduleByArea = SubjectGradesByArea.Select(g => new SubjectGradesGroup
+            {
+                SubjectCode = g.SubjectCode,
+                SubjectLabel = g.SubjectLabel,
+                Grades = g.Grades.Select(grade => new SubjectGrade
+                {
+                    SchoolYear = grade.SchoolYear,
+                    Term = grade.Term,
+                    CourseNumber = grade.CourseNumber,
+                    Title = grade.Title,
+                    GradeLevel = grade.GradeLevel,
+                    Mark = grade.Mark,
+                    Type = "Transcript",
+                    CreditsEarned = grade.CreditsEarned
+                }).ToList()
+            }).ToList();
+
+            foreach (var scheduled in scheduledSubjectGradesByArea)
+            {
+                var existing = AGScheduleByArea.FirstOrDefault(x => x.SubjectCode == scheduled.SubjectCode);
+                if (existing != null)
+                {
+                    existing.Grades.AddRange(scheduled.Grades);
+                    existing.Grades = existing.Grades
+                        .OrderByDescending(x => x.SchoolYear)
+                        .ThenBy(x => x.Term)
+                        .ToList();
+                }
+                else
+                {
+                    AGScheduleByArea.Add(scheduled);
+                }
+            }
 
             return Page();
         }
@@ -236,7 +301,5 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             return Content($"<div><strong>Total Absences:</strong> {attendance}</div>", "text/html");
         }
-
-
     }
 }

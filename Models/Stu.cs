@@ -1,12 +1,10 @@
-using System;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace ORSV2.Models
 {
-    [Keyless]
     public class STU
     {
+        [Key]
         public int StuId { get; set; }
         public int DistrictID { get; set; }
         public int SchoolID { get; set; }

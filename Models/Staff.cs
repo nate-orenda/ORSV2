@@ -11,42 +11,41 @@ public class Staff
     public int DistrictId { get; set; }
 
     [MaxLength(50)]
-    public string LocalStaffID { get; set; }
+    public string LocalStaffID { get; set; } = string.Empty;
 
     [MaxLength(100)]
-    public string FirstName { get; set; }
+    public string FirstName { get; set; } = string.Empty;
 
     [MaxLength(100)]
-    public string LastName { get; set; }
+    public string LastName { get; set; } = string.Empty;
 
     [MaxLength(100)]
-    public string MiddleName { get; set; }
+    public string MiddleName { get; set; } = string.Empty;
 
     [MaxLength(10)]
-    public string Gender { get; set; }
+    public string Gender { get; set; } = string.Empty;
 
     [MaxLength(10)]
-    public string EthnicityCode { get; set; }
+    public string EthnicityCode { get; set; } = string.Empty;
 
     [MaxLength(10)]
-    public string RaceCode1 { get; set; }
+    public string RaceCode1 { get; set; } = string.Empty;
 
     [MaxLength(150)]
-    public string EmailAddress { get; set; }
+    public string EmailAddress { get; set; } = string.Empty;
 
     [MaxLength(150)]
-    public string JobTitle { get; set; }
+    public string JobTitle { get; set; } = string.Empty;
 
     [MaxLength(32)]
-    public string PrimarySchool { get; set; }
-
-    public string SchoolAccess { get; set; }
+    public string PrimarySchool { get; set; } = string.Empty;
+    public string SchoolAccess { get; set; } = string.Empty;
 
     [NotMapped]
     public List<StaffSchoolAccess> SchoolAccessEntries =>
         string.IsNullOrWhiteSpace(SchoolAccess)
             ? new()
-            : JsonSerializer.Deserialize<List<StaffSchoolAccess>>(SchoolAccess);
+            : JsonSerializer.Deserialize<List<StaffSchoolAccess>>(SchoolAccess) ?? new();
 
     public decimal? FullTimePercentage { get; set; }
 

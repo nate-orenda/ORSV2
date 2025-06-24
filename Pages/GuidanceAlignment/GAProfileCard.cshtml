@@ -207,109 +207,112 @@
     </div>
 
  @if (HasIndicator("AGGrades"))
-        {
+    {
     <h5 class="text-center mt-5 mb-3">
             A–G Grades
             <span class="badge @(Model.Student.AGGrades == true ? "bg-success" : "bg-danger") ms-2">
                 @(Model.Student.AGGrades == true ? "Met" : "Not Met")
             </span>
         </h5>
-@foreach (var (code, name, actual, target) in new[] {
+    @foreach (var (code, name, actual, target) in new[] {
 
-    ("A", "A. History", Model.AGProgress.CreditsEarned_HIS, Model.AGProgress.TargetEarned_HIS),
-    ("B", "B. English", Model.AGProgress.CreditsEarned_ELA, Model.AGProgress.TargetEarned_ELA),
-    ("C", "C. Math", Model.AGProgress.CreditsEarned_MATH, Model.AGProgress.TargetEarned_MATH),
-    ("D", "D. Science", Model.AGProgress.CreditsEarned_SCI, Model.AGProgress.TargetEarned_SCI),
-    ("E", "E. Foreign Language", Model.AGProgress.CreditsEarned_FL, Model.AGProgress.TargetEarned_FL),
-    ("F", "F. VAPA", Model.AGProgress.CreditsEarned_VA, Model.AGProgress.TargetEarned_VA),
-    ("G", "G. College-Prep Elective", Model.AGProgress.CreditsEarned_PREP, Model.AGProgress.TargetEarned_PREP)
-}) {
-    var gradeGroup = Model.SubjectGradesByArea.FirstOrDefault(g => g.SubjectCode == code);
+        ("A", "A. History", Model.AGProgress.CreditsEarned_HIS, Model.AGProgress.TargetEarned_HIS),
+        ("B", "B. English", Model.AGProgress.CreditsEarned_ELA, Model.AGProgress.TargetEarned_ELA),
+        ("C", "C. Math", Model.AGProgress.CreditsEarned_MATH, Model.AGProgress.TargetEarned_MATH),
+        ("D", "D. Science", Model.AGProgress.CreditsEarned_SCI, Model.AGProgress.TargetEarned_SCI),
+        ("E", "E. Foreign Language", Model.AGProgress.CreditsEarned_FL, Model.AGProgress.TargetEarned_FL),
+        ("F", "F. VAPA", Model.AGProgress.CreditsEarned_VA, Model.AGProgress.TargetEarned_VA),
+        ("G", "G. College-Prep Elective", Model.AGProgress.CreditsEarned_PREP, Model.AGProgress.TargetEarned_PREP)
+    }) {
+        var gradeGroup = Model.SubjectGradesByArea.FirstOrDefault(g => g.SubjectCode == code);
 
-    <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3">
-            <div class="card-body">
-                <h6 class="card-title mb-2">@name</h6>
-                <p class="mb-2"><strong>Earned:</strong> @actual / @target</p>
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <h6 class="card-title mb-2">@name</h6>
+                    <p class="mb-2"><strong>Earned:</strong> @actual / @target</p>
 
-                @if (gradeGroup != null && gradeGroup.Grades.Any())
-                {
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped small mb-0">
-                            <thead>
-                                <tr>
-                                    <th>School Year</th>
-                                    <th>Term</th>
-                                    <th>Course #</th>
-                                    <th>Title</th>
-                                    <th>Grade</th>
-                                    <th>Mark</th>
-                                    <th>Type</th>
-                                    <th>Credits</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var row in gradeGroup.Grades)
-                                {
+                    @if (gradeGroup != null && gradeGroup.Grades.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped small mb-0">
+                                <thead>
                                     <tr>
-                                        <td>@row.SchoolYear</td>
-                                        <td>@row.Term</td>
-                                        <td>@row.CourseNumber</td>
-                                        <td>@row.Title</td>
-                                        <td>@row.GradeLevel</td>
-                                        <td>@row.Mark</td>
-                                        <td>@row.Type</td>
-                                        <td>@row.CreditsEarned</td>
+                                        <th>School Year</th>
+                                        <th>Term</th>
+                                        <th>Course #</th>
+                                        <th>Title</th>
+                                        <th>Grade</th>
+                                        <th>Mark</th>
+                                        <th>Type</th>
+                                        <th>Credits</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted small mb-0">No grades found for this subject.</p>
-                }
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in gradeGroup.Grades)
+                                    {
+                                        <tr>
+                                            <td>@row.SchoolYear</td>
+                                            <td>@row.Term</td>
+                                            <td>@row.CourseNumber</td>
+                                            <td>@row.Title</td>
+                                            <td>@row.GradeLevel</td>
+                                            <td>@row.Mark</td>
+                                            <td>@row.Type</td>
+                                            <td>@row.CreditsEarned</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">No grades found for this subject.</p>
+                    }
+                </div>
+            </div><br/>
+        </div>
+    }
+    @if (Model.NonAGGrades.Any())
+    {
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <h5 class="text-center card-title mb-2">Non-AG Courses</h5>
+                    <table class="table table-sm table-striped small">
+                        <thead>
+                            <tr>
+                                <th>School Year</th>
+                                <th>Term</th>
+                                <th>Course #</th>
+                                <th>Title</th>
+                                <th>Grade</th>
+                                <th>Mark</th>
+                                <th>Type</th>
+                                <th>Credits</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.NonAGGrades)
+                        {
+                            <tr>
+                                <td>@row.SchoolYear</td>
+                                <td>@row.Term</td>
+                                <td>@row.CourseNumber</td>
+                                <td>@row.Title</td>
+                                <td>@row.GradeLevel</td>
+                                <td>@row.Mark</td>
+                                <td>@row.Type</td>
+                                <td>@row.CreditsEarned</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div> <br/>
-}
-@if (Model.NonAGGrades.Any())
-{
-    <h5 class="text-center mt-5 mb-3">Non-A–G Courses</h5>
-
-    <div class="table-responsive">
-        <table class="table table-sm table-striped small">
-            <thead>
-                <tr>
-                    <th>School Year</th>
-                    <th>Term</th>
-                    <th>Course #</th>
-                    <th>Title</th>
-                    <th>Grade</th>
-                    <th>Mark</th>
-                    <th>Type</th>
-                    <th>Credits</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var row in Model.NonAGGrades)
-            {
-                <tr>
-                    <td>@row.SchoolYear</td>
-                    <td>@row.Term</td>
-                    <td>@row.CourseNumber</td>
-                    <td>@row.Title</td>
-                    <td>@row.GradeLevel</td>
-                    <td>@row.Mark</td>
-                    <td>@row.Type</td>
-                    <td>@row.CreditsEarned</td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-}
+    }
 }
 
     @if (HasIndicator("AGSchedule") && Model.AGProgress != null)
@@ -322,27 +325,44 @@
         </h5>
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            @foreach (var (code, name, actual, target) in new[] {
+                ("A", "A. History", Model.AGProgress.CreditsScheduled_HIS, Model.AGProgress.TargetScheduled_HIS),
+                ("B", "B. English (ELA)", Model.AGProgress.CreditsScheduled_ELA, Model.AGProgress.TargetScheduled_ELA),
+                ("C", "C. Math", Model.AGProgress.CreditsScheduled_MATH, Model.AGProgress.TargetScheduled_MATH),
+                ("D", "D. Science", Model.AGProgress.CreditsScheduled_SCI, Model.AGProgress.TargetScheduled_SCI),
+                ("E", "E. Foreign Language", Model.AGProgress.CreditsScheduled_FL, Model.AGProgress.TargetScheduled_FL),
+                ("F", "F. VAPA", Model.AGProgress.CreditsScheduled_VA, Model.AGProgress.TargetScheduled_VA),
+                ("G", "G. College-Prep Elective", Model.AGProgress.CreditsScheduled_PREP, Model.AGProgress.TargetScheduled_PREP)
+            })
+            {
+                var scheduleGroup = Model.AGScheduleByArea.FirstOrDefault(g => g.SubjectCode == code);
 
-            @foreach (var (name, actual, target) in new[] {
-                ("A. History", Model.AGProgress.CreditsScheduled_HIS, Model.AGProgress.TargetScheduled_HIS),
-                ("B. English (ELA)", Model.AGProgress.CreditsScheduled_ELA, Model.AGProgress.TargetScheduled_ELA),
-                ("C. Math", Model.AGProgress.CreditsScheduled_MATH, Model.AGProgress.TargetScheduled_MATH),
-                ("D. Science", Model.AGProgress.CreditsScheduled_SCI, Model.AGProgress.TargetScheduled_SCI),
-                ("E. Foreign Language", Model.AGProgress.CreditsScheduled_FL, Model.AGProgress.TargetScheduled_FL),
-                ("F. VAPA", Model.AGProgress.CreditsScheduled_VA, Model.AGProgress.TargetScheduled_VA),
-                ("G. College-Prep Elective", Model.AGProgress.CreditsScheduled_PREP, Model.AGProgress.TargetScheduled_PREP)
-            }) {
                 <div class="col">
                     <div class="card h-100 border-0 shadow-sm rounded-3">
                         <div class="card-body">
                             <h6 class="card-title mb-2">@name</h6>
-                            <p class="mb-0"><strong>Scheduled:</strong> @actual / @target</p>
+                            <p class="mb-1"><strong>Scheduled:</strong> @actual / @target</p>
+
+                            @if (scheduleGroup != null && scheduleGroup.Grades.Any())
+                            {
+                                <ul class="list-unstyled small mb-0">
+                                    @foreach (var course in scheduleGroup.Grades.Take(5))
+                                    {
+                                        <li>@course.Title (@course.Term)</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">No scheduled or transcript courses found.</p>
+                            }
                         </div>
                     </div>
                 </div>
             }
         </div>
     }
+
 
     <div class="text-end text-muted small mt-4">
         Last Updated: @Model.Student.DateLastUpdated?.ToString("g")

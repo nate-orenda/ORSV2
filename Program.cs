@@ -1,8 +1,8 @@
 using ORSV2.Data;
 using ORSV2.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,10 +75,18 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 // Seed roles and admin user on startup
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    await SeedData.Initialize(services);
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var services = scope.ServiceProvider;
+//     try
+//     {
+//         await SeedData.Initialize(services);
+//     }
+//     catch (Exception ex)
+//     {
+//         var logger = services.GetRequiredService<ILogger<Program>>();
+//         throw; // optional: remove this line if you want app to continue
+//     }
+// }
 
 app.Run();
