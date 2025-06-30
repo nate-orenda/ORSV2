@@ -51,7 +51,9 @@ namespace ORSV2.Pages
                 ScopeLabel = "District";
 
                 var districts = await _context.Districts.ToDictionaryAsync(d => d.Id, d => d.Name);
-                var schools = await _context.Schools.ToListAsync();
+                var schools = await _context.Schools
+                    .Where(s => !s.Inactive)
+                    .ToListAsync();
 
                 DistrictSchools = schools
                     .GroupBy(s => districts.ContainsKey(s.DistrictId) ? districts[s.DistrictId] : "Unknown")
@@ -81,11 +83,17 @@ namespace ORSV2.Pages
             {
                 ScopeLabel = "District";
 
+                var activeSchoolIds = await _context.Schools
+                    .Where(s => s.DistrictId == user.DistrictId && !s.Inactive)
+                    .Select(s => s.Id)
+                    .ToListAsync();
+
                 var schoolNames = await _context.Schools
+                    .Where(s => activeSchoolIds.Contains(s.Id))
                     .ToDictionaryAsync(s => s.Id, s => s.Name);
 
                 var data = await _context.STU
-                    .Where(s => s.DistrictID == user.DistrictId)
+                    .Where(s => s.DistrictID == user.DistrictId && activeSchoolIds.Contains(s.SchoolID))
                     .GroupBy(s => s.SchoolID)
                     .Select(g => new
                     {
@@ -104,11 +112,15 @@ namespace ORSV2.Pages
             }
             else
             {
-                var schoolIds = user.UserSchools.Select(us => us.SchoolId).ToList();
                 ScopeLabel = "School";
 
+                var schoolIds = user.UserSchools
+                    .Where(us => us.School != null && !us.School.Inactive)
+                    .Select(us => us.SchoolId)
+                    .ToList();
+
                 var schoolNames = await _context.Schools
-                    .Where(s => schoolIds.Contains(s.Id))
+                    .Where(s => schoolIds.Contains(s.Id) && !s.Inactive)
                     .ToDictionaryAsync(s => s.Id, s => s.Name);
 
                 var data = await _context.STU
