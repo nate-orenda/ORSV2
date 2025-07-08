@@ -1,0 +1,79 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.ProtocolsModel
+@{
+    ViewData["Title"] = "GA Protocols";
+}
+
+<h2>Guidance Alignment Protocols</h2>
+
+<button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createProtocolModal">
+    + Create New Protocol
+</button>
+
+@if (Model.Protocols?.Any() == true)
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>School</th>
+                <th>Checkpoint</th>
+                <th>Year</th>
+                <th>Created</th>
+                <th>Last Updated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var protocol in Model.Protocols)
+        {
+            <tr>
+                <td>@protocol.School?.Name</td>
+                <td>@protocol.CP</td>
+                <td>@protocol.SchoolYear</td>
+                <td>@protocol.CreatedAt.ToShortDateString()</td>
+                <td>@protocol.UpdatedAt?.ToShortDateString()</td>
+                <td>
+                    <a asp-page="/GuidanceAlignment/EditProtocol" asp-route-id="@protocol.Id">Edit</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No protocols found.</p>
+}
+<div class="modal fade" id="createProtocolModal" tabindex="-1" aria-labelledby="createProtocolLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" asp-page-handler="CreateProtocol">
+        <div class="modal-header">
+          <h5 class="modal-title" id="createProtocolLabel">Create Protocol</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <input type="hidden" name="SchoolId" value="@Model.School?.Id" />
+            <input type="hidden" name="DistrictId" value="@Model.School?.DistrictId" />
+            <input type="hidden" name="SchoolYear" value="@Model.SchoolYear" />
+
+            <div class="mb-3">
+                <label for="CP" class="form-label">Checkpoint</label>
+                <select name="CP" class="form-select" required>
+                    @foreach (var item in Model.BuildableCheckpoints)
+                    {
+                        <option value="@item.CP">@item.Label</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

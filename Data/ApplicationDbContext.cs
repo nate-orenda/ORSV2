@@ -22,7 +22,8 @@ namespace ORSV2.Data
         public DbSet<Grades> Grades { get; set; }
         public DbSet<StudentClass> StudentClasses { get; set; }
         public DbSet<MasterSchedule> MasterSchedule { get; set; }
-
+        public DbSet<GAProtocol> GAProtocols { get; set; }
+        public DbSet<GAProtocolSectionResponse> GAProtocolSectionResponses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
