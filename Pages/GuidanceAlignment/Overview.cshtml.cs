@@ -13,7 +13,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         [BindProperty(SupportsGet = true)]
         public int SchoolId { get; set; }
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
-        public School School { get; set; } = new();
+        public School? School { get; set; } = new();
         public string CurrentCheckpoint { get; set; } = string.Empty;
         public List<(int Grade, int Count)> GradeDistribution { get; set; } = new();
         public record QuadrantSummary(int Grade, string Quadrant, int Count);
@@ -64,13 +64,13 @@ namespace ORSV2.Pages.GuidanceAlignment
             QuadrantSummaries = await _context.GAResults
                 .Where(r => r.SchoolId == SchoolId && r.CP == cp)
                 .GroupBy(r => new { r.Grade, r.Quadrant })
-                .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant, g.Count()))
+                .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant ?? "Unknown", g.Count()))
                 .ToListAsync();
 
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
-                new BreadcrumbItem { Title = School.District.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = School.DistrictId }) },
+                new BreadcrumbItem { Title = School!.District!.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = School.DistrictId }) },
                 new BreadcrumbItem { Title = School.Name }
             };
 

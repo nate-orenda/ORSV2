@@ -11,6 +11,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public ProtocolsModel(ApplicationDbContext context) : base(context) { }
 
         public List<GAProtocol> Protocols { get; set; } = new();
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
         [BindProperty]
         public int CP { get; set; }
@@ -38,7 +39,9 @@ namespace ORSV2.Pages.GuidanceAlignment
             if (schoolId.HasValue)
             {
                 query = query.Where(p => p.SchoolId == schoolId.Value);
-                School = await _context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId.Value);
+                School = await _context.Schools
+                    .Include(s => s.District)
+                    .FirstOrDefaultAsync(s => s.Id == schoolId.Value);
             }
             else if (districtId.HasValue)
             {
@@ -74,6 +77,14 @@ namespace ORSV2.Pages.GuidanceAlignment
                 var existing = Protocols.Select(p => p.CP).ToList();
                 BuildableCheckpoints = CurrentCheckpointHelper.GetBuildableCheckpointLabels(schedule, today, existing);
             }
+            
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
+                new BreadcrumbItem { Title = School!.District!.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = School.DistrictId }) },
+                new BreadcrumbItem { Title = School.Name, Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = School.Id }) },
+                new BreadcrumbItem { Title = "View Protocols" }
+            };
 
             return Page();
         }

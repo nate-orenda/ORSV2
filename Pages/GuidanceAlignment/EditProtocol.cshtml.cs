@@ -9,6 +9,7 @@ namespace ORSV2.Pages.GuidanceAlignment
     {
         public EditProtocolModel(ApplicationDbContext context) : base(context) { }
         public List<GAProtocolTarget> GradeLevelTargets { get; set; } = new();
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
         [BindProperty(SupportsGet = true)]
         public int Id { get; set; } // ProtocolId
@@ -36,6 +37,8 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         [BindProperty]
         public List<GAProtocolTarget> NewTargets { get; set; } = new();
+        public School? School { get; set; }
+        public District? District { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -49,6 +52,14 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             if (Protocol == null)
                 return NotFound();
+
+            School = await _context.Schools
+                .Include(s => s.District)
+                .FirstOrDefaultAsync(s => s.Id == Protocol.SchoolId);
+
+            if (School == null || School.District == null)
+                return NotFound();
+
 
             // Load section responses into dictionary
             foreach (var title in SectionTitles)
@@ -64,6 +75,15 @@ namespace ORSV2.Pages.GuidanceAlignment
                         && t.TargetType == "AboveLine")
                 .OrderBy(t => t.GradeLevel)
                 .ToListAsync();
+
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
+                new BreadcrumbItem { Title = School!.District!.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = School.DistrictId }) },
+                new BreadcrumbItem { Title = School.Name, Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = School.Id }) },
+                new BreadcrumbItem { Title = "Protocols", Url = Url.Page("/GuidanceAlignment/Protocols", new { schoolId = School.Id }) },
+                new BreadcrumbItem { Title = $"Edit Protocol – CP {Protocol.CP}" } // No URL, current page
+            };
 
             return Page();
         }
