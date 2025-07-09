@@ -28,7 +28,6 @@
             <h1 class="mt-3">Edit GA Protocol</h1>
 
             <form method="post">
-
                 @for (int i = 1; i <= 9; i++)
                 {
                     var sectionId = i switch
@@ -45,15 +44,119 @@
                         _ => $"section{i}"
                     };
 
-                    <section id="@sectionId" class="my-5">
+                    <section id="@sectionId" class="ga-section @(i == 1 ? "visible" : "d-none") my-5">
                         <h3>@i. @Model.SectionTitles[i]</h3>
-                        <textarea class="form-control" rows="6" asp-for="Responses[@i]" placeholder="Enter response..."></textarea>
+
+                        @if (i == 1)
+                        {
+                            <p class="mb-3">
+                                Welcome to the Guidance Alignment Protocol Module. This module is designed to help you save and organize your team’s reflections on the data presented in PROMOTE. Each section below corresponds to a step in the Guidance Alignment (GA) Protocol and presents the relevant data for review.
+                            </p>
+                            <p class="mb-3">
+                                Every step includes a text editor where you can enter your observations, reflections, and plans. These entries will be saved and reviewed in future GA sessions, allowing for ongoing collaboration and continuous improvement.
+                            </p>
+                            <p class="mb-3">
+                                The editor supports pasting formatted data tables directly from PROMOTE. You can also use the toolbar above each editor for helpful formatting features—hover over each icon to see tooltips.
+                            </p>
+                            <p class="mb-4">
+                                In some steps, you will be asked to set performance targets based on the data. These targets can be revisited and adjusted during later GA sessions. Don’t forget to save your responses at the end of each step.
+                            </p>
+
+                        }
+
+                        @if (i == 2)
+                        {
+                            @if (Model.GradeLevelTargets.Any())
+                            {
+                                <h5 class="mb-3">Above the Line Targets</h5>
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-bordered table-sm align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Grade</th>
+                                                <th>Target</th>
+                                                <th class="text-end">Value (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var target in Model.GradeLevelTargets)
+                                            {
+                                                <tr>
+                                                    <td>@(target.GradeLevel == 0 ? "K" : target.GradeLevel.ToString())</td>
+                                                    <td>@target.TargetName</td>
+                                                    <td>
+                                                        <input type="number" step="0.1" min="0" max="100"
+                                                            class="form-control form-control-sm text-end"
+                                                            name="UpdatedTargets[@target.Id]"
+                                                            value="@($"{target.TargetValue:N1}")" />
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else if (Model.NewTargets.Any())
+                            {
+                                <h5 class="mb-3">Enter Above the Line Targets (per Grade)</h5>
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-bordered table-sm align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Grade</th>
+                                                <th class="text-end">Target Value (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int j = 0; j < Model.NewTargets.Count; j++)
+                                            {
+                                                <tr>
+                                                    <td>@(Model.NewTargets[j].GradeLevel == 0 ? "K" : Model.NewTargets[j].GradeLevel.ToString())</td>
+                                                    <td>
+                                                        <input type="number" step="0.1" min="0" max="100"
+                                                            class="form-control form-control-sm text-end"
+                                                            name="NewTargets[@j].TargetValue"
+                                                            value="@($"{Model.NewTargets[j].TargetValue:N1}")" />
+                                                        <input type="hidden" name="NewTargets[@j].GradeLevel" value="@Model.NewTargets[j].GradeLevel" />
+                                                        <input type="hidden" name="NewTargets[@j].DistrictId" value="@Model.NewTargets[j].DistrictId" />
+                                                        <input type="hidden" name="NewTargets[@j].SchoolId" value="@Model.NewTargets[j].SchoolId" />
+                                                        <input type="hidden" name="NewTargets[@j].SchoolYear" value="@Model.NewTargets[j].SchoolYear" />
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        }
+
+                        @if (i != 1 && i != 2)
+                        {
+                            @if (Model.Protocol != null &&
+                                Model.Protocol.SectionResponses.FirstOrDefault(r => r.SectionNumber == i) is { } sectionMeta)
+                            {
+                                <small class="text-muted d-block mb-2">
+                                    Last updated by @sectionMeta.UpdatedBy on @sectionMeta.UpdatedAt.ToLocalTime().ToString("g")
+                                </small>
+                            }
+                            <form method="post" asp-page-handler="SaveSection" class="mb-4">
+                                <input type="hidden" name="Section" value="@i" />
+                                <textarea class="form-control mb-2" rows="6" name="Content"
+                                        placeholder="Enter response...">@Model.Responses.GetValueOrDefault(i)</textarea>
+                                <button type="submit" class="btn btn-sm btn-outline-success">Save Section</button>
+                            </form>
+                        }
+
+                        @if (i < 9)
+                        {
+                            <div class="text-end mt-3">
+                                <button type="button" class="btn btn-outline-primary"
+                                        onclick="goToNextSection(@i)">Next: @Model.SectionTitles[i + 1]</button>
+                            </div>
+                        }
                     </section>
                 }
 
-                <div class="text-end mb-5">
-                    <button type="submit" class="btn btn-success">Save Protocol</button>
-                </div>
             </form>
 
         </main>
@@ -61,16 +164,41 @@
 </div>
 
 @section Scripts {
-    <script>
-        // Smooth scrolling for sidebar links
-        document.querySelectorAll('a.nav-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
+<script>
+    const sectionMap = {
+        1: "introduction",
+        2: "targets",
+        3: "above",
+        4: "demographics",
+        5: "indicators",
+        6: "trends",
+        7: "agreements",
+        8: "action",
+        9: "wrapup"
+    };
+
+   function goToNextSection(currentIndex) {
+        const nextId = sectionMap[currentIndex + 1];
+        const next = document.getElementById(nextId);
+        if (next) {
+            next.classList.remove("d-none");
+            setTimeout(() => next.classList.add("visible"), 10); // triggers animation
+            next.scrollIntoView({ behavior: "smooth" });
+        }
+    }
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const id = this.getAttribute('href').substring(1);
+            const section = document.getElementById(id);
+            if (section && !section.classList.contains('visible')) {
+                section.classList.remove('d-none');
+                setTimeout(() => section.classList.add("visible"), 10);
+            }
+            section.scrollIntoView({ behavior: 'smooth' });
         });
-    </script>
+    });
+
+</script>
 }

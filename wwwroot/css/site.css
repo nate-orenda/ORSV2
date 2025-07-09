@@ -88,3 +88,18 @@ button.accept-policy {
     box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
     transition: box-shadow 0.3s ease-in-out;
 }
+
+.ga-section {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.ga-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.d-none {
+    display: none !important;
+}

@@ -24,6 +24,7 @@ namespace ORSV2.Data
         public DbSet<MasterSchedule> MasterSchedule { get; set; }
         public DbSet<GAProtocol> GAProtocols { get; set; }
         public DbSet<GAProtocolSectionResponse> GAProtocolSectionResponses { get; set; }
+        public DbSet<GAProtocolTarget> GAProtocolTargets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
