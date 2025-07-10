@@ -5,31 +5,59 @@
 }
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
+<style>
+    .nav-link {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.2s ease;
+    }
+    .nav-link:hover,
+    .nav-link:focus {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+    }
+    .nav-link.active {
+        font-weight: 600;
+        background-color: #d0e5ff;
+        border-left: 4px solid #0d6efd;
+        padding-left: calc(1rem - 4px);
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row">
         <!-- Sidebar Navigation -->
-        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar position-sticky"
-            style="top: 0; height: 100vh; overflow-y: auto;">
+        <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar position-sticky" style="top: 0; height: 100vh; overflow-y: auto;">
             <div class="pt-3">
-                <ul class="nav flex-column">
-                    <li class="nav-item"><a class="nav-link" href="#introduction">1. Introduction</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#targets">2. Targets</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#above">3. Above the Line</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#demographics">4. Demographics</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#indicators">5. Indicators</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#trends">6. Trends</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#agreements">7. Common Agreements</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#action">8. Action Plan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#wrapup">9. Wrap Up</a></li>
+                <ul class="nav flex-column" id="sectionNav">
+                    @for (int i = 1; i <= 9; i++)
+                    {
+                        var sectionId = i switch
+                        {
+                            1 => "introduction",
+                            2 => "targets",
+                            3 => "above",
+                            4 => "demographics",
+                            5 => "indicators",
+                            6 => "trends",
+                            7 => "agreements",
+                            8 => "action",
+                            9 => "wrapup",
+                            _ => $"section{i}"
+                        };
+                        <li class="nav-item">
+                            <a class="nav-link" href="#@sectionId" data-section="@sectionId">@i. @Model.SectionTitles[i]</a>
+                        </li>
+                    }
                 </ul>
             </div>
         </nav>
 
         <!-- Main Content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4" style="margin-left: 16.666667%;">
             <h1 class="mt-3">Edit GA Protocol</h1>
 
-            <form method="post">
+            <form method="post" id="fullProtocolForm">
                 @for (int i = 1; i <= 9; i++)
                 {
                     var sectionId = i switch
@@ -46,9 +74,10 @@
                         _ => $"section{i}"
                     };
 
-                    <section id="@sectionId" class="ga-section @(i == 1 ? "visible" : "d-none") my-5">
-                        <h3>@i. @Model.SectionTitles[i]</h3>
-
+                    <section id="@sectionId" class="my-5 p-4 rounded-3 shadow-sm border bg-white">
+    <div class="position-sticky top-0 bg-white pb-2 pt-2" style="z-index: 1;">
+        <h3 class="mb-3 border-bottom pb-2">@i. @Model.SectionTitles[i]</h3>
+    </div>
                         @if (i == 1)
                         {
                             <p class="mb-3">
@@ -71,10 +100,8 @@
                                 be revisited and adjusted during later GA sessions. Don’t forget to save your responses at the
                                 end of each step.
                             </p>
-
                         }
-
-                        @if (i == 2)
+                        else if (i == 2)
                         {
                             <h5>Existing Above the Line Targets</h5>
                             @if (Model.GradeLevelTargets.Any())
@@ -90,12 +117,8 @@
                                         @foreach (var target in Model.GradeLevelTargets)
                                         {
                                             <tr>
-                                                <td>
-                                                    @(target.GradeLevel == 0 ? "K" : $"Grade {target.GradeLevel}")
-                                                </td>
-                                                <td>
-                                                    @target.TargetValue.ToString("0.##")%
-                                                </td>
+                                                <td>@(target.GradeLevel == 0 ? "K" : $"Grade {target.GradeLevel}")</td>
+                                                <td>@target.TargetValue.ToString("0.##")%</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -107,132 +130,140 @@
                             }
 
                             <h5 class="mt-4">Add New Target</h5>
-
-                            <form method="post">
-                                <input type="hidden" asp-for="Id" />
-
-                                <table class="table w-auto">
-                                    <thead>
-                                        <tr>
-                                            <th>Grade</th>
-                                            <th>Target Type</th>
-                                            <th>Target Value (%)</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>
-                                                <select asp-for="NewTarget.GradeLevel" class="form-select">
-                                                    <option value="0">K</option>
-                                                    @for (int j = 1; j <= 12; j++)
-                                                    {
-                                                        <option value="@j">@j</option>
-                                                    }
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <select asp-for="NewTarget.TargetType" class="form-select">
-                                                    <option value="AboveLine">Above the Line</option>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input asp-for="NewTarget.TargetValue"
-                                                    class="form-control"
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    step="1" />
-                                            </td>
-                                            <td>
-                                                <button type="submit" name="insertButton" class="btn btn-primary">Insert</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <table class="table w-auto">
+                                <thead>
+                                    <tr>
+                                        <th>Grade</th>
+                                        <th>Target Type</th>
+                                        <th>Target Value (%)</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <select asp-for="NewTarget.GradeLevel" class="form-select is-invalid" required>
+                                                <option value="">-- Select --</option>
+                                                <option value="0">K</option>
+                                                @for (int j = 1; j <= 12; j++)
+                                                {
+                                                    <option value="@j">@j</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select asp-for="NewTarget.TargetType" class="form-select" required>
+                                                <option value="AboveLine">Above the Line</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input asp-for="NewTarget.TargetValue" class="form-control" type="number" min="0" max="100" step="1" required />
+                                        </td>
+                                        <td>
+                                            <button type="submit" name="insertButton" class="btn btn-primary">Insert</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            @if (Model.Protocol?.SectionResponses.FirstOrDefault(r => r.SectionNumber == i) is { } sectionMeta)
+                            {
+                                <small class="text-muted d-block mb-2">Last updated by @sectionMeta.UpdatedBy on @sectionMeta.UpdatedAt.ToLocalTime():g</small>
+                            }
+                            <form method="post" asp-page-handler="SaveSection" class="mb-4 auto-save-form" data-section="@i">
+                                <input type="hidden" name="Section" value="@i" />
+                                <textarea class="form-control mb-2 auto-save-input" rows="6" name="Content" placeholder="Enter response...">@Model.Responses.GetValueOrDefault(i)</textarea>
+                                <button type="submit" class="btn btn-sm btn-outline-success">Save Section</button>
                             </form>
                         }
-
-                    @if (i != 1 && i != 2)
-                    {
-                        @if (Model.Protocol != null &&
-                                            Model.Protocol.SectionResponses.FirstOrDefault(r => r.SectionNumber == i) is { } sectionMeta)
-                        {
-                            <small class="text-muted d-block mb-2">
-                                Last updated by @sectionMeta.UpdatedBy on @sectionMeta.UpdatedAt.ToLocalTime().ToString("g")
-                            </small>
-                        }
-                        <form method="post" asp-page-handler="SaveSection" class="mb-4">
-                            <input type="hidden" name="Section" value="@i" />
-                            <textarea class="form-control mb-2" rows="6" name="Content"
-                            placeholder="Enter response...">@Model.Responses.GetValueOrDefault(i)</textarea>
-                            <button type="submit" class="btn btn-sm btn-outline-success">Save Section</button>
-                        </form>
-                    }
-
-                    @if (i < 9)
-                    {
-                        <div class="text-end mt-3">
-                            <button type="button" class="btn btn-outline-primary" onclick="goToNextSection(@i)">Next:
-                                @Model.SectionTitles[i + 1]</button>
-                        </div>
-                    }
-                </section>
-                                }
-
+                    </section>
+                }
             </form>
 
+            <!-- Sticky Save All Button -->
+            <div class="position-sticky bottom-0 bg-white py-3 border-top text-end" style="z-index: 1000;">
+                <button form="fullProtocolForm" type="submit" class="btn btn-success px-4">Save All</button>
+            </div>
         </main>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="sectionToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                Section saved successfully.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        const sectionMap = {
-            1: "introduction",
-            2: "targets",
-            3: "above",
-            4: "demographics",
-            5: "indicators",
-            6: "trends",
-            7: "agreements",
-            8: "action",
-            9: "wrapup"
-        };
+        document.addEventListener("DOMContentLoaded", function () {
+            const input = document.querySelector('input[name="NewTarget.TargetValue"]');
+            if (input) {
+                input.addEventListener("input", function () {
+                    if (this.value > 100) this.value = 100;
+                    if (this.value < 0) this.value = 0;
+                });
+            }
 
-        function goToNextSection(currentIndex) {
-            const nextId = sectionMap[currentIndex + 1];
-            const next = document.getElementById(nextId);
-            if (next) {
-                next.classList.remove("d-none");
-                setTimeout(() => next.classList.add("visible"), 10); // triggers animation
-                next.scrollIntoView({ behavior: "smooth" });
+            const toastEl = document.getElementById('sectionToast');
+            const toast = new bootstrap.Toast(toastEl);
+
+            document.querySelectorAll('.auto-save-input').forEach(textarea => {
+                let timeout;
+                textarea.addEventListener('input', function () {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        const form = this.closest('form.auto-save-form');
+                        if (form) {
+                            const formData = new FormData(form);
+                            fetch(form.action || window.location.href, {
+                                method: 'POST',
+                                body: formData,
+                            }).then(response => {
+                                if (response.ok) {
+                                    toast.show();
+                                } else {
+                                    console.warn('Auto-save failed');
+                                }
+                            });
+                        }
+                    }, 1500);
+                });
+            });
+        });
+    </script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sectionLinks = document.querySelectorAll('#sectionNav a');
+        const sectionOffsets = Array.from(sectionLinks).map(link => {
+            const id = link.getAttribute('data-section');
+            return {
+                id: id,
+                el: document.getElementById(id)
+            };
+        });
+
+        function highlightActiveSection() {
+            let scrollPos = window.scrollY + 100;
+            let active = sectionOffsets.findLast(s => s.el && s.el.offsetTop <= scrollPos);
+            sectionLinks.forEach(link => link.classList.remove("active"));
+            if (active) {
+                const activeLink = document.querySelector(`a[data-section='${active.id}']`);
+                if (activeLink) activeLink.classList.add("active");
             }
         }
 
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const id = this.getAttribute('href').substring(1);
-                const section = document.getElementById(id);
-                if (section && !section.classList.contains('visible')) {
-                    section.classList.remove('d-none');
-                    setTimeout(() => section.classList.add("visible"), 10);
-                }
-                section.scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-
-    </script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const input = document.querySelector('input[name="NewTarget.TargetValue"]');
-            input.addEventListener("input", function () {
-                if (this.value > 100) this.value = 100;
-                if (this.value < 0) this.value = 0;
-            });
-        });
-    </script>
+        document.addEventListener('scroll', highlightActiveSection);
+        highlightActiveSection(); // run once on load
+    });
+</script>
 
 }
