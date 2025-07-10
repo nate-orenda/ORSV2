@@ -1,0 +1,70 @@
+@page "{handler?}"
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.TargetsModel
+@{
+    Layout = null; // this must be null so it returns just the HTML
+}
+
+    <h2 class="mb-3">Targets – CP @Model.Protocol?.CP</h2>
+    <p class="text-muted">
+        School: <strong>@Model.School?.Name</strong> | 
+        District: <strong>@Model.School?.District?.Name</strong> | 
+        Year: <strong>@Model.Protocol?.SchoolYear</strong>
+    </p>
+
+    <form method="post" asp-page-handler="Partial" asp-route-protocolId="@Model.Protocol?.Id">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Grade</th>
+                    <th>Target %</th>
+                    <th>Updated At</th>
+                    <th>Updated By</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var target in Model.GradeLevelTargets)
+                {
+                    <tr>
+                        <td>@(target.GradeLevel == 0 ? "K" : target.GradeLevel.ToString())</td>
+                        <td>
+                            <input name="UpdatedTargets[@target.Id]" class="form-control" value="@target.TargetValue" />
+                        </td>
+                        <td>@target.UpdatedAt.ToString("MM/dd/yyyy")</td>
+                        <td>@target.UpdatedBy</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-primary">Save Targets</button>
+    </form>
+
+    <hr class="my-2" />
+
+    <h4 class="mt-4">Add New Target</h4>
+    <form method="post" asp-page-handler="Partial" asp-route-protocolId="@Model.Protocol?.Id">
+        <input type="hidden" name="insertButton" value="true" />
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label asp-for="NewTarget.GradeLevel" class="form-label">Grade</label>
+                <select asp-for="NewTarget.GradeLevel" class="form-select">
+                    <option value="">-- Select --</option>
+                    @foreach (var g in Model.AvailableGradeLevels)
+                    {
+                        <option value="@g">@(g == 0 ? "K" : g.ToString())</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="NewTarget.TargetValue" class="form-label">Target %</label>
+                <input asp-for="NewTarget.TargetValue" class="form-control" />
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-success">Insert Target</button>
+            </div>
+        </div>
+    </form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

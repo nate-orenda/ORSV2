@@ -1,0 +1,150 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.AbovethelineModel
+@{
+    ViewData["Title"] = "Above the Line";
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml"; // Optional: shared layout for sections
+}
+
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">% Above the Line – CP @Model.Protocol?.CP</h2>
+    <canvas id="aboveLineChart" height="100"></canvas>
+
+    <hr class="my-5" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <h5 class="mb-3 text-center">Current Checkpoint: CP @Model.Protocol?.CP</h5>
+            <table class="table table-bordered table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Grade</th>
+                        <th>Target %</th>
+                        <th>Checkpoint %</th>
+                        <th>Difference</th>
+                        <th>Enrollment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Table_AllGrades.Concat(Model.Table_6_8).Concat(Model.Table_9_10).Concat(Model.Table_11_12))
+                {
+                    <tr>
+                        <td>@row.GradeLabel</td>
+                        <td>@row.TargetPct.ToString("F1")%</td>
+                        <td>@row.CheckpointPct.ToString("F1")%</td>
+                        <td>@(row.Difference >= 0 ? "+" : "")@row.Difference.ToString("F1")%</td>
+                        <td>@row.Enrollment</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-md-6">
+            <h5 class="mb-3">Compare with Previous CP</h5>
+            <form method="get">
+                <input type="hidden" name="ProtocolId" value="@Model.ProtocolId" />
+                <div class="input-group mb-3">
+                    <label class="input-group-text" for="prevCP">Checkpoint</label>
+                    <select class="form-select" id="prevCP" name="compareCP">
+                        @for (int cp = Model.Protocol!.CP - 1; cp >= 1; cp--)
+                        {
+                            //<option value="@cp" @(cp == Model.CompareCP ? "selected" : null)>CP @cp</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary">Compare</button>
+                </div>
+            </form>
+
+            @if (Model.PreviousCPRows != null && Model.PreviousCPRows.Any())
+            {
+                <table class="table table-bordered table-sm">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Grade</th>
+                            <th>Checkpoint %</th>
+                            <th>Enrollment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in Model.PreviousCPRows)
+                    {
+                        <tr>
+                            <td>@row.GradeLabel</td>
+                            <td>@row.CheckpointPct.ToString("F1")%</td>
+                            <td>@row.Enrollment</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+            else if (Model.CompareCP.HasValue)
+            {
+                <div class="alert alert-warning">No data available for CP @Model.CompareCP.</div>
+            }
+            else
+            {
+                <div class="alert alert-info">Select a previous checkpoint to compare.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const chartData = @Html.Raw(Json.Serialize(Model.ChartData));
+        const ctx = document.getElementById('aboveLineChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.map(d => d.cpLabel),
+                datasets: [
+                    {
+                        label: 'All Grades',
+                        data: chartData.map(d => d.allGrades),
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Grades 6–8',
+                        data: chartData.map(d => d.gr6_8),
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Grades 9–10',
+                        data: chartData.map(d => d.gr9_10),
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Grades 11–12',
+                        data: chartData.map(d => d.gr11_12),
+                        fill: false,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: '% Above the Line'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}

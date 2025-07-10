@@ -28,7 +28,8 @@ namespace ORSV2.Models
         public bool Inactive { get; set; } = false;
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }
-
+        public short? LowGrade { get; set; }
+        public short? HighGrade { get; set; }
         public District? District { get; set; }
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
     }

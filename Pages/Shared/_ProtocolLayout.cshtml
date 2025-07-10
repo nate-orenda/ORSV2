@@ -1,0 +1,56 @@
+@inherits Microsoft.AspNetCore.Mvc.Razor.RazorPage<dynamic>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Guidance Alignment Protocol</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        .protocol-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .protocol-sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .protocol-sidebar .nav-link {
+            white-space: normal !important;
+            word-break: break-word;
+        }
+
+        .protocol-main {
+            flex-grow: 1;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+
+        .nav-link.active-section {
+            font-weight: bold;
+            background-color: #e9ecef;
+            border-left: 3px solid #0d6efd;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <header class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand">ORSV2 – Guidance Alignment</span>
+        </div>
+    </header>
+
+    <div class="container-fluid protocol-layout">
+        @RenderBody()
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>
