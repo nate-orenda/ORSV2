@@ -36,7 +36,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public Dictionary<int, decimal> UpdatedTargets { get; set; } = new();
 
         [BindProperty]
-        public List<GAProtocolTarget> NewTargets { get; set; } = new();
+        public GAProtocolTarget NewTarget { get; set; } = new(); 
         public School? School { get; set; }
         public District? District { get; set; }
 
@@ -146,19 +146,25 @@ namespace ORSV2.Pages.GuidanceAlignment
                     }
                 }
             }
-            if (NewTargets.Any())
+            if (Request.Form.ContainsKey("insertButton"))
             {
-                foreach (var t in NewTargets.Where(t => t.TargetValue > 0))
+                if (NewTarget != null && NewTarget.TargetValue > 0 && NewTarget.TargetValue <= 100)
                 {
-                    t.TargetName = "Above the Line";
-                    t.TargetType = "AboveLine";
-                    t.UpdatedAt = now;
-                    t.UpdatedBy = user;
+                    NewTarget.TargetName = "Above the Line";
+                    NewTarget.TargetType = "AboveLine";
+                    NewTarget.SchoolId = protocol.SchoolId;
+                    NewTarget.DistrictId = protocol.DistrictId;
+                    NewTarget.SchoolYear = protocol.SchoolYear;
+                    NewTarget.UpdatedAt = now;
+                    NewTarget.UpdatedBy = user;
 
-                    _context.GAProtocolTargets.Add(t);
+                    _context.GAProtocolTargets.Add(NewTarget);
+                    await _context.SaveChangesAsync();
+
+                    TempData["Success"] = "Target inserted!";
+                    return RedirectToPage(new { id = Id });
                 }
             }
-
             if (!ModelState.IsValid)
             {
                 // Reload targets for redisplay on error
