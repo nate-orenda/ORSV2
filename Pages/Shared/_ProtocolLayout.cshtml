@@ -53,7 +53,7 @@
                 // Build the URL for each section
                 var sectionUrl = sectionNum switch
                 {
-                    1 => $"/GuidanceAlignment/EditProtocol?id={protocolId}",
+                    1 => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}",
                     2 => $"/GuidanceAlignment/ProtocolSections/Targets?protocolId={protocolId}",
                     3 => $"/GuidanceAlignment/ProtocolSections/Abovetheline?protocolId={protocolId}",
                     4 => $"/GuidanceAlignment/ProtocolSections/Demographics?protocolId={protocolId}",
@@ -62,7 +62,7 @@
                     7 => $"/GuidanceAlignment/ProtocolSections/CommonAgreements?protocolId={protocolId}",
                     8 => $"/GuidanceAlignment/ProtocolSections/ActionPlan?protocolId={protocolId}",
                     9 => $"/GuidanceAlignment/ProtocolSections/WrapUp?protocolId={protocolId}",
-                    _ => $"/GuidanceAlignment/EditProtocol?id={protocolId}"
+                    _ => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}"
                 };
 
                 <li class="nav-item mb-1">

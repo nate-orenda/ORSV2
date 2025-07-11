@@ -34,7 +34,7 @@
                 <td>@protocol.CreatedAt.ToShortDateString()</td>
                 <td>@protocol.UpdatedAt?.ToShortDateString()</td>
                 <td>
-                    <a asp-page="/GuidanceAlignment/EditProtocol" asp-route-id="@protocol.Id">Edit</a>
+                    <a asp-page="/GuidanceAlignment/ProtocolSections/Introduction" asp-route-protocolId="@protocol.Id">Edit</a>
                 </td>
             </tr>
         }
