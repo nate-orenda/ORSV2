@@ -8,6 +8,7 @@
     var completedSections = Model.Responses.Count(r => !string.IsNullOrWhiteSpace(r.Value));
     var percentComplete = (int)Math.Round(100.0 * completedSections / totalSections);
 }
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
 <style>
     .layout-container {
@@ -39,7 +40,13 @@
     var sectionNum = kvp.Key;
     var title = kvp.Value;
     var isComplete = sectionNum != 1 && Model.Responses.ContainsKey(sectionNum) && !string.IsNullOrWhiteSpace(Model.Responses[sectionNum]);
-    var sectionPath = sectionNum == 2 ? "/GuidanceAlignment/ProtocolSections/Targets?handler=Partial" : $"/GuidanceAlignment/Protocols/Section{sectionNum}?handler=Partial";
+    var sectionPath = sectionNum switch
+        {
+            2 => "/GuidanceAlignment/ProtocolSections/Targets?handler=Partial",
+            3 => "/GuidanceAlignment/ProtocolSections/Abovetheline?handler=Partial",
+            _ => $"/GuidanceAlignment/Protocols/Section{sectionNum}?handler=Partial"
+        };
+
     <li class="nav-item mb-1">
         <a href="#" data-section-url="@sectionPath"
            class="nav-link section-link text-wrap @(isComplete ? "text-success" : "text-dark") @(sectionNum == 1 ? "fw-bold bg-white border-start border-3 border-primary" : "")">
@@ -65,14 +72,13 @@
     <!-- Main Content Area -->
     <main class="main-content-container p-4">
         <div id="section-wrapper">
-            <div id="welcome-pane">
-                <h2>Edit Protocol – CP @Model.Protocol?.CP</h2>
+            <h2>Protocol – Checkpoint @Model.Protocol?.CP</h2>
                 <p class="text-muted">
                     School: <strong>@Model.School?.Name</strong> | 
                     District: <strong>@Model.School?.District?.Name</strong> | 
                     Year: <strong>@Model.Protocol?.SchoolYear</strong>
                 </p>
-
+            <div id="welcome-pane">
                 <div class="alert alert-info">
                     Select a section from the left sidebar to begin editing. Each section saves automatically.
                 </div>

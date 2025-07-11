@@ -1,150 +1,119 @@
-@page
+@page "{handler?}"
 @model ORSV2.Pages.GuidanceAlignment.ProtocolSections.AbovethelineModel
 @{
-    ViewData["Title"] = "Above the Line";
-    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml"; // Optional: shared layout for sections
+    Layout = null; // important for partial rendering
 }
 
+<h4 class="mb-3">Above the Line</h4>
 
-<div class="container-fluid py-4">
-    <h2 class="mb-4">% Above the Line – CP @Model.Protocol?.CP</h2>
-    <canvas id="aboveLineChart" height="100"></canvas>
+<!-- Chart.js Container -->
+<canvas id="aboveLineChart" class="mb-4" height="100"></canvas>
 
-    <hr class="my-5" />
+<script>
+    const chartData = {
+        labels: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.CPLabel))),
+        datasets: [
+            {
+                label: "All Grades",
+                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.AllGrades))),
+                borderWidth: 2,
+                fill: false
+            },
+            {
+                label: "Grades 6–8",
+                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr6_8))),
+                borderWidth: 2,
+                fill: false
+            },
+            {
+                label: "Grades 9–10",
+                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr9_10))),
+                borderWidth: 2,
+                fill: false
+            },
+            {
+                label: "Grades 11–12",
+                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr11_12))),
+                borderWidth: 2,
+                fill: false
+            }
+        ]
+    };
 
-    <div class="row">
-        <div class="col-md-6">
-            <h5 class="mb-3 text-center">Current Checkpoint: CP @Model.Protocol?.CP</h5>
-            <table class="table table-bordered table-sm">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Grade</th>
-                        <th>Target %</th>
-                        <th>Checkpoint %</th>
-                        <th>Difference</th>
-                        <th>Enrollment</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var row in Model.Table_AllGrades.Concat(Model.Table_6_8).Concat(Model.Table_9_10).Concat(Model.Table_11_12))
+    const ctx = document.getElementById('aboveLineChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+
+@foreach (var (title, rows, color) in new[] {
+    ("Schoolwide (All Grades)", Model.Table_AllGrades, "#FF6447"),
+    ("Predictive Indicators Stage (Grades 6–8)", Model.Table_6_8, "#38B54B"),
+    ("Predictive Indicators Stage (Grades 9–10)", Model.Table_9_10, "#38B54B"),
+    ("End of Journey Indicators of Success (Grades 11–12)", Model.Table_11_12, "#29E2F0")
+})
+{
+    if (rows.Any())
+    {
+        <table class="table table-bordered mt-4">
+            <thead class="table-light">
+                <tr>
+                    <th colspan="7" class="text-center" style="background-color:@color; color:white; font-weight:bold;">
+                        @title
+                    </th>
+                </tr>
+                <tr>
+                    <th>Grade</th>
+                    <th>Target %</th>
+                    <th>Current CP %</th>
+                    <th>Prev CP %</th>
+                    <th>Difference From Target</th>
+                    
+                    <th>Δ Change From Last CP</th>
+                    <th>Enrollment</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
                 {
                     <tr>
                         <td>@row.GradeLabel</td>
-                        <td>@row.TargetPct.ToString("F1")%</td>
-                        <td>@row.CheckpointPct.ToString("F1")%</td>
-                        <td>@(row.Difference >= 0 ? "+" : "")@row.Difference.ToString("F1")%</td>
+                        <td>@row.TargetPct</td>
+                        <td>@row.CheckpointPct</td>
+                        <td>@(row.PreviousPct?.ToString("0.0") ?? "--")</td>
+                        <td>@row.Difference</td>
+                        <td>
+                            @if (row.Change.HasValue)
+                            {
+                                <span class="@(row.Change >= 0 ? "text-success" : "text-danger")">
+                                    @(row.Change.Value.ToString("+0.0;-0.0"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span>--</span>
+                            }
+                        </td>
                         <td>@row.Enrollment</td>
                     </tr>
                 }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="col-md-6">
-            <h5 class="mb-3">Compare with Previous CP</h5>
-            <form method="get">
-                <input type="hidden" name="ProtocolId" value="@Model.ProtocolId" />
-                <div class="input-group mb-3">
-                    <label class="input-group-text" for="prevCP">Checkpoint</label>
-                    <select class="form-select" id="prevCP" name="compareCP">
-                        @for (int cp = Model.Protocol!.CP - 1; cp >= 1; cp--)
-                        {
-                            //<option value="@cp" @(cp == Model.CompareCP ? "selected" : null)>CP @cp</option>
-                        }
-                    </select>
-                    <button type="submit" class="btn btn-outline-primary">Compare</button>
-                </div>
-            </form>
-
-            @if (Model.PreviousCPRows != null && Model.PreviousCPRows.Any())
-            {
-                <table class="table table-bordered table-sm">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>Grade</th>
-                            <th>Checkpoint %</th>
-                            <th>Enrollment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var row in Model.PreviousCPRows)
-                    {
-                        <tr>
-                            <td>@row.GradeLabel</td>
-                            <td>@row.CheckpointPct.ToString("F1")%</td>
-                            <td>@row.Enrollment</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-            }
-            else if (Model.CompareCP.HasValue)
-            {
-                <div class="alert alert-warning">No data available for CP @Model.CompareCP.</div>
-            }
-            else
-            {
-                <div class="alert alert-info">Select a previous checkpoint to compare.</div>
-            }
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const chartData = @Html.Raw(Json.Serialize(Model.ChartData));
-        const ctx = document.getElementById('aboveLineChart').getContext('2d');
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.map(d => d.cpLabel),
-                datasets: [
-                    {
-                        label: 'All Grades',
-                        data: chartData.map(d => d.allGrades),
-                        fill: false,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'Grades 6–8',
-                        data: chartData.map(d => d.gr6_8),
-                        fill: false,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'Grades 9–10',
-                        data: chartData.map(d => d.gr9_10),
-                        fill: false,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'Grades 11–12',
-                        data: chartData.map(d => d.gr11_12),
-                        fill: false,
-                        tension: 0.3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: '% Above the Line'
-                        }
-                    }
-                }
-            }
-        });
-    </script>
+            </tbody>
+        </table>
+    }
 }
+
+<h5 class="mt-4">Reflection / Notes</h5>
+<form method="post" asp-page-handler="SaveComment" asp-route-protocolId="@Model.ProtocolId">
+    <textarea asp-for="AboveLineComment" class="form-control" rows="4" placeholder="Enter reflection notes here..."></textarea>
+    <button type="submit" class="btn btn-primary mt-2">Save Comment</button>
+</form>

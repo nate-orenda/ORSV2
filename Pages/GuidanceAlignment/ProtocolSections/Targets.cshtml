@@ -4,12 +4,7 @@
     Layout = null; // this must be null so it returns just the HTML
 }
 
-    <h2 class="mb-3">Targets – CP @Model.Protocol?.CP</h2>
-    <p class="text-muted">
-        School: <strong>@Model.School?.Name</strong> | 
-        District: <strong>@Model.School?.District?.Name</strong> | 
-        Year: <strong>@Model.Protocol?.SchoolYear</strong>
-    </p>
+    <h4 class="mb-3">Targets</h4>
 
     <form method="post" asp-page-handler="Partial" asp-route-protocolId="@Model.Protocol?.Id">
         <table class="table table-bordered">
