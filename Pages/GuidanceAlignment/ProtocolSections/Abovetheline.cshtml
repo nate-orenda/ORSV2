@@ -1,108 +1,84 @@
 @page "{handler?}"
 @model ORSV2.Pages.GuidanceAlignment.ProtocolSections.AbovethelineModel
 @{
-    Layout = null; // important for partial rendering
+    ViewData["Title"] = "Above the Line";
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml";
 }
 
 <h4 class="mb-3">Above the Line</h4>
 
-<!-- Chart.js Container -->
-<canvas id="aboveLineChart" class="mb-4" height="100"></canvas>
-
-<script>
-    const chartData = {
-        labels: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.CPLabel))),
-        datasets: [
-            {
-                label: "All Grades",
-                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.AllGrades))),
-                borderWidth: 2,
-                fill: false
-            },
-            {
-                label: "Grades 6–8",
-                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr6_8))),
-                borderWidth: 2,
-                fill: false
-            },
-            {
-                label: "Grades 9–10",
-                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr9_10))),
-                borderWidth: 2,
-                fill: false
-            },
-            {
-                label: "Grades 11–12",
-                data: @Html.Raw(Json.Serialize(Model.ChartData.Select(p => p.Gr11_12))),
-                borderWidth: 2,
-                fill: false
-            }
-        ]
-    };
-
-    const ctx = document.getElementById('aboveLineChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-</script>
-
-@foreach (var (title, rows, color) in new[] {
-    ("Schoolwide (All Grades)", Model.Table_AllGrades, "#FF6447"),
-    ("Predictive Indicators Stage (Grades 6–8)", Model.Table_6_8, "#38B54B"),
-    ("Predictive Indicators Stage (Grades 9–10)", Model.Table_9_10, "#38B54B"),
-    ("End of Journey Indicators of Success (Grades 11–12)", Model.Table_11_12, "#29E2F0")
-})
+@if (Model.Protocol?.CP > 1)
 {
-    if (rows.Any())
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Compare to Previous Checkpoint:</label>
+            <select id="compareCPSelect" class="form-select" onchange="updateComparison()">
+                <option value="">Select Checkpoint</option>
+                @for (int i = 1; i < Model.Protocol.CP; i++)
+                {
+                    @if (Model.CompareCP == i)
+                    {
+                        <option value="@i" selected>Checkpoint @i</option>
+                    }
+                    else
+                    {
+                        <option value="@i">Checkpoint @i</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+}
+
+@foreach (var table in Model.TableGroups)
+{
+    if (table.Rows.Any())
     {
         <table class="table table-bordered mt-4">
             <thead class="table-light">
                 <tr>
-                    <th colspan="7" class="text-center" style="background-color:@color; color:white; font-weight:bold;">
-                        @title
+                    <th colspan="7" class="text-center" style="background-color:@table.Color; color:white; font-weight:bold;">
+                        @table.Title
                     </th>
                 </tr>
                 <tr>
                     <th>Grade</th>
                     <th>Target %</th>
-                    <th>Current CP %</th>
-                    <th>Prev CP %</th>
+                    <th>Current CP @Model.Protocol?.CP %</th>
+                    @if (Model.CompareCP.HasValue)
+                    {
+                        <th>Prev CP @Model.CompareCP %</th>
+                        <th>Δ Change</th>
+                    }
                     <th>Difference From Target</th>
-                    
-                    <th>Δ Change From Last CP</th>
                     <th>Enrollment</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in rows)
+                @foreach (var row in table.Rows)
                 {
                     <tr>
                         <td>@row.GradeLabel</td>
-                        <td>@row.TargetPct</td>
-                        <td>@row.CheckpointPct</td>
-                        <td>@(row.PreviousPct?.ToString("0.0") ?? "--")</td>
-                        <td>@row.Difference</td>
-                        <td>
-                            @if (row.Change.HasValue)
-                            {
-                                <span class="@(row.Change >= 0 ? "text-success" : "text-danger")">
-                                    @(row.Change.Value.ToString("+0.0;-0.0"))
-                                </span>
-                            }
-                            else
-                            {
-                                <span>--</span>
-                            }
+                        <td>@row.TargetPct.ToString("F1")%</td>
+                        <td>@row.CheckpointPct.ToString("F1")%</td>
+                        @if (Model.CompareCP.HasValue)
+                        {
+                            <td>@(row.PreviousPct?.ToString("F1") ?? "--")%</td>
+                            <td>
+                                @if (row.Change.HasValue)
+                                {
+                                    <span class="@(row.Change >= 0 ? "text-success" : "text-danger")">
+                                        @(row.Change.Value.ToString("+0.0;-0.0"))
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>--</span>
+                                }
+                            </td>
+                        }
+                        <td class="@(row.Difference >= 0 ? "text-success" : "text-danger")">
+                            @row.Difference.ToString("+0.0;-0.0")
                         </td>
                         <td>@row.Enrollment</td>
                     </tr>
@@ -113,7 +89,24 @@
 }
 
 <h5 class="mt-4">Reflection / Notes</h5>
-<form method="post" asp-page-handler="SaveComment" asp-route-protocolId="@Model.ProtocolId">
+<form method="post" asp-page-handler="SaveComment" asp-route-protocolId="@Model.ProtocolId" asp-route-compareCP="@Model.CompareCP">
     <textarea asp-for="AboveLineComment" class="form-control" rows="4" placeholder="Enter reflection notes here..."></textarea>
     <button type="submit" class="btn btn-primary mt-2">Save Comment</button>
 </form>
+
+@section Scripts {
+<script>
+    function updateComparison() {
+        const selectedCP = document.getElementById('compareCPSelect').value;
+        const url = new URL(window.location);
+        
+        if (selectedCP) {
+            url.searchParams.set('CompareCP', selectedCP);
+        } else {
+            url.searchParams.delete('CompareCP');
+        }
+        
+        window.location.href = url.toString();
+    }
+</script>
+}

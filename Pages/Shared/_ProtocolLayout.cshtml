@@ -1,56 +1,107 @@
-@inherits Microsoft.AspNetCore.Mvc.Razor.RazorPage<dynamic>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Guidance Alignment Protocol</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link rel="stylesheet" href="~/css/site.css" />
-    <style>
-        .protocol-layout {
-            display: flex;
-            min-height: 100vh;
-        }
+@using ORSV2.Models
+@using ORSV2.Data
+@using ORSV2.Pages.GuidanceAlignment
+@{
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
 
-        .protocol-sidebar {
-            width: 250px;
-            flex-shrink: 0;
-            background-color: #f8f9fa;
-            border-right: 1px solid #dee2e6;
-        }
+@{
+    // These should be set by the calling page
+    var protocolId = ViewData["ProtocolId"] as int? ?? 0;
+    var protocol = ViewData["Protocol"] as ORSV2.Models.GAProtocol;
+    var school = ViewData["School"] as ORSV2.Models.School;
+    var currentSection = ViewData["CurrentSection"] as int? ?? 1;
+    var sectionTitles = ViewData["SectionTitles"] as Dictionary<int, string> ?? new Dictionary<int, string>();
+    var responses = ViewData["Responses"] as Dictionary<int, string> ?? new Dictionary<int, string>();
+    var breadcrumbs = ViewData["Breadcrumbs"] as List<ORSV2.Models.BreadcrumbItem> ?? new List<ORSV2.Models.BreadcrumbItem>();
+}
 
-        .protocol-sidebar .nav-link {
-            white-space: normal !important;
-            word-break: break-word;
-        }
+@await Html.PartialAsync("_Breadcrumbs", breadcrumbs)
 
-        .protocol-main {
-            flex-grow: 1;
-            padding: 2rem;
-            background-color: #f8f9fa;
-        }
+<style>
+    .layout-container {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    .sidebar-container {
+        flex: 0 0 250px;
+        max-width: 250px;
+        min-width: 250px;
+        overflow-y: auto;
+    }
+    
+    .main-content-container {
+        flex: 1;
+        min-width: 0;
+        overflow-x: auto;
+    }
+</style>
 
-        .nav-link.active-section {
-            font-weight: bold;
-            background-color: #e9ecef;
-            border-left: 3px solid #0d6efd;
-        }
-    </style>
-</head>
-<body class="bg-light">
-    <header class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <span class="navbar-brand">ORSV2 – Guidance Alignment</span>
+<div class="layout-container">
+    <!-- Fixed Sidebar Navigation -->
+    <aside class="sidebar-container bg-light border-end p-3">
+        <h5 class="text-primary">Sections</h5>
+        <ul class="nav flex-column small">
+            @foreach (var kvp in sectionTitles)
+            {
+                var sectionNum = kvp.Key;
+                var title = kvp.Value;
+                var isComplete = sectionNum != 1 && responses.ContainsKey(sectionNum) && !string.IsNullOrWhiteSpace(responses[sectionNum]);
+                var isActive = sectionNum == currentSection;
+                
+                // Build the URL for each section
+                var sectionUrl = sectionNum switch
+                {
+                    1 => $"/GuidanceAlignment/EditProtocol?id={protocolId}",
+                    2 => $"/GuidanceAlignment/ProtocolSections/Targets?protocolId={protocolId}",
+                    3 => $"/GuidanceAlignment/ProtocolSections/Abovetheline?protocolId={protocolId}",
+                    4 => $"/GuidanceAlignment/ProtocolSections/Demographics?protocolId={protocolId}",
+                    5 => $"/GuidanceAlignment/ProtocolSections/Indicators?protocolId={protocolId}",
+                    6 => $"/GuidanceAlignment/ProtocolSections/Trends?protocolId={protocolId}",
+                    7 => $"/GuidanceAlignment/ProtocolSections/CommonAgreements?protocolId={protocolId}",
+                    8 => $"/GuidanceAlignment/ProtocolSections/ActionPlan?protocolId={protocolId}",
+                    9 => $"/GuidanceAlignment/ProtocolSections/WrapUp?protocolId={protocolId}",
+                    _ => $"/GuidanceAlignment/EditProtocol?id={protocolId}"
+                };
+
+                <li class="nav-item mb-1">
+                    <a href="@sectionUrl" class="nav-link section-link text-wrap @(isComplete ? "text-success" : "text-dark") @(isActive ? "fw-bold bg-white border-start border-3 border-primary" : "")">
+                        <strong>@title</strong>
+                        @if (sectionNum == 1)
+                        {
+                            <i class="bi bi-house-fill"></i>
+                        }
+                        else if (isComplete)
+                        {
+                            <i class="bi bi-check-circle-fill"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-circle"></i>
+                        }
+                    </a>
+                </li>
+            }
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content-container p-4">
+        <div id="section-wrapper">
+            <h2>Protocol – Checkpoint @protocol?.CP</h2>
+            <p class="text-muted">
+                School: <strong>@school?.Name</strong> | 
+                District: <strong>@school?.District?.Name</strong> | 
+                Year: <strong>@protocol?.SchoolYear</strong>
+            </p>
+
+            <!-- Page-specific content goes here -->
+            @RenderBody()
         </div>
-    </header>
+    </main>
+</div>
 
-    <div class="container-fluid protocol-layout">
-        @RenderBody()
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+@section Scripts {
     @RenderSection("Scripts", required: false)
-</body>
-</html>
+}

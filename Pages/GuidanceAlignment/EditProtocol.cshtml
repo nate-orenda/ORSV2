@@ -2,159 +2,21 @@
 @model ORSV2.Pages.GuidanceAlignment.EditProtocolModel
 @{
     ViewData["Title"] = "Edit Protocol";
-    Layout = "~/Pages/Shared/_Layout.cshtml";
-
-    var totalSections = Model.SectionTitles.Count;
-    var completedSections = Model.Responses.Count(r => !string.IsNullOrWhiteSpace(r.Value));
-    var percentComplete = (int)Math.Round(100.0 * completedSections / totalSections);
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml";
 }
-@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
-<style>
-    .layout-container {
-        display: flex;
-        min-height: 100vh;
-    }
-    
-    .sidebar-container {
-        flex: 0 0 250px; /* Don't grow, don't shrink, fixed at 250px */
-        max-width: 250px;
-        min-width: 250px;
-        overflow-y: auto;
-    }
-    
-    .main-content-container {
-        flex: 1;
-        min-width: 0; /* Allows flex item to shrink below content size */
-        overflow-x: auto;
-    }
-</style>
+<div id="welcome-pane">
+    <div class="alert alert-info">
+        Welcome to the Guidance Alignment Protocol workspace. Select a section from the left sidebar to begin editing. Each section saves automatically.
+    </div>
 
-<div class="layout-container">
-    <!-- Fixed Sidebar Navigation -->
-    <aside class="sidebar-container bg-light border-end p-3">
-        <h5 class="text-primary">Sections</h5>
-        <ul class="nav flex-column small">
-@foreach (var kvp in Model.SectionTitles)
-{
-    var sectionNum = kvp.Key;
-    var title = kvp.Value;
-    var isComplete = sectionNum != 1 && Model.Responses.ContainsKey(sectionNum) && !string.IsNullOrWhiteSpace(Model.Responses[sectionNum]);
-    var sectionPath = sectionNum switch
-        {
-            2 => "/GuidanceAlignment/ProtocolSections/Targets?handler=Partial",
-            3 => "/GuidanceAlignment/ProtocolSections/Abovetheline?handler=Partial",
-            _ => $"/GuidanceAlignment/Protocols/Section{sectionNum}?handler=Partial"
-        };
-
-    <li class="nav-item mb-1">
-        <a href="#" data-section-url="@sectionPath"
-           class="nav-link section-link text-wrap @(isComplete ? "text-success" : "text-dark") @(sectionNum == 1 ? "fw-bold bg-white border-start border-3 border-primary" : "")">
-            <strong>@title</strong>
-            @if (sectionNum == 1)
-            {
-                <i class="bi bi-house-fill"></i>
-            }
-            else if (isComplete)
-            {
-                <i class="bi bi-check-circle-fill"></i>
-            }
-            else
-            {
-                <i class="bi bi-circle"></i>
-            }
-        </a>
-    </li>
-}
-            </ul>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="main-content-container p-4">
-        <div id="section-wrapper">
-            <h2>Protocol – Checkpoint @Model.Protocol?.CP</h2>
-                <p class="text-muted">
-                    School: <strong>@Model.School?.Name</strong> | 
-                    District: <strong>@Model.School?.District?.Name</strong> | 
-                    Year: <strong>@Model.Protocol?.SchoolYear</strong>
-                </p>
-            <div id="welcome-pane">
-                <div class="alert alert-info">
-                    Select a section from the left sidebar to begin editing. Each section saves automatically.
-                </div>
-
-                <div class="border rounded p-3 bg-white text-muted">
-                    <p><em>Welcome! This workspace is designed to help your team collaboratively complete the Guidance Alignment Protocol. Begin by selecting a section on the left. As each section is completed, it will be marked with a check icon.</em></p>
-                    <ul>
-                        <li>Each section can be updated independently by any member of your team.</li>
-                        <li>All updates are saved automatically and stamped with the user and time.</li>
-                        <li>Some sections include visualizations and editable targets, such as the "Targets" and "Above the Line" sections.</li>
-                        <li>Come back to this overview at any time by selecting "Introduction" from the sidebar.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div id="section-content"></div>
-        </div>
-    </main>
+    <div class="border rounded p-3 bg-white text-muted">
+        <p><em>This workspace is designed to help your team collaboratively complete the Guidance Alignment Protocol. Begin by selecting a section on the left. As each section is completed, it will be marked with a check icon.</em></p>
+        <ul>
+            <li>Each section can be updated independently by any member of your team.</li>
+            <li>All updates are saved automatically and stamped with the user and time.</li>
+            <li>Some sections include visualizations and editable targets, such as the "Targets" and "Above the Line" sections.</li>
+            <li>Come back to this overview at any time by selecting "Introduction" from the sidebar.</li>
+        </ul>
+    </div>
 </div>
-
-@section Scripts {
-<script>
-    document.querySelectorAll('[data-section-url]').forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            const sectionUrl = this.getAttribute('data-section-url');
-
-            if (sectionUrl.includes('Section1')) {
-                document.getElementById('welcome-pane').style.display = 'block';
-                document.getElementById('section-content').innerHTML = '';
-            } else {
-                // Show loading indicator
-                document.getElementById('section-content').innerHTML = '<div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-                
-                fetch(sectionUrl + '&protocolId=@Model.Id')
-                    .then(res => res.text())
-                    .then(html => {
-                        document.getElementById('section-content').innerHTML = html;
-                        document.getElementById('welcome-pane').style.display = 'none';
-                    })
-                    .catch(err => {
-                        console.error("Load error:", err);
-                        document.getElementById('section-content').innerHTML = '<div class="alert alert-danger">Error loading section. Please try again.</div>';
-                    });
-            }
-
-            // Update active highlight
-            document.querySelectorAll('.section-link').forEach(nav =>
-                nav.classList.remove("fw-bold", "bg-white", "border-start", "border-3", "border-primary")
-            );
-            this.classList.add("fw-bold", "bg-white", "border-start", "border-3", "border-primary");
-        });
-    });
-
-    document.addEventListener("submit", function (e) {
-        const form = e.target;
-        if (form.closest("#section-content")) {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const action = form.getAttribute("action") || window.location.href;
-            const method = form.getAttribute("method") || "post";
-
-            fetch(action, {
-                method: method.toUpperCase(),
-                body: formData
-            })
-            .then(res => res.text())
-            .then(html => {
-                document.getElementById("section-content").innerHTML = html;
-                const scrollTarget = document.querySelector("#section-content .table");
-                if (scrollTarget) {
-                    scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-            })
-            .catch(err => console.error("Form error:", err));
-        }
-    });
-</script>
-}

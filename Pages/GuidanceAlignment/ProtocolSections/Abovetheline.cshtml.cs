@@ -1,195 +1,186 @@
-// Pages/GuidanceAlignment/Protocols/Abovetheline.cshtml.cs
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 
 namespace ORSV2.Pages.GuidanceAlignment.ProtocolSections;
 
-public class AbovethelineModel : GABasePageModel
+public class AbovethelineModel : ProtocolSectionBaseModel
 {
     public AbovethelineModel(ApplicationDbContext context) : base(context) { }
 
-    [BindProperty(SupportsGet = true)]
-    public int ProtocolId { get; set; }
+    public override int CurrentSection => 3; // Above the Line section
 
-    public GAProtocol? Protocol { get; set; }
-    public School? School { get; set; }
-    public List<AboveLineChartPoint> ChartData { get; set; } = new();
-    public List<AboveLineSummaryRow> Table_AllGrades { get; set; } = new();
-    public List<AboveLineSummaryRow> Table_6_8 { get; set; } = new();
-    public List<AboveLineSummaryRow> Table_9_10 { get; set; } = new();
-    public List<AboveLineSummaryRow> Table_11_12 { get; set; } = new();
     [BindProperty(SupportsGet = true)]
     public int? CompareCP { get; set; }
 
-    public class AboveLineChartPoint
-    {
-        public string CPLabel { get; set; } = string.Empty;
-        public decimal AllGrades { get; set; }
-        public decimal Gr6_8 { get; set; }
-        public decimal Gr9_10 { get; set; }
-        public decimal Gr11_12 { get; set; }
-    }
+    [BindProperty]
+    public string? AboveLineComment { get; set; }
+
+    public List<TableGroup> TableGroups { get; set; } = new();
 
     public class AboveLineSummaryRow
     {
         public string GradeLabel { get; set; } = string.Empty;
         public decimal TargetPct { get; set; }
         public decimal CheckpointPct { get; set; }
-        public decimal? PreviousPct { get; set; } // from CompareCP
+        public decimal? PreviousPct { get; set; }
         public decimal Difference => CheckpointPct - TargetPct;
-        public decimal? Change => PreviousPct.HasValue ? CheckpointPct - PreviousPct : (decimal?)null;
+        public decimal? Change => PreviousPct.HasValue ? CheckpointPct - PreviousPct.Value : null;
         public int Enrollment { get; set; }
     }
-    [BindProperty]
-    public string? AboveLineComment { get; set; }
 
-
-
-    public async Task<IActionResult> OnGetAsync() => await LoadAsync();
-    public async Task<IActionResult> OnGetPartialAsync() => await LoadAsync();
-
-    private async Task<IActionResult> LoadAsync()
+    public class TableGroup
     {
-        var authorized = await AuthorizeAsync();
-        if (!authorized) return Forbid();
+        public string Title { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public List<AboveLineSummaryRow> Rows { get; set; } = new();
+    }
 
-        Protocol = await _context.GAProtocols
-        .Include(p => p.SectionResponses)
-        .FirstOrDefaultAsync(p => p.Id == ProtocolId);
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var result = await LoadProtocolDataAsync();
+        if (result.GetType() != typeof(PageResult)) return result;
 
-        if (Protocol == null) return NotFound();
+        await LoadAboveLineDataAsync();
+        return Page();
+    }
 
-        School = await _context.Schools.Include(s => s.District)
-            .FirstOrDefaultAsync(s => s.Id == Protocol.SchoolId);
-        if (School == null) return NotFound();
+    public async Task<IActionResult> OnPostSaveCommentAsync()
+    {
+        var result = await LoadProtocolDataAsync();
+        if (result.GetType() != typeof(PageResult)) return result;
 
+        await SaveSectionResponseAsync(3, AboveLineComment ?? string.Empty);
+        return RedirectToPage(new { protocolId = ProtocolId, compareCP = CompareCP });
+    }
+
+    private async Task LoadAboveLineDataAsync()
+    {
+        if (Protocol == null || School == null) return;
+        
         var cp = Protocol.CP;
         var schoolYear = Protocol.SchoolYear;
 
-        AboveLineComment = Protocol?.SectionResponses?
-            .FirstOrDefault(r => r.SectionNumber == 3)?.ResponseText ?? string.Empty;
+        // Load comment
+        AboveLineComment = Responses.GetValueOrDefault(3, string.Empty);
 
-
-
-        // Auto-default CompareCP
-        if (!CompareCP.HasValue && cp > 1)
-            CompareCP = cp - 1;
-
-        var results = await _context.GAResults
-            .Where(r => r.SchoolId == School.Id && r.DistrictId == School.DistrictId && r.SchoolYear == schoolYear && r.CP == cp)
+        // Load current checkpoint results
+        var currentResults = await _context.GAResults
+            .Where(r => r.SchoolId == School.Id && 
+                       r.DistrictId == School.DistrictId && 
+                       r.SchoolYear == schoolYear && 
+                       r.CP == cp)
             .ToListAsync();
 
-        ChartData = new List<AboveLineChartPoint>
+        // Load comparison results if requested
+        var compareResults = new List<GAResults>();
+        if (CompareCP.HasValue && CompareCP.Value < cp)
         {
-            new AboveLineChartPoint
-            {
-                CPLabel = $"CP {cp}",
-                AllGrades = SafePct(results.Count(r => r.Quadrant == "Benchmark" || r.Quadrant == "Challenge"), results.Count),
-                Gr6_8 = SafePct(results.Count(r => r.Grade is >= 6 and <= 8 && (r.Quadrant == "Benchmark" || r.Quadrant == "Challenge")),
-                                results.Count(r => r.Grade is >= 6 and <= 8)),
-                Gr9_10 = SafePct(results.Count(r => r.Grade is 9 or 10 && (r.Quadrant == "Benchmark" || r.Quadrant == "Challenge")),
-                                results.Count(r => r.Grade is 9 or 10)),
-                Gr11_12 = SafePct(results.Count(r => r.Grade is 11 or 12 && (r.Quadrant == "Benchmark" || r.Quadrant == "Challenge")),
-                                results.Count(r => r.Grade is 11 or 12))
-            }
-        };
-
-        var targets = await _context.GAProtocolTargets
-            .Where(t => t.SchoolId == School.Id && t.DistrictId == School.DistrictId && t.SchoolYear == schoolYear && t.TargetType == "AboveLine")
-            .ToDictionaryAsync(t => t.GradeLevel, t => t.TargetValue);
-
-        // Load prior CP if requested
-        Dictionary<string, decimal> previousPctByGrade = new();
-        if (CompareCP.HasValue)
-        {
-            var priorResults = await _context.GAResults
-                .Where(r => r.SchoolId == School.Id
-                    && r.DistrictId == School.DistrictId
-                    && r.SchoolYear == schoolYear
-                    && r.CP == CompareCP.Value)
+            compareResults = await _context.GAResults
+                .Where(r => r.SchoolId == School.Id && 
+                           r.DistrictId == School.DistrictId && 
+                           r.SchoolYear == schoolYear && 
+                           r.CP == CompareCP.Value)
                 .ToListAsync();
-
-            previousPctByGrade = priorResults
-                .GroupBy(r => r.Grade)
-                .ToDictionary(
-                    g => g.Key == 0 ? "K" : g.Key.ToString(),
-                    g => SafePct(g.Count(r => r.Quadrant == "Benchmark" || r.Quadrant == "Challenge"), g.Count()));
         }
 
-        var summaryRows = results
+        // Load targets
+        var targets = await _context.GAProtocolTargets
+            .Where(t => t.SchoolId == School.Id && 
+                       t.DistrictId == School.DistrictId && 
+                       t.SchoolYear == schoolYear && 
+                       t.TargetType == "AboveLine")
+            .ToDictionaryAsync(t => t.GradeLevel, t => t.TargetValue);
+
+        // Build table data
+        TableGroups = BuildTableGroups(currentResults, compareResults, targets);
+    }
+
+    private List<TableGroup> BuildTableGroups(List<GAResults> currentResults, List<GAResults> compareResults, Dictionary<int, decimal> targets)
+    {
+        var summaryRows = BuildSummaryRows(currentResults, compareResults, targets);
+
+        return new List<TableGroup>
+        {
+            new TableGroup
+            {
+                Title = "Schoolwide (All Grades)",
+                Color = "#FF6447",
+                Rows = new List<AboveLineSummaryRow>
+                {
+                    new AboveLineSummaryRow
+                    {
+                        GradeLabel = "All",
+                        TargetPct = summaryRows.Any() ? summaryRows.Average(r => r.TargetPct) : 0,
+                        CheckpointPct = CalculateAboveLinePct(currentResults),
+                        PreviousPct = compareResults.Any() ? CalculateAboveLinePct(compareResults) : null,
+                        Enrollment = currentResults.Count
+                    }
+                }
+            },
+            new TableGroup
+            {
+                Title = "Predictive Indicators Stage (Grades 6–8)",
+                Color = "#38B54B",
+                Rows = summaryRows.Where(r => IsInGradeRange(r.GradeLabel, 6, 8)).ToList()
+            },
+            new TableGroup
+            {
+                Title = "Predictive Indicators Stage (Grades 9–10)",
+                Color = "#38B54B",
+                Rows = summaryRows.Where(r => IsInGradeRange(r.GradeLabel, 9, 10)).ToList()
+            },
+            new TableGroup
+            {
+                Title = "End of Journey Indicators of Success (Grades 11–12)",
+                Color = "#29E2F0",
+                Rows = summaryRows.Where(r => IsInGradeRange(r.GradeLabel, 11, 12)).ToList()
+            }
+        };
+    }
+
+    private List<AboveLineSummaryRow> BuildSummaryRows(List<GAResults> currentResults, List<GAResults> compareResults, Dictionary<int, decimal> targets)
+    {
+        return currentResults
             .GroupBy(r => r.Grade)
             .Select(g =>
             {
                 var grade = g.Key;
                 var gradeLabel = grade == 0 ? "K" : grade.ToString();
-                var total = g.Count();
-                var above = g.Count(r => r.Quadrant == "Benchmark" || r.Quadrant == "Challenge");
+                var currentGradeResults = g.ToList();
+                var compareGradeResults = compareResults.Where(r => r.Grade == grade).ToList();
 
                 return new AboveLineSummaryRow
                 {
                     GradeLabel = gradeLabel,
-                    TargetPct = targets.ContainsKey(grade) ? targets[grade] : 0,
-                    CheckpointPct = SafePct(above, total),
-                    PreviousPct = previousPctByGrade.TryGetValue(gradeLabel, out var prev) ? prev : (decimal?)null,
-                    Enrollment = total
+                    TargetPct = targets.GetValueOrDefault(grade, 0),
+                    CheckpointPct = CalculateAboveLinePct(currentGradeResults),
+                    PreviousPct = compareGradeResults.Any() ? CalculateAboveLinePct(compareGradeResults) : null,
+                    Enrollment = currentGradeResults.Count
                 };
-            }).ToList();
-
-        Table_AllGrades = new List<AboveLineSummaryRow> {
-            new AboveLineSummaryRow {
-                GradeLabel = "All",
-                TargetPct = summaryRows.Any() ? Math.Round(summaryRows.Average(r => r.TargetPct), 1) : 0,
-                CheckpointPct = SafePct(results.Count(r => r.Quadrant == "Benchmark" || r.Quadrant == "Challenge"), results.Count),
-                Enrollment = results.Count
-            }
-        };
-
-        Table_6_8 = summaryRows.Where(r => new[] { "6", "7", "8" }.Contains(r.GradeLabel)).OrderBy(r => r.GradeLabel).ToList();
-        Table_9_10 = summaryRows.Where(r => new[] { "9", "10" }.Contains(r.GradeLabel)).OrderBy(r => r.GradeLabel).ToList();
-        Table_11_12 = summaryRows.Where(r => new[] { "11", "12" }.Contains(r.GradeLabel)).OrderBy(r => r.GradeLabel).ToList();
-
-        return Page();
+            })
+            .OrderBy(r => r.GradeLabel == "K" ? 0 : int.Parse(r.GradeLabel))
+            .ToList();
     }
 
-
-    private static decimal SafePct(int numerator, int denominator) =>
-        denominator == 0 ? 0 : Math.Round((decimal)numerator / denominator * 100, 1);
-
-    public async Task<IActionResult> OnPostSaveCommentAsync()
+    private static decimal CalculateAboveLinePct(IEnumerable<GAResults> results)
     {
-        var authorized = await AuthorizeAsync();
-        if (!authorized) return Forbid();
+        var resultList = results.ToList();
+        if (!resultList.Any()) return 0;
 
-        Protocol = await _context.GAProtocols
-            .Include(p => p.SectionResponses)
-            .FirstOrDefaultAsync(p => p.Id == ProtocolId);
-        if (Protocol == null) return NotFound();
-
-        var existing = Protocol.SectionResponses
-            .FirstOrDefault(r => r.SectionNumber == 3);
-
-        if (existing != null)
-        {
-            existing.ResponseText = AboveLineComment;
-            existing.UpdatedAt = DateTime.UtcNow;
-            existing.UpdatedBy = User.Identity?.Name ?? "Unknown";
-        }
-        else
-        {
-            Protocol.SectionResponses.Add(new GAProtocolSectionResponse
-            {
-                ProtocolId = ProtocolId,
-                SectionNumber = 3,
-                ResponseText = AboveLineComment,
-                UpdatedAt = DateTime.UtcNow,
-                UpdatedBy = User.Identity?.Name ?? "Unknown"
-            });
-        }
-
-        await _context.SaveChangesAsync();
-        return RedirectToPage(new { protocolId = ProtocolId });
+        var aboveLineCount = resultList.Count(r => r.Quadrant == "Benchmark" || r.Quadrant == "Challenge");
+        return Math.Round((decimal)aboveLineCount / resultList.Count * 100, 1);
     }
 
+    private static bool IsInGradeRange(string gradeLabel, int minGrade, int maxGrade)
+    {
+        if (gradeLabel == "K") return minGrade == 0;
+        if (int.TryParse(gradeLabel, out int grade))
+        {
+            return grade >= minGrade && grade <= maxGrade;
+        }
+        return false;
+    }
 }
