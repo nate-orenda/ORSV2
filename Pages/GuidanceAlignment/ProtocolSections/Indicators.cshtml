@@ -1,0 +1,29 @@
+@page "{handler?}"
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.IndicatorsModel
+@{
+    ViewData["Title"] = "Indicators";
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml";
+}
+
+<h4 class="mb-3">Indicators</h4>
+
+<form method="post" asp-page-handler="SaveResponse" asp-route-protocolId="@Model.ProtocolId">
+    <div class="mb-3">
+        <label class="form-label">Indicator Analysis and Reflection</label>
+        <textarea asp-for="IndicatorsResponse" class="form-control" rows="8" 
+                  placeholder="Enter your Indicator analysis and reflection here..."></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save Response</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.LastUpdated))
+{
+    <div class="mt-3 text-muted small">
+        <i class="bi bi-clock"></i> Last updated: @Model.LastUpdated by @Model.LastUpdatedBy
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

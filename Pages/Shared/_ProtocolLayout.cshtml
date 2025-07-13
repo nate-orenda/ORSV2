@@ -21,69 +21,94 @@
 <style>
     .layout-container {
         display: flex;
-        min-height: 100vh;
+        min-height: auto;
     }
     
     .sidebar-container {
         flex: 0 0 250px;
         max-width: 250px;
         min-width: 250px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
         overflow-y: auto;
+        z-index: 100;
     }
     
     .main-content-container {
         flex: 1;
         min-width: 0;
         overflow-x: auto;
+        padding-left: 1rem;
+    }
+    
+    /* Ensure the sidebar content has proper spacing */
+    .sidebar-content {
+        padding: 1rem;
+        height: 100%;
+    }
+    
+    /* Optional: Add a subtle shadow to separate the sidebar */
+    .sidebar-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 1px;
+        height: 100%;
+        background: rgba(0,0,0,0.1);
+        pointer-events: none;
     }
 </style>
 
 <div class="layout-container">
     <!-- Fixed Sidebar Navigation -->
-    <aside class="sidebar-container bg-light border-end p-3">
-        <h5 class="text-primary">Sections</h5>
-        <ul class="nav flex-column small">
-            @foreach (var kvp in sectionTitles)
-            {
-                var sectionNum = kvp.Key;
-                var title = kvp.Value;
-                var isComplete = sectionNum != 1 && responses.ContainsKey(sectionNum) && !string.IsNullOrWhiteSpace(responses[sectionNum]);
-                var isActive = sectionNum == currentSection;
-                
-                // Build the URL for each section
-                var sectionUrl = sectionNum switch
+    <aside class="sidebar-container bg-light border-end">
+        <div class="sidebar-content">
+            <h5 class="text-primary">Sections</h5>
+            <ul class="nav flex-column small">
+                @foreach (var kvp in sectionTitles)
                 {
-                    1 => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}",
-                    2 => $"/GuidanceAlignment/ProtocolSections/Targets?protocolId={protocolId}",
-                    3 => $"/GuidanceAlignment/ProtocolSections/Abovetheline?protocolId={protocolId}",
-                    4 => $"/GuidanceAlignment/ProtocolSections/Demographics?protocolId={protocolId}",
-                    5 => $"/GuidanceAlignment/ProtocolSections/Indicators?protocolId={protocolId}",
-                    6 => $"/GuidanceAlignment/ProtocolSections/Trends?protocolId={protocolId}",
-                    7 => $"/GuidanceAlignment/ProtocolSections/CommonAgreements?protocolId={protocolId}",
-                    8 => $"/GuidanceAlignment/ProtocolSections/ActionPlan?protocolId={protocolId}",
-                    9 => $"/GuidanceAlignment/ProtocolSections/WrapUp?protocolId={protocolId}",
-                    _ => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}"
-                };
+                    var sectionNum = kvp.Key;
+                    var title = kvp.Value;
+                    var isComplete = sectionNum != 1 && responses.ContainsKey(sectionNum) && !string.IsNullOrWhiteSpace(responses[sectionNum]);
+                    var isActive = sectionNum == currentSection;
+                    
+                    // Build the URL for each section
+                    var sectionUrl = sectionNum switch
+                    {
+                        1 => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}",
+                        2 => $"/GuidanceAlignment/ProtocolSections/Targets?protocolId={protocolId}",
+                        3 => $"/GuidanceAlignment/ProtocolSections/Abovetheline?protocolId={protocolId}",
+                        4 => $"/GuidanceAlignment/ProtocolSections/Demographics?protocolId={protocolId}",
+                        5 => $"/GuidanceAlignment/ProtocolSections/Indicators?protocolId={protocolId}",
+                        6 => $"/GuidanceAlignment/ProtocolSections/Trends?protocolId={protocolId}",
+                        7 => $"/GuidanceAlignment/ProtocolSections/CommonAgreements?protocolId={protocolId}",
+                        8 => $"/GuidanceAlignment/ProtocolSections/ActionPlan?protocolId={protocolId}",
+                        9 => $"/GuidanceAlignment/ProtocolSections/WrapUp?protocolId={protocolId}",
+                        _ => $"/GuidanceAlignment/ProtocolSections/Introduction?protocolId={protocolId}"
+                    };
 
-                <li class="nav-item mb-1">
-                    <a href="@sectionUrl" class="nav-link section-link text-wrap @(isComplete ? "text-success" : "text-dark") @(isActive ? "fw-bold bg-white border-start border-3 border-primary" : "")">
-                        <strong>@title</strong>
-                        @if (sectionNum == 1)
-                        {
-                            <i class="bi bi-house-fill"></i>
-                        }
-                        else if (isComplete)
-                        {
-                            <i class="bi bi-check-circle-fill"></i>
-                        }
-                        else
-                        {
-                            <i class="bi bi-circle"></i>
-                        }
-                    </a>
-                </li>
-            }
-        </ul>
+                    <li class="nav-item mb-1">
+                        <a href="@sectionUrl" class="nav-link section-link text-wrap @(isComplete ? "text-success" : "text-dark") @(isActive ? "fw-bold bg-white border-start border-3 border-primary" : "")">
+                            <strong>@title</strong>
+                            @if (sectionNum == 1)
+                            {
+                                <i class="bi bi-house-fill"></i>
+                            }
+                            else if (isComplete)
+                            {
+                                <i class="bi bi-check-circle-fill"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-circle"></i>
+                            }
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
     </aside>
 
     <!-- Main Content Area -->
