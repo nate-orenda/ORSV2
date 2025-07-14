@@ -1,28 +1,15 @@
 @model ORSV2.Pages.GuidanceAlignment.ProtocolSections.TrendsModel.IndicatorTableGroup
 
-@if (Model != null && Model.Rows.Any())
+@if (Model?.Rows?.Any() == true)
 {
     <div class="table-responsive">
-        <table class="table table-bordered table-sm data-table mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th style="width: 30%;">Indicator</th>
-                    @foreach (var grade in Model.Grades)
+        <table class="table table-sm data-table mb-0">
+            <thead>
+                <tr class="table-primary">
+                    <th scope="col" class="fw-bold text-primary">Indicator</th>
+                    @foreach (var grade in Model.Grades.OrderBy(g => g))
                     {
-                        // Get total enrollment for this grade from any indicator row
-                        var totalEnrollment = Model.Rows
-                            .Where(r => r.GradeData.ContainsKey(grade) && r.GradeData[grade].IsAvailable)
-                            .Select(r => r.GradeData[grade].TotalCount)
-                            .FirstOrDefault();
-                        
-                        <th class="text-center" style="min-width: 100px;">
-                            <div class="fw-bold">Grade @grade</div>
-                            @if (totalEnrollment > 0)
-                            {
-                                <small class="text-muted">(@totalEnrollment students)</small>
-                            }
-                            <div><small class="text-muted">% Met | Count</small></div>
-                        </th>
+                        <th scope="col" class="text-center fw-bold text-primary">Grade @grade</th>
                     }
                 </tr>
             </thead>
@@ -30,25 +17,19 @@
                 @foreach (var row in Model.Rows)
                 {
                     <tr>
-                        <td class="fw-semibold align-middle">
-                            <span class="badge bg-light text-dark">@row.IndicatorName</span>
-                        </td>
-                        @foreach (var grade in Model.Grades)
+                        <td class="fw-semibold">@row.IndicatorName</td>
+                        @foreach (var grade in Model.Grades.OrderBy(g => g))
                         {
-                            @if (row.GradeData.TryGetValue(grade, out var metrics))
+                            @if (row.GradeData.ContainsKey(grade))
                             {
-                                @if (metrics.IsAvailable)
+                                var gradeData = row.GradeData[grade];
+                                @if (gradeData.IsAvailable && gradeData.TotalCount > 0)
                                 {
-                                    <td class="text-center align-middle">
-                                        @if (metrics.TotalCount > 0)
-                                        {
-                                            <div class="fw-bold text-primary fs-6">@metrics.PercentMet.ToString("F1")%</div>
-                                            <small class="text-muted">@metrics.CountMet / @metrics.TotalCount</small>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">No Students</span>
-                                        }
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="badge bg-primary rounded-pill mb-1">@gradeData.PercentMet%</span>
+                                            <small class="text-muted">@gradeData.CountMet/@gradeData.TotalCount</small>
+                                        </div>
                                     </td>
                                 }
                                 else
@@ -71,33 +52,110 @@
         </table>
     </div>
     
-    @* Summary stats for this demographic group *@
-    <div class="mt-2 p-2 bg-light rounded">
-        <div class="row text-center">
-            @{
-                var totalStudents = Model.Rows.SelectMany(r => r.GradeData.Values).Where(v => v.IsAvailable).Sum(v => v.TotalCount);
-                var totalMet = Model.Rows.SelectMany(r => r.GradeData.Values).Where(v => v.IsAvailable).Sum(v => v.CountMet);
-                var averagePerformance = totalStudents > 0 ? Math.Round((decimal)totalMet / totalStudents * 100, 1) : 0;
+    @* Enhanced Summary Stats with Modern Design and Performance Categories *@
+    <div class="mt-3 p-3 bg-gradient rounded-3 border" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+        @{
+            var allGradeData = Model.Rows.SelectMany(r => r.GradeData.Values).Where(v => v.IsAvailable && v.TotalCount > 0).ToList();
+            var totalStudents = allGradeData.Sum(v => v.TotalCount);
+            var totalMet = allGradeData.Sum(v => v.CountMet);
+            
+            // Calculate performance categories based on percentage ranges
+            // Challenge: 75%+ performance, Benchmark: 50-74%, Strategic: 25-49%, Intensive: <25%
+            var challengeCount = 0;
+            var benchmarkCount = 0; 
+            var strategicCount = 0;
+            var intensiveCount = 0;
+            
+            foreach (var data in allGradeData)
+            {
+                if (data.PercentMet >= 75)
+                    challengeCount += data.CountMet;
+                else if (data.PercentMet >= 50)
+                    benchmarkCount += data.CountMet;
+                else if (data.PercentMet >= 25)
+                    strategicCount += data.CountMet;
+                else
+                    intensiveCount += data.CountMet;
             }
-            <div class="col-md-4">
-                <small class="text-muted">Total Students</small>
-                <div class="fw-bold">@totalStudents</div>
+            
+            var challengePercent = totalStudents > 0 ? Math.Round((decimal)challengeCount / totalStudents * 100, 1) : 0;
+            var benchmarkPercent = totalStudents > 0 ? Math.Round((decimal)benchmarkCount / totalStudents * 100, 1) : 0;
+            var strategicPercent = totalStudents > 0 ? Math.Round((decimal)strategicCount / totalStudents * 100, 1) : 0;
+            var intensivePercent = totalStudents > 0 ? Math.Round((decimal)intensiveCount / totalStudents * 100, 1) : 0;
+        }
+        
+        <div class="row g-3">
+            <!-- Total Students -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="text-center p-3 bg-white rounded-3 shadow-sm border">
+                    <div class="text-muted small fw-medium mb-1">Total Students</div>
+                    <div class="fs-3 fw-bold text-dark">@totalStudents</div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <small class="text-muted">Overall Performance</small>
-                <div class="fw-bold text-primary">@averagePerformance%</div>
+            
+            <!-- Challenge Category (75%+ performance) -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="text-center p-3 bg-white rounded-3 shadow-sm border">
+                    <div class="text-muted small fw-medium mb-1">Challenge</div>
+                    <div class="fs-5 fw-bold text-success mb-1">@challengePercent%</div>
+                    <div class="small text-muted">(@challengeCount students)</div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <small class="text-muted">Indicators Tracked</small>
-                <div class="fw-bold">@Model.Rows.Count(r => r.GradeData.Values.Any(v => v.IsAvailable))</div>
+            
+            <!-- Benchmark Category (50-74% performance) -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="text-center p-3 bg-white rounded-3 shadow-sm border">
+                    <div class="text-muted small fw-medium mb-1">Benchmark</div>
+                    <div class="fs-5 fw-bold text-primary mb-1">@benchmarkPercent%</div>
+                    <div class="small text-muted">(@benchmarkCount students)</div>
+                </div>
+            </div>
+            
+            <!-- Strategic Category (25-49% performance) -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="text-center p-3 bg-white rounded-3 shadow-sm border">
+                    <div class="text-muted small fw-medium mb-1">Strategic</div>
+                    <div class="fs-5 fw-bold text-warning mb-1">@strategicPercent%</div>
+                    <div class="small text-muted">(@strategicCount students)</div>
+                </div>
+            </div>
+            
+            <!-- Intensive Category (<25% performance) -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="text-center p-3 bg-white rounded-3 shadow-sm border">
+                    <div class="text-muted small fw-medium mb-1">Intensive</div>
+                    <div class="fs-5 fw-bold text-danger mb-1">@intensivePercent%</div>
+                    <div class="small text-muted">(@intensiveCount students)</div>
+                </div>
+            </div>
+        </div>
+        
+        @* Performance Summary Bar *@
+        <div class="mt-3">
+            <div class="progress" style="height: 8px;">
+                @if (totalStudents > 0)
+                {
+                    <div class="progress-bar bg-success" role="progressbar" style="width: @challengePercent%" title="Challenge: @challengePercent%"></div>
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: @benchmarkPercent%" title="Benchmark: @benchmarkPercent%"></div>
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: @strategicPercent%" title="Strategic: @strategicPercent%"></div>
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: @intensivePercent%" title="Intensive: @intensivePercent%"></div>
+                }
+            </div>
+            <div class="text-center mt-2">
+                <small class="text-muted">Performance Distribution Across All Indicators</small>
             </div>
         </div>
     </div>
 }
 else
 {
-    <div class="alert alert-info mb-0">
-        <i class="bi bi-info-circle"></i>
-        No data available for this demographic group at the current checkpoint.
+    <div class="alert alert-info mb-0 rounded-3">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle me-2 fs-5"></i>
+            <div>
+                <strong>No Data Available</strong><br>
+                <small>No data available for this demographic group at the current checkpoint.</small>
+            </div>
+        </div>
     </div>
 }
