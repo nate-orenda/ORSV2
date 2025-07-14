@@ -52,6 +52,8 @@ public class TrendsModel : ProtocolSectionBaseModel
         public string GradeRange { get; set; } = string.Empty;
         public List<int> Grades { get; set; } = new();
         public List<IndicatorRow> Rows { get; set; } = new();
+        public int TotalStudents { get; set; } // Fixed: Total for this specific group only
+        public Dictionary<string, int> QuadrantCounts { get; set; } = new(); // Added: Quadrant breakdown
     }
 
     public class IndicatorRow
@@ -98,7 +100,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         var districtId = School.DistrictId;
         var schoolId = School.Id;
 
-        // Load all GAResults for this checkpoint
+        // Load all GAResults for this school/checkpoint/year
         var allResults = await _context.GAResults
             .Where(r => r.SchoolId == schoolId && 
                        r.DistrictId == districtId && 
@@ -106,7 +108,7 @@ public class TrendsModel : ProtocolSectionBaseModel
                        r.CP == cp)
             .ToListAsync();
 
-        // Get indicators for context
+        // Get all indicators for grades 6-12 from the most specific scope available
         var indicators = await _context.GAQuadrantIndicators
             .Where(i => i.CP == cp && 
                        i.IsEnabled == true &&
@@ -155,8 +157,8 @@ public class TrendsModel : ProtocolSectionBaseModel
 
     private void BuildDemographicSections(List<GAResults> allResults, List<GAQuadrantIndicators> indicators, int cp)
     {
-        // English Learners (LF = 'EL')
-        var englishLearners = allResults.Where(r => r.LF == "EL").ToList();
+        // English Learners (LF = 'EL') - Filter by school for total count
+        var englishLearners = allResults.Where(r => r.LF == "EL" && r.SchoolId == School!.Id).ToList();
         if (englishLearners.Any())
         {
             var grades = englishLearners.Select(r => r.Grade).Distinct().OrderBy(g => g).ToList();
@@ -201,7 +203,12 @@ public class TrendsModel : ProtocolSectionBaseModel
             Title = title,
             GradeRange = gradeRange,
             Grades = grades,
-            Rows = new List<IndicatorRow>()
+            Rows = new List<IndicatorRow>(),
+            TotalStudents = filteredResults.Count, // Fixed: Only count students in this specific group
+            QuadrantCounts = filteredResults
+                .Where(r => !string.IsNullOrEmpty(r.Quadrant))
+                .GroupBy(r => r.Quadrant!)
+                .ToDictionary(g => g.Key, g => g.Count()) // Added: Quadrant breakdown
         };
 
         // Group filtered results by grade
@@ -310,25 +317,26 @@ public class TrendsModel : ProtocolSectionBaseModel
 
         if (lastResponse != null)
         {
-            LastUpdated = lastResponse.UpdatedAt.ToString("MM/dd/yyyy hh:mm tt");
+            LastUpdated = lastResponse.UpdatedAt.ToString("MMM dd, yyyy 'at' h:mm tt");
             LastUpdatedBy = lastResponse.UpdatedBy ?? "Unknown";
         }
     }
 
     private async Task SaveTrendsResponsesAsync()
     {
+        if (Protocol == null) return;
+
         var now = DateTime.UtcNow;
-        var user = User.Identity?.Name ?? "Unknown";
+        var user = User?.Identity?.Name ?? "Unknown";
 
         // Get existing section 6 responses
         var existingResponses = await _context.GAProtocolSectionResponses
-            .Where(r => r.ProtocolId == Protocol!.Id && r.SectionNumber == 6)
+            .Where(r => r.ProtocolId == Protocol.Id && r.SectionNumber == 6)
             .ToListAsync();
 
         foreach (var kvp in TrendQuestions)
         {
             var key = kvp.Key;
-            var question = kvp.Value;
             var responseText = TrendResponses.GetValueOrDefault(key, string.Empty)?.Trim();
 
             var existingResponse = existingResponses.FirstOrDefault(r => r.SectionTitle == key);
@@ -345,7 +353,7 @@ public class TrendsModel : ProtocolSectionBaseModel
                 // Create new response only if there's content
                 _context.GAProtocolSectionResponses.Add(new GAProtocolSectionResponse
                 {
-                    ProtocolId = Protocol!.Id,
+                    ProtocolId = Protocol.Id,
                     SectionNumber = 6,
                     SectionTitle = key,
                     ResponseText = responseText,
