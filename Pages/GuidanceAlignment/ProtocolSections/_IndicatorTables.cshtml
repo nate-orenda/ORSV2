@@ -1,0 +1,89 @@
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.IndicatorsModel
+
+<!-- Indicator Tables -->
+@foreach (var tableGroup in Model.TableGroups)
+{
+    @if (tableGroup.Rows.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">@tableGroup.Title (@tableGroup.GradeRange)</h5>
+                @if (!string.IsNullOrEmpty(Model.DemographicFilter) && Model.DemographicFilter != "All")
+                {
+                    var filterLabel = Model.DemographicOptions.FirstOrDefault(o => o.Value == Model.DemographicFilter).Label;
+                    <small class="text-muted">Filtered by: @filterLabel</small>
+                }
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Indicator</th>
+                                @foreach (var grade in tableGroup.Grades)
+                                {
+                                    // Get total enrollment for this grade from any indicator row
+                                    var totalEnrollment = tableGroup.Rows
+                                        .Where(r => r.GradeData.ContainsKey(grade) && r.GradeData[grade].IsAvailable)
+                                        .Select(r => r.GradeData[grade].TotalCount)
+                                        .FirstOrDefault();
+                                    
+                                    <th class="text-center">
+                                        <strong>Grade @grade</strong>
+                                        @if (totalEnrollment > 0)
+                                        {
+                                            <small class="text-muted d-block">(@totalEnrollment total)</small>
+                                        }
+                                        <small class="text-muted">% | # Met</small>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in tableGroup.Rows)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@row.IndicatorName</td>
+                                    @foreach (var grade in tableGroup.Grades)
+                                    {
+                                        @if (row.GradeData.TryGetValue(grade, out var metrics))
+                                        {
+                                            @if (metrics.IsAvailable)
+                                            {
+                                                <td class="text-center">
+                                                    <span class="fw-bold text-primary">@metrics.PercentMet.ToString("F1")%</span>
+                                                    <span class="text-muted"> | </span>
+                                                    <span>@metrics.CountMet</span>
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td class="text-center table-secondary">
+                                                    <span class="text-muted">N/A</span>
+                                                </td>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <td class="text-center">
+                                                <span class="text-muted">No Data</span>
+                                            </td>
+                                        }
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@if (!Model.TableGroups.Any(g => g.Rows.Any()))
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        No indicator data found for the current checkpoint and selected demographic filter.
+    </div>
+}

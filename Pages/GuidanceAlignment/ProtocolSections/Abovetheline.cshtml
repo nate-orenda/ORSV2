@@ -12,81 +12,27 @@
     <div class="row mb-3">
         <div class="col-md-4">
             <label class="form-label">Compare to Previous Checkpoint:</label>
-            <select id="compareCPSelect" class="form-select" onchange="updateComparison()">
+            <select id="compareCPSelect" class="form-select" onchange="updateComparisonTables()">
                 <option value="">Select Checkpoint</option>
                 @for (int i = 1; i < Model.Protocol.CP; i++)
                 {
-                    @if (Model.CompareCP == i)
-                    {
-                        <option value="@i" selected>Checkpoint @i</option>
-                    }
-                    else
-                    {
-                        <option value="@i">Checkpoint @i</option>
-                    }
+                    <option value="@i" selected="@(Model.CompareCP == i)">Checkpoint @i</option>
                 }
             </select>
+        </div>
+        <div class="col-md-8 d-flex align-items-end">
+            <div id="loadingIndicator" class="text-muted" style="display: none;">
+                <i class="spinner-border spinner-border-sm me-2"></i>
+                Loading comparison data...
+            </div>
         </div>
     </div>
 }
 
-@foreach (var table in Model.TableGroups)
-{
-    if (table.Rows.Any())
-    {
-        <table class="table table-bordered mt-4">
-            <thead class="table-light">
-                <tr>
-                    <th colspan="7" class="text-center" style="background-color:@table.Color; color:white; font-weight:bold;">
-                        @table.Title
-                    </th>
-                </tr>
-                <tr>
-                    <th>Grade</th>
-                    <th>Target %</th>
-                    <th>Current CP @Model.Protocol?.CP %</th>
-                    @if (Model.CompareCP.HasValue)
-                    {
-                        <th>Prev CP @Model.CompareCP %</th>
-                        <th>Δ Change</th>
-                    }
-                    <th>Difference From Target</th>
-                    <th>Enrollment</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var row in table.Rows)
-                {
-                    <tr>
-                        <td>@row.GradeLabel</td>
-                        <td>@row.TargetPct.ToString("F1")%</td>
-                        <td>@row.CheckpointPct.ToString("F1")%</td>
-                        @if (Model.CompareCP.HasValue)
-                        {
-                            <td>@(row.PreviousPct?.ToString("F1") ?? "--")%</td>
-                            <td>
-                                @if (row.Change.HasValue)
-                                {
-                                    <span class="@(row.Change >= 0 ? "text-success" : "text-danger")">
-                                        @(row.Change.Value.ToString("+0.0;-0.0"))
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>--</span>
-                                }
-                            </td>
-                        }
-                        <td class="@(row.Difference >= 0 ? "text-success" : "text-danger")">
-                            @row.Difference.ToString("+0.0;-0.0")
-                        </td>
-                        <td>@row.Enrollment</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-}
+<!-- Tables Container -->
+<div id="aboveLineTablesContainer">
+    @await Html.PartialAsync("_AboveLineTableGroups", Model)
+</div>
 
 <h5 class="mt-4">Reflection / Notes</h5>
 <form method="post" asp-page-handler="SaveComment" asp-route-protocolId="@Model.ProtocolId" asp-route-compareCP="@Model.CompareCP">
@@ -96,17 +42,101 @@
 
 @section Scripts {
 <script>
-    function updateComparison() {
-        const selectedCP = document.getElementById('compareCPSelect').value;
-        const url = new URL(window.location);
+    async function updateComparisonTables() {
+        const select = document.getElementById('compareCPSelect');
+        const selectedValue = select.value;
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const tablesContainer = document.getElementById('aboveLineTablesContainer');
         
-        if (selectedCP) {
-            url.searchParams.set('CompareCP', selectedCP);
-        } else {
-            url.searchParams.delete('CompareCP');
+        try {
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            select.disabled = true;
+            
+            // Build the URL with compareCP parameter
+            const url = `?handler=Tables&protocolId=@Model.ProtocolId${selectedValue ? `&compareCP=${selectedValue}` : ''}`;
+            
+            // Fetch updated tables
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const html = await response.text();
+                tablesContainer.innerHTML = html;
+            } else {
+                console.error('Failed to load comparison tables');
+                tablesContainer.innerHTML = '<div class="alert alert-danger">Failed to load comparison data. Please refresh the page.</div>';
+            }
+        } catch (error) {
+            console.error('Error updating tables:', error);
+            tablesContainer.innerHTML = '<div class="alert alert-danger">Error loading data. Please refresh the page.</div>';
+        } finally {
+            // Hide loading indicator
+            loadingIndicator.style.display = 'none';
+            select.disabled = false;
         }
-        
-        window.location.href = url.toString();
+    }
+
+    // Auto-save functionality for the comment
+    let autoSaveTimeout;
+    const commentTextarea = document.querySelector('textarea[name="AboveLineComment"]');
+    
+    if (commentTextarea) {
+        commentTextarea.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(autoSaveComment, 2000); // Auto-save after 2 seconds of inactivity
+        });
+    }
+
+    async function autoSaveComment() {
+        const textarea = document.querySelector('textarea[name="AboveLineComment"]');
+        if (!textarea) return;
+
+        const formData = new FormData();
+        formData.append('AboveLineComment', textarea.value);
+        formData.append('CompareCP', document.getElementById('compareCPSelect')?.value || '');
+        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+        try {
+            const response = await fetch('?handler=SaveComment', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Show subtle auto-save indicator
+                showAutoSaveStatus('Auto-saved', 'success');
+            } else {
+                showAutoSaveStatus('Auto-save failed', 'error');
+            }
+        } catch (error) {
+            console.error('Auto-save error:', error);
+            showAutoSaveStatus('Auto-save error', 'error');
+        }
+    }
+
+    function showAutoSaveStatus(message, type) {
+        // Remove existing status
+        const existing = document.getElementById('autoSaveStatus');
+        if (existing) existing.remove();
+
+        // Create new status indicator
+        const status = document.createElement('small');
+        status.id = 'autoSaveStatus';
+        status.className = `text-${type === 'success' ? 'success' : 'danger'} ms-2`;
+        status.textContent = message;
+
+        // Add after the save button
+        const saveButton = document.querySelector('button[type="submit"]');
+        if (saveButton) {
+            saveButton.parentNode.appendChild(status);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (status.parentNode) {
+                    status.remove();
+                }
+            }, 3000);
+        }
     }
 </script>
 }

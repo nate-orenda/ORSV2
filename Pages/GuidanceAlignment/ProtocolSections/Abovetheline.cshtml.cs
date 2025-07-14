@@ -47,12 +47,25 @@ public class AbovethelineModel : ProtocolSectionBaseModel
         return Page();
     }
 
+    // NEW: AJAX handler for table updates
+    public async Task<IActionResult> OnGetTablesAsync()
+    {
+        var result = await LoadProtocolDataAsync();
+        if (result.GetType() != typeof(PageResult)) return result;
+
+        await LoadAboveLineDataAsync();
+        
+        return Partial("_AboveLineTableGroups", this);
+    }
+
     public async Task<IActionResult> OnPostSaveCommentAsync()
     {
         var result = await LoadProtocolDataAsync();
         if (result.GetType() != typeof(PageResult)) return result;
 
         await SaveSectionResponseAsync(3, AboveLineComment ?? string.Empty);
+        
+        TempData["Success"] = "Above the Line reflection saved successfully!";
         return RedirectToPage(new { protocolId = ProtocolId, compareCP = CompareCP });
     }
 

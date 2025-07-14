@@ -1,0 +1,59 @@
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.AbovethelineModel
+
+@foreach (var table in Model.TableGroups)
+{
+    if (table.Rows.Any())
+    {
+        <table class="table table-bordered mt-4">
+            <thead class="table-light">
+                <tr>
+                    <th colspan="@(Model.CompareCP.HasValue ? "7" : "5")" class="text-center" style="background-color:@table.Color; color:white; font-weight:bold;">
+                        @table.Title
+                    </th>
+                </tr>
+                <tr>
+                    <th>Grade</th>
+                    <th>Target %</th>
+                    <th>Current CP @Model.Protocol?.CP %</th>
+                    @if (Model.CompareCP.HasValue)
+                    {
+                        <th>Prev CP @Model.CompareCP %</th>
+                        <th>Δ Change</th>
+                    }
+                    <th>Difference From Target</th>
+                    <th>Enrollment</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in table.Rows)
+                {
+                    <tr>
+                        <td>@row.GradeLabel</td>
+                        <td>@row.TargetPct.ToString("F1")%</td>
+                        <td>@row.CheckpointPct.ToString("F1")%</td>
+                        @if (Model.CompareCP.HasValue)
+                        {
+                            <td>@(row.PreviousPct?.ToString("F1") ?? "--")%</td>
+                            <td>
+                                @if (row.Change.HasValue)
+                                {
+                                    <span class="@(row.Change >= 0 ? "text-success" : "text-danger")">
+                                        @(row.Change.Value.ToString("+0.0;-0.0"))
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>--</span>
+                                }
+                            </td>
+                        }
+                        <td class="@(row.Difference >= 0 ? "text-success" : "text-danger")">
+                            @row.Difference.ToString("+0.0;-0.0")
+                        </td>
+                        <td>@row.Enrollment</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
