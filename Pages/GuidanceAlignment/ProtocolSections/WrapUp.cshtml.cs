@@ -43,16 +43,31 @@ public class WrapUpModel : ProtocolSectionBaseModel
         var result = await LoadProtocolDataAsync();
         if (result.GetType() != typeof(PageResult)) return result;
 
-        // Save the wrap-up response to section responses
-        await SaveSectionResponseAsync(9, WrapUpResponse);
-
-        // Update protocol fields if values are provided
-        // Need to reload the protocol to get fresh data
-        var protocol = await _context.GAProtocols
-            .FirstOrDefaultAsync(p => p.Id == ProtocolId);
-
-        if (protocol != null)
+        // Validate required fields
+        if (string.IsNullOrWhiteSpace(WrapUpResponse))
         {
+            ModelState.AddModelError(nameof(WrapUpResponse), "Reflection feedback is required.");
+            LoadWrapUpData();
+            await LoadScheduleInfoAsync();
+            return Page();
+        }
+
+        try
+        {
+            // Save the wrap-up response to section responses
+            await SaveSectionResponseAsync(9, WrapUpResponse);
+
+            // Update protocol fields if values are provided
+            // Need to reload the protocol to get fresh data
+            var protocol = await _context.GAProtocols
+                .FirstOrDefaultAsync(p => p.Id == ProtocolId);
+
+            if (protocol == null) 
+            {
+                TempData["Error"] = "Protocol not found.";
+                return RedirectToPage("/GuidanceAlignment/Protocols", new { schoolId = School?.Id });
+            }
+
             var protocolNeedsUpdate = false;
 
             // Update NextProtocolDate if provided
@@ -74,10 +89,30 @@ public class WrapUpModel : ProtocolSectionBaseModel
                 protocol.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
-        }
 
-        TempData["Success"] = "Wrap Up section saved successfully!";
-        return RedirectToPage(new { protocolId = ProtocolId });
+            // Set success message based on finalization status
+            if (FinalizeProtocol)
+            {
+                TempData["Success"] = "Protocol completed and finalized successfully!";
+            }
+            else
+            {
+                TempData["Success"] = "Wrap Up section saved successfully!";
+            }
+
+            // Return to the main protocols page for the school
+            return RedirectToPage("/GuidanceAlignment/Protocols", new { schoolId = School?.Id });
+        }
+        catch (Exception)
+        {
+            // Log the exception (you might want to use ILogger here)
+            TempData["Error"] = "An error occurred while saving. Please try again.";
+            
+            // Reload data and return to page
+            LoadWrapUpData();
+            await LoadScheduleInfoAsync();
+            return Page();
+        }
     }
 
     private void LoadWrapUpData()
@@ -95,9 +130,12 @@ public class WrapUpModel : ProtocolSectionBaseModel
             LastUpdatedBy = wrapUpResponse.UpdatedBy ?? "Unknown";
         }
 
-        // Load existing protocol values
-        NextSessionDate = Protocol.NextProtocolDate;
-        FinalizeProtocol = Protocol.IsFinalized;
+        // Load protocol-level data
+        if (Protocol != null)
+        {
+            NextSessionDate = Protocol.NextProtocolDate;
+            FinalizeProtocol = Protocol.IsFinalized;
+        }
     }
 
     private async Task LoadScheduleInfoAsync()

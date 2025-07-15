@@ -1,4 +1,4 @@
-@page "{handler?}"
+@page
 @model ORSV2.Pages.GuidanceAlignment.ProtocolSections.CommonAgreementsModel
 @{
     ViewData["Title"] = "Common Agreements";
@@ -141,6 +141,120 @@
         </button>
     </div>
 </form>
+
+<hr class="my-4" />
+
+<h4 class="mb-3">Action Plan</h4>
+<p>If appropriate, divide up the work tasks so each member contributes to the common agreements.</p>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Add New Task</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="AddActionPlanItem" asp-route-protocolId="@Model.ProtocolId" id="addActionPlanItemForm">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="user-search-input" class="form-label fw-bold">Search Team Member</label>
+                    <input type="text" id="user-search-input" class="form-control mb-2" placeholder="Type to search by name or email...">
+                    
+                    <label asp-for="NewActionPlanItem.TeamMemberId" class="form-label visually-hidden">Team Member</label>
+                    <select asp-for="NewActionPlanItem.TeamMemberId" class="form-select" asp-items="Model.SchoolUsers" size="5">
+                        <option value="" disabled>-- Select a user --</option>
+                    </select>
+                    <span asp-validation-for="NewActionPlanItem.TeamMemberId" class="text-danger"></span>
+                </div>
+                <div class="col-md-5">
+                    <label asp-for="NewActionPlanItem.Task" class="form-label fw-bold">Task to Do</label>
+                    <input asp-for="NewActionPlanItem.Task" class="form-control" placeholder="Enter task description" />
+                    <span asp-validation-for="NewActionPlanItem.Task" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewActionPlanItem.DueDate" class="form-label fw-bold">Due Date</label>
+                    <input asp-for="NewActionPlanItem.DueDate" type="date" class="form-control" />
+                    <span asp-validation-for="NewActionPlanItem.DueDate" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="mt-3 text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Task
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h5 class="mt-4">Assigned Tasks</h5>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 25%;">Team Member</th>
+                <th style="width: 50%;">Task</th>
+                <th style="width: 20%;">Due Date</th>
+                <th style="width: 5%;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.ActionPlanItems.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center">No action plan items have been added yet.</td>
+                </tr>
+            }
+            @foreach (var item in Model.ActionPlanItems)
+            {
+                <tr>
+                    <td>
+                        @if (item.TeamMember != null)
+                        {
+                            <span>@($"{item.TeamMember.FirstName} {item.TeamMember.LastName}".Trim())</span>
+                            <br>
+                            <small class="text-muted">@item.TeamMember.Email</small>
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </td>
+                    <td>@item.Task</td>
+                    <td>@item.DueDate.ToString("MM/dd/yyyy")</td>
+                    <td>
+                        @* Future placeholder for edit/delete buttons *@
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('user-search-input');
+            const userSelect = document.querySelector('select[asp-for="NewActionPlanItem.TeamMemberId"]');
+            
+            if (searchInput && userSelect) {
+                const options = Array.from(userSelect.options);
+
+                searchInput.addEventListener('keyup', function () {
+                    const searchText = this.value.toLowerCase();
+                    
+                    // Clear current options
+                    userSelect.innerHTML = ''; 
+
+                    // Filter and re-add options
+                    options.forEach(option => {
+                        if (option.text.toLowerCase().includes(searchText)) {
+                            userSelect.add(option);
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}
 
 @functions {
     private string GetPlaceholderText(string questionKey)

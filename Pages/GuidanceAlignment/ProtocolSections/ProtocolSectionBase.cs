@@ -24,7 +24,7 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
         {5, "Indicators"},
         {6, "Trends"},
         {7, "Common Agreements"},
-        {8, "Action Plan"},
+        //{8, "Action Plan"},
         {9, "Wrap Up"}
     };
 
