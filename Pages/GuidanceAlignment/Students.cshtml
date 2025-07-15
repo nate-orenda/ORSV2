@@ -1,69 +1,37 @@
-@page
+@page "{schoolId:int}/{grade:int}"
 @model ORSV2.Pages.GuidanceAlignment.StudentsModel
-@using System.Text.Json
 @{
     ViewData["Title"] = $"Students - Grade {Model.Grade}";
 }
 
-<!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
 
-<div class="row">
-    <!-- Left: Indicator Bar Chart -->
-    <div class="col-md-6 mb-4 d-flex">
-        <div class="card shadow-sm p-3 w-100 d-flex flex-column align-self-end">
-            <!-- Summary Table (no header) -->
-            <table class="table table-sm mb-2">
-                <tr>
-                    <td><strong>Grade:</strong> @Model.Grade</td>
-                    <td><strong>Checkpoint:</strong> @Model.CurrentCheckpoint</td>
-                    <td><strong>Above %:</strong> @Model.FormatPercentage(@Model.AboveTheLineCount)</td>
-                    <td><strong>Above #:</strong> @Model.AboveTheLineCount</td>
-                    <td><strong>Total:</strong> @Model.TotalCount</td>
-                </tr>
-            </table>
-
-            <!-- Detailed Indicator Table -->
-            <table class="table table-sm table-bordered text-center mb-3">
-                <thead class="table-light">
-                    <tr>
-                        <th>Grade</th>
-                        <th>CP</th>
-                        <th>Indicator</th>
-                        <th>% Met</th>
-                        <th># Met</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var i in Model.IndicatorSummaries)
-                    {
-                        <tr>
-                            <td>@Model.Grade</td>
-                            <td>@Model.CurrentCheckpoint</td>
-                            <td>@i.Name</td>
-                            <td>@i.PercentMet.ToString("0.0")%</td>
-                            <td>@i.CountMet</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            <h6 class="text-center mb-3">Indicators Met – Grade @Model.Grade</h6>
-            @if (Model.IndicatorSummaries?.Any() == true)
-            {
-                <canvas id="indicatorChart"></canvas>
-            }
-            else
-            {
-                <div class="alert alert-info text-center mb-0">
-                    No indicators found for this grade/checkpoint.
-                </div>
-            }
+<div class="container-fluid px-4 py-3">
+<!-- Summary Cards Row -->
+<div class="row mb-3">
+    <!-- Left: Indicator Performance Overview -->
+    <div class="col-md-6 mb-3 d-flex">
+        <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-center">
+            <h6 class="text-center mb-3">Indicator Performance – Grade @Model.Grade</h6>
+            <div class="row g-2">
+                @foreach (var indicator in Model.IndicatorSummaries)
+                {
+                    <div class="col-6 col-lg-4">
+                        <div class="text-center p-2 border rounded">
+                            <div class="fw-semibold small">@GetIndicatorDisplayName(indicator.Name)</div>
+                            <div class="h5 mb-1 @(indicator.PercentMet >= 80 ? "text-success" : indicator.PercentMet >= 60 ? "text-warning" : "text-danger")">
+                                @indicator.PercentMet.ToString("0")%
+                            </div>
+                            <div class="small text-muted">@indicator.CountMet met</div>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 
     <!-- Right: Quadrant Pie Chart -->
-    <div class="col-md-6 mb-4 d-flex">
+    <div class="col-md-6 mb-3 d-flex">
         <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-end">
             <h6 class="text-center mb-3">Quadrant Distribution – Grade @Model.Grade</h6>
             <canvas id="quadrantPie"></canvas>
@@ -71,8 +39,7 @@
     </div>
 </div>
 
-
-<!-- Existing student table stays below -->
+<!-- Student Table -->
 <div class="card shadow-sm mb-4 border-0">
     <div class="card-body">
         <h5 class="card-title mb-4">Student List – Grade @Model.Grade</h5>
@@ -93,7 +60,13 @@
                         <th>Current GPA</th>
                         <th>Cumulative GPA</th>
                         <th>Credits</th>
-                        <th>On Track</th>
+                        
+                        <!-- Dynamic Indicator Columns -->
+                        @foreach (var indicator in Model.IndicatorSummaries)
+                        {
+                            <th class="text-center">@GetIndicatorDisplayName(indicator.Name)</th>
+                        }
+                        
                         <th>Quadrant</th>
                     </tr>
                 </thead>
@@ -126,19 +99,25 @@
                             <td>@(s.CurrentGPA?.ToString("0.00") ?? "-")</td>
                             <td>@(s.CumulativeGPA?.ToString("0.00") ?? "-")</td>
                             <td>@(s.CreditsCompleted?.ToString("0.#") ?? "-")</td>
-                            <td>
-                                <span class="badge bg-@(s.OnTrack == true ? "success" : "secondary")">
-                                    @(s.OnTrack == true ? "Yes" : "No")
-                                </span>
-                            </td>
+                            
+                            <!-- Dynamic Indicator Values -->
+                            @foreach (var indicator in Model.IndicatorSummaries)
+                            {
+                                var value = GetIndicatorValue(s, indicator.Name);
+                                <td class="text-center">
+                                    <span class="badge bg-@(value == true ? "success" : value == false ? "danger" : "secondary")">
+                                        @(value == true ? "Met" : value == false ? "Not Met" : "N/A")
+                                    </span>
+                                </td>
+                            }
+                            
                             <td>
                                 <span class="badge 
-                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
-                                    s.Quadrant == "Benchmark" ? "bg-success" :
-                                    s.Quadrant == "Strategic" ? "bg-warning text-dark" :
-                                    s.Quadrant == "Intensive" ? "bg-danger" :
-                                    "bg-secondary")">
-                                    @s.Quadrant
+                                    @(s.Quadrant == "Q1" ? "bg-success" :
+                                    s.Quadrant == "Q2" ? "bg-warning text-dark" :
+                                    s.Quadrant == "Q3" ? "bg-danger" :
+                                    s.Quadrant == "Q4" ? "bg-info" : "bg-secondary")">
+                                    @(s.Quadrant ?? "N/A")
                                 </span>
                             </td>
                         </tr>
@@ -148,27 +127,65 @@
         </div>
     </div>
 </div>
+</div>
 
-
+<!-- Student Profile Modal -->
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="profileContent">Loading...</div>
+            <div class="modal-body" id="profileContent">
+                <!-- Content loaded via AJAX -->
             </div>
         </div>
     </div>
 </div>
+
+@functions {
+    bool? GetIndicatorValue(ORSV2.Models.GAResults student, string indicatorName)
+    {
+        return indicatorName switch
+        {
+            "OnTrack" => student.OnTrack,
+            "GPA" => student.GPA,
+            "AGGrades" => student.AGGrades,
+            "AGSchedule" => student.AGSchedule,
+            "Affiliation" => student.Affiliation,
+            "FAFSA" => student.FAFSA,
+            "CollegeApplication" => student.CollegeApplication,
+            "Attendance" => student.Attendance,
+            "Referrals" => student.Referrals,
+            "Grades" => student.Grades,
+            "ELA" => student.AssessmentsELA,
+            "Math" => student.AssessmentsMath,
+            _ => null
+        };
+    }
+
+    string GetIndicatorDisplayName(string indicatorName)
+    {
+        return indicatorName switch
+        {
+            "OnTrack" => "On Track",
+            "AGGrades" => "A-G Grades",
+            "AGSchedule" => "A-G Schedule",
+            "CollegeApplication" => "College App",
+            "AssessmentsELA" => "ELA",
+            "AssessmentsMath" => "Math",
+            _ => indicatorName
+        };
+    }
+}
 
 <style>
     #indicatorChart {
         max-height: 300px;
     }
 </style>
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -190,6 +207,47 @@
                         }
                     });
 
+            });
+
+            // DataTable initialization
+            $('#studentsTable').DataTable({
+                responsive: true,
+                pageLength: 50,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "All"]],
+                order: [[0, 'asc']],
+                dom: 'Blfrtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel"></i> Excel',
+                        className: 'btn btn-success btn-sm'
+                    },
+                    {
+                        extend: 'csvHtml5', 
+                        text: '<i class="fas fa-file-csv"></i> CSV',
+                        className: 'btn btn-info btn-sm'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print"></i> Print', 
+                        className: 'btn btn-secondary btn-sm'
+                    }
+                ],
+                columnDefs: [
+                    { width: "150px", targets: 0 }, // Name
+                    { width: "80px", targets: 1 },  // ID
+                    { width: "40px", targets: 2 },  // Grade
+                    { width: "100px", targets: 3 }, // Counselor
+                    { width: "120px", targets: 4 }, // Race/Ethnicity
+                    { width: "40px", targets: [5,6,7] }, // SWD, SED, LF
+                    { width: "50px", targets: [8,9,10,11] }, // Numeric columns
+                    { className: "text-center", targets: [1,2,5,6,7,8,9,10,11] }
+                ],
+                language: {
+                    search: "Search students:",
+                    lengthMenu: "Show _MENU_ students",
+                    info: "Showing _START_ to _END_ of _TOTAL_ students"
+                }
             });
         });
     </script>
@@ -288,6 +346,5 @@
         }
     });
 </script>
-
 
 }

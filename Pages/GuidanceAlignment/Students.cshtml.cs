@@ -59,9 +59,9 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             // Quadrant breakdown for this grade level
            QuadrantSummaries = await _context.GAResults
-            .Where(r => r.SchoolId == SchoolId && r.CP == cp && r.Grade == Grade)
+            .Where(r => r.SchoolId == SchoolId && r.CP == cp && r.Grade == Grade && !string.IsNullOrEmpty(r.Quadrant))
             .GroupBy(r => new { r.Grade, r.Quadrant })
-            .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant, g.Count()))
+            .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant!, g.Count()))
             .ToListAsync();
 
             // Indicator performance based on enabled indicators
@@ -103,7 +103,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
-                new BreadcrumbItem { Title = school.District.Name, Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = school.DistrictId }) },
+                new BreadcrumbItem { Title = school.District?.Name ?? "District", Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = school.DistrictId }) },
                 new BreadcrumbItem { Title = school.Name, Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = school.Id }) },
                 new BreadcrumbItem { Title = $"Grade {Grade}" }
             };
