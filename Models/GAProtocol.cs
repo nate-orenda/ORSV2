@@ -16,6 +16,8 @@ namespace ORSV2.Models
 
         public bool IsFinalized { get; set; }
 
+        public DateTime? NextProtocolDate { get; set; }
+
         public District? District { get; set; }
         public School? School { get; set; }
     }

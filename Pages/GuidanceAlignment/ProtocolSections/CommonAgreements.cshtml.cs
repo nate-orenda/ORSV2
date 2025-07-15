@@ -78,63 +78,46 @@ public class CommonAgreementsModel : ProtocolSectionBaseModel
         var result = await LoadProtocolDataAsync();
         if (result.GetType() != typeof(PageResult)) return result;
 
-        await LoadResponsesAsync();
+        LoadResponses();
         return Page();
     }
 
-    public async Task<IActionResult> OnPostSaveResponseAsync()
+    public async Task<IActionResult> OnPostSaveAllAsync()
     {
         var result = await LoadProtocolDataAsync();
         if (result.GetType() != typeof(PageResult)) return result;
 
-        // Get the parameters from the request
-        var focusArea = Request.Form["focusArea"].ToString();
-        var questionKey = Request.Form["questionKey"].ToString();
-        var response = Request.Form["response"].ToString();
-
-        if (string.IsNullOrEmpty(focusArea) || string.IsNullOrEmpty(questionKey))
-        {
-            return new JsonResult(new { success = false, message = "Invalid parameters" });
-        }
-
-        // Create a unique key for storing the response
-        var responseKey = $"{focusArea}_{questionKey}";
+        await SaveAllResponsesAsync();
         
-        try
-        {
-            await SaveCommonAgreementResponseAsync(responseKey, response?.Trim() ?? string.Empty);
-            return new JsonResult(new { success = true, message = "Response saved successfully!" });
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, message = $"Error saving response: {ex.Message}" });
-        }
+        TempData["Success"] = "Common Agreements saved successfully!";
+        return RedirectToPage(new { protocolId = ProtocolId });
     }
 
-    private async Task LoadResponsesAsync()
+    private void LoadResponses()
     {
         if (Protocol == null) return;
 
-        // Load existing responses for section 7
-        var sectionResponses = await _context.GAProtocolSectionResponses
-            .Where(r => r.ProtocolId == Protocol.Id && r.SectionNumber == 7)
-            .ToListAsync();
+        // Load existing responses for section 7 (exactly like Trends does for section 6)
+        var existingResponses = Protocol.SectionResponses?
+            .Where(r => r.SectionNumber == 7)
+            .ToDictionary(r => r.SectionTitle, r => r.ResponseText ?? string.Empty) ?? new Dictionary<string, string>();
 
+        // Initialize CommonAgreementResponses with existing data
         CommonAgreementResponses = new Dictionary<string, string>();
-
+        
         // Initialize all possible response keys
         foreach (var focusArea in FocusAreas)
         {
             foreach (var question in focusArea.Value.Questions)
             {
                 var responseKey = $"{focusArea.Key}_{question.Key}";
-                var existingResponse = sectionResponses.FirstOrDefault(r => r.SectionTitle == responseKey);
-                CommonAgreementResponses[responseKey] = existingResponse?.ResponseText ?? string.Empty;
+                CommonAgreementResponses[responseKey] = existingResponses.GetValueOrDefault(responseKey, string.Empty);
             }
         }
 
-        // Set last updated info
-        var lastResponse = sectionResponses
+        // Set last updated info from any section 7 response
+        var lastResponse = Protocol?.SectionResponses?
+            .Where(r => r.SectionNumber == 7)
             .OrderByDescending(r => r.UpdatedAt)
             .FirstOrDefault();
 
@@ -145,49 +128,47 @@ public class CommonAgreementsModel : ProtocolSectionBaseModel
         }
     }
 
-    private async Task SaveCommonAgreementResponseAsync(string sectionTitle, string content)
+    private async Task SaveAllResponsesAsync()
     {
-        if (Protocol == null) 
-        {
-            throw new InvalidOperationException("Protocol is null");
-        }
+        if (Protocol == null) return;
 
         var now = DateTime.UtcNow;
         var user = User?.Identity?.Name ?? "Unknown";
 
-        // Debug logging
-        System.Diagnostics.Debug.WriteLine($"Saving: ProtocolId={Protocol.Id}, SectionTitle={sectionTitle}, Content='{content}', User={user}");
+        // Get existing section 7 responses (like Trends does for section 6)
+        var existingResponses = await _context.GAProtocolSectionResponses
+            .Where(r => r.ProtocolId == Protocol.Id && r.SectionNumber == 7)
+            .ToListAsync();
 
-        var existingResponse = await _context.GAProtocolSectionResponses
-            .FirstOrDefaultAsync(r => r.ProtocolId == Protocol.Id && 
-                                     r.SectionNumber == 7 && 
-                                     r.SectionTitle == sectionTitle);
+        foreach (var kvp in CommonAgreementResponses)
+        {
+            var sectionTitle = kvp.Key;
+            var responseText = kvp.Value?.Trim() ?? string.Empty;
 
-        if (existingResponse != null)
-        {
-            // Update existing response
-            System.Diagnostics.Debug.WriteLine($"Updating existing response with ID: {existingResponse.Id}");
-            existingResponse.ResponseText = content;
-            existingResponse.UpdatedAt = now;
-            existingResponse.UpdatedBy = user;
-        }
-        else
-        {
-            // Create new response - always create, even if content is empty (like Trends)
-            System.Diagnostics.Debug.WriteLine("Creating new response");
-            var newResponse = new GAProtocolSectionResponse
+            var existingResponse = existingResponses.FirstOrDefault(r => r.SectionTitle == sectionTitle);
+
+            if (existingResponse != null)
             {
-                ProtocolId = Protocol.Id,
-                SectionNumber = 7,
-                SectionTitle = sectionTitle,
-                ResponseText = content,
-                UpdatedAt = now,
-                UpdatedBy = user
-            };
-            _context.GAProtocolSectionResponses.Add(newResponse);
+                // Update existing response
+                existingResponse.ResponseText = responseText;
+                existingResponse.UpdatedAt = now;
+                existingResponse.UpdatedBy = user;
+            }
+            else if (!string.IsNullOrWhiteSpace(responseText))
+            {
+                // Create new response only if there's content (exactly like Trends)
+                _context.GAProtocolSectionResponses.Add(new GAProtocolSectionResponse
+                {
+                    ProtocolId = Protocol.Id,
+                    SectionNumber = 7,
+                    SectionTitle = sectionTitle,
+                    ResponseText = responseText,
+                    UpdatedAt = now,
+                    UpdatedBy = user
+                });
+            }
         }
 
-        var changes = await _context.SaveChangesAsync();
-        System.Diagnostics.Debug.WriteLine($"SaveChanges returned: {changes} changes");
+        await _context.SaveChangesAsync();
     }
 }

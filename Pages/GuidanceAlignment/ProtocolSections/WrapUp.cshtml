@@ -1,0 +1,159 @@
+@page "{handler?}"
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.WrapUpModel
+@{
+    ViewData["Title"] = "Wrap Up";
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml";
+}
+
+<div class="section-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary mb-0">Wrap Up</h3>
+        @if (!string.IsNullOrEmpty(Model.LastUpdated))
+        {
+            <small class="text-muted">
+                Last updated: @Model.LastUpdated by @Model.LastUpdatedBy
+            </small>
+        }
+    </div>
+
+    <!-- Next Session Information -->
+    @if (!string.IsNullOrEmpty(Model.NextScheduledSession))
+    {
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-calendar-event me-2"></i>
+            <strong>Upcoming Session:</strong> @Model.NextScheduledSession
+        </div>
+    }
+
+    <form method="post" class="needs-validation" novalidate>
+        @Html.AntiForgeryToken()
+        
+        <!-- Section Question -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clipboard-check me-2"></i>
+                    Reflection Session Feedback
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="wrapUpResponse" class="form-label fw-bold">
+                        What was successful about this reflection session? What could be changed to make next session better?
+                    </label>
+                    <textarea asp-for="WrapUpResponse" 
+                              id="wrapUpResponse"
+                              class="form-control" 
+                              rows="6" 
+                              placeholder="Share your thoughts on what went well in this session and any suggestions for improvement..."
+                              required></textarea>
+                    <div class="invalid-feedback">
+                        Please provide feedback about the reflection session.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Session Planning -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-plus me-2"></i>
+                    Next Session Planning
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="nextSessionDate" class="form-label fw-bold">
+                                Next Session Goal Date
+                            </label>
+                            <input asp-for="NextSessionDate" 
+                                   type="date" 
+                                   class="form-control" 
+                                   id="nextSessionDate" />
+                            <div class="form-text">
+                                Select when you plan to hold the next protocol session.
+                            </div>
+                            <span asp-validation-for="NextSessionDate" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input asp-for="FinalizeProtocol" 
+                                       type="checkbox" 
+                                       class="form-check-input" 
+                                       id="finalizeProtocol" />
+                                <label class="form-check-label fw-bold" for="finalizeProtocol">
+                                    Finalize this protocol
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                Check this box to mark this protocol as finalized. This action cannot be undone.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between">
+            <a href="@Url.Page("/GuidanceAlignment/ProtocolSections/ActionPlan", new { protocolId = Model.ProtocolId })" 
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Previous: Action Plan
+            </a>
+            
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-floppy me-2"></i>Save Wrap Up
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Bootstrap form validation
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                var forms = document.getElementsByClassName('needs-validation');
+                var validation = Array.prototype.filter.call(forms, function(form) {
+                    form.addEventListener('submit', function(event) {
+                        if (form.checkValidity() === false) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            }, false);
+        })();
+
+        // Confirmation for finalize checkbox
+        document.getElementById('finalizeProtocol').addEventListener('change', function() {
+            if (this.checked) {
+                if (!confirm('Are you sure you want to finalize this protocol? This action cannot be undone.')) {
+                    this.checked = false;
+                }
+            }
+        });
+
+        // Auto-save functionality (optional enhancement)
+        let saveTimeout;
+        const textarea = document.getElementById('wrapUpResponse');
+        
+        textarea.addEventListener('input', function() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(function() {
+                // Auto-save after 2 seconds of no typing
+                console.log('Auto-saving...');
+                // Could implement AJAX auto-save here if desired
+            }, 2000);
+        });
+    </script>
+}
