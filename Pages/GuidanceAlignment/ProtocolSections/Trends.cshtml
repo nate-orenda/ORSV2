@@ -55,15 +55,6 @@
     <div class="col-lg-9">
         <h4 class="mb-3">Trends Analysis</h4>
 
-        <!-- Success Message -->
-        @if (TempData["Success"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                @TempData["Success"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        }
-
         <form method="post" asp-page-handler="Save" asp-route-protocolId="@Model.ProtocolId">
             
             <!-- Predictive Grades Section -->

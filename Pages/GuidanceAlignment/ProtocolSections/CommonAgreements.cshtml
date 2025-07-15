@@ -1,0 +1,406 @@
+@page "{handler?}"
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.CommonAgreementsModel
+@{
+    ViewData["Title"] = "Common Agreements";
+    Layout = "~/Pages/Shared/_ProtocolLayout.cshtml";
+}
+
+<style>
+    .focus-area-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+    
+    .focus-area-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .focus-area-card.selected {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .collapse-content {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .question-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-left: 4px solid var(--bs-primary);
+        margin-bottom: 1.5rem;
+    }
+    
+    .question-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-control {
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .save-btn {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 50px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+    }
+    
+    .save-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+    
+    .accordion-button {
+        font-weight: 600;
+        padding: 1.25rem;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background: linear-gradient(135deg, var(--bs-primary) 0%, #0056b3 100%);
+        color: white;
+        border-color: var(--bs-primary);
+    }
+    
+    .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1055;
+    }
+    
+    .scroll-margin { 
+        scroll-margin-top: 100px; 
+    }
+    
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .border-success {
+        border-color: #28a745 !important;
+    }
+</style>
+
+<!-- Success/Error Toast -->
+<div class="toast-container">
+    <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Response saved successfully!
+        </div>
+    </div>
+</div>
+
+<!-- Anti-forgery token -->
+<form style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
+<!-- Main Content -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-handshake me-2 text-primary"></i>Common Agreements
+    </h4>
+    @if (!string.IsNullOrEmpty(Model.LastUpdated))
+    {
+        <small class="text-muted">
+            <i class="bi bi-clock me-1"></i>Last updated @Model.LastUpdated by @Model.LastUpdatedBy
+        </small>
+    }
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Instructions:</strong> From your reflection on the data, select a focus for the upcoming Checkpoint. 
+    Click on one or more focus areas below to complete the planning questions and establish common agreements 
+    for your team.
+</div>
+
+<!-- Focus Areas Accordion -->
+<div class="accordion" id="focusAreasAccordion">
+    @{
+        int accordionIndex = 0;
+    }
+    @foreach (var focusArea in CommonAgreementsModel.FocusAreas)
+    {
+        var areaId = focusArea.Key.ToLower();
+        accordionIndex++;
+        
+        <div class="accordion-item mb-3 scroll-margin" id="@areaId">
+            <h2 class="accordion-header" id="heading@(focusArea.Key)">
+                <button class="accordion-button collapsed" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#collapse@(focusArea.Key)" 
+                        aria-expanded="false" 
+                        aria-controls="collapse@(focusArea.Key)">
+                    <i class="@focusArea.Value.Icon me-3" style="font-size: 1.2rem;"></i>
+                    <div>
+                        <div class="fw-bold">@focusArea.Value.Title</div>
+                        <small class="opacity-75">
+                            @if (focusArea.Key == "Indicators")
+                            {
+                                <span>Focus on specific performance indicators for improvement</span>
+                            }
+                            else if (focusArea.Key == "Quadrants")
+                            {
+                                <span>Target specific performance quadrants (Challenge, Benchmark, Strategic, Intensive)</span>
+                            }
+                            else if (focusArea.Key == "StudentGroups")
+                            {
+                                <span>Focus on specific student demographic groups</span>
+                            }
+                        </small>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapse@(focusArea.Key)" 
+                 class="accordion-collapse collapse" 
+                 aria-labelledby="heading@(focusArea.Key)" 
+                 data-bs-parent="#focusAreasAccordion">
+                <div class="accordion-body">
+                    <form data-focus-area="@focusArea.Key">
+                        @foreach (var question in focusArea.Value.Questions)
+                        {
+                            var responseKey = $"{focusArea.Key}_{question.Key}";
+                            var currentValue = Model.CommonAgreementResponses.GetValueOrDefault(responseKey, string.Empty);
+                            
+                            <div class="question-section p-4 rounded mb-4">
+                                <label class="question-label">
+                                    @question.Value
+                                </label>
+                                <div class="position-relative">
+                                    <textarea 
+                                        name="@responseKey" 
+                                        class="form-control" 
+                                        rows="4" 
+                                        placeholder="@GetPlaceholderText(question.Key)"
+                                        data-question-key="@question.Key"
+                                        data-focus-area="@focusArea.Key">@currentValue</textarea>
+                                    <div class="position-absolute bottom-0 end-0 p-2">
+                                        <button type="button" 
+                                                class="btn btn-primary save-btn btn-sm"
+                                                onclick="saveResponse('@focusArea.Key', '@question.Key', this)">
+                                            <i class="bi bi-check-lg me-1"></i>Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize navigation
+            initializeNavigation();
+            
+            // Auto-save functionality
+            $('textarea').on('blur', function() {
+                const $textarea = $(this);
+                const focusArea = $textarea.data('focus-area');
+                const questionKey = $textarea.data('question-key');
+                
+                if ($textarea.val().trim() !== $textarea.data('original-value')) {
+                    autoSave(focusArea, questionKey, $textarea[0]);
+                }
+            });
+            
+            // Store original values for change detection
+            $('textarea').each(function() {
+                $(this).data('original-value', $(this).val().trim());
+            });
+        });
+
+        function initializeNavigation() {
+            // Update active nav link based on scroll position
+            $(window).on('scroll', function() {
+                let current = '';
+                $('.scroll-margin').each(function() {
+                    const sectionTop = $(this).offset().top;
+                    if ($(window).scrollTop() >= sectionTop - 150) {
+                        current = $(this).attr('id');
+                    }
+                });
+                
+                $('.nav-link').removeClass('active');
+                if (current) {
+                    $(`a[href="#${current}"]`).addClass('active');
+                }
+            });
+            
+            // Smooth scrolling for navigation links
+            $('.nav-link').on('click', function(e) {
+                e.preventDefault();
+                const target = $(this).attr('href');
+                if (target) {
+                    $('html, body').animate({
+                        scrollTop: $(target).offset().top - 100
+                    }, 500);
+                }
+            });
+        }
+
+        function saveResponse(focusArea, questionKey, button) {
+            const $button = $(button);
+            const $textarea = $button.closest('.position-relative').find('textarea');
+            const response = $textarea.val();
+            
+            console.log('Saving:', { focusArea, questionKey, response });
+            
+            // Show loading state
+            $button.prop('disabled', true);
+            $button.html('<i class="bi bi-arrow-clockwise me-1 spin"></i>Saving...');
+            
+            // Get anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            console.log('Token:', token);
+            
+            // Get current URL parameters to maintain protocolId
+            const urlParams = new URLSearchParams(window.location.search);
+            const protocolId = urlParams.get('protocolId');
+            
+            $.ajax({
+                url: `?protocolId=${protocolId}&handler=SaveResponse`,
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: token,
+                    focusArea: focusArea,
+                    questionKey: questionKey,
+                    response: response
+                },
+                success: function(data) {
+                    console.log('Save success:', data);
+                    if (data.success) {
+                        showToast('success', data.message);
+                        $textarea.data('original-value', response.trim());
+                        
+                        // Update button to show success
+                        $button.removeClass('btn-primary').addClass('btn-success');
+                        $button.html('<i class="bi bi-check-lg me-1"></i>Saved');
+                        
+                        setTimeout(() => {
+                            $button.removeClass('btn-success').addClass('btn-primary');
+                            $button.html('<i class="bi bi-check-lg me-1"></i>Save');
+                        }, 2000);
+                    } else {
+                        showToast('error', data.message || 'Failed to save response');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Save error:', xhr.responseText, status, error);
+                    showToast('error', 'Failed to save response. Please try again.');
+                    $button.removeClass('btn-primary').addClass('btn-danger');
+                    $button.html('<i class="bi bi-exclamation-triangle me-1"></i>Error');
+                    
+                    setTimeout(() => {
+                        $button.removeClass('btn-danger').addClass('btn-primary');
+                        $button.html('<i class="bi bi-check-lg me-1"></i>Save');
+                    }, 3000);
+                },
+                complete: function() {
+                    $button.prop('disabled', false);
+                }
+            });
+        }
+
+        function autoSave(focusArea, questionKey, textarea) {
+            const $textarea = $(textarea);
+            const response = $textarea.val();
+            
+            // Get anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            
+            // Get current URL parameters to maintain protocolId
+            const urlParams = new URLSearchParams(window.location.search);
+            const protocolId = urlParams.get('protocolId');
+            
+            $.ajax({
+                url: `?protocolId=${protocolId}&handler=SaveResponse`,
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: token,
+                    focusArea: focusArea,
+                    questionKey: questionKey,
+                    response: response
+                },
+                success: function(data) {
+                    if (data.success) {
+                        $textarea.data('original-value', response.trim());
+                        // Subtle visual feedback for auto-save
+                        $textarea.removeClass('border-primary').addClass('border-success');
+                        setTimeout(() => {
+                            $textarea.removeClass('border-success');
+                        }, 1000);
+                    }
+                }
+            });
+        }
+
+        function showToast(type, message) {
+            const $toast = $('#saveToast');
+            const $header = $toast.find('.toast-header');
+            const $body = $toast.find('#toastMessage');
+            
+            // Update toast styling based on type
+            if (type === 'success') {
+                $header.html('<i class="bi bi-check-circle-fill text-success me-2"></i><strong class="me-auto">Success</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>');
+            } else {
+                $header.html('<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i><strong class="me-auto">Error</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>');
+            }
+            
+            $body.text(message);
+            
+            const toast = new bootstrap.Toast($toast[0]);
+            toast.show();
+        }
+    </script>
+}
+
+@functions {
+    private string GetPlaceholderText(string questionKey)
+    {
+        return questionKey switch
+        {
+            "FocusIndicators" => "Identify specific indicators (e.g., ELA proficiency, Math growth, Attendance) and explain why these are priorities...",
+            "IndicatorStrategies" => "Detail specific strategies, interventions, and common agreements for improving the selected indicators...",
+            "FocusQuadrants" => "Specify which quadrants (Challenge, Benchmark, Strategic, Intensive) need focus and provide rationale...",
+            "QuadrantStrategies" => "Outline targeted strategies and agreements for moving students between quadrants...",
+            "FocusStudentGroups" => "Identify specific student groups (e.g., English Learners, Students with Disabilities, specific demographic groups) and justify the focus...",
+            "StudentGroupStrategies" => "Describe targeted interventions and agreements for supporting the identified student groups...",
+            _ => "Enter your response here..."
+        };
+    }
+}
