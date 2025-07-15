@@ -1,37 +1,72 @@
 @page "{schoolId:int}/{grade:int}"
 @model ORSV2.Pages.GuidanceAlignment.StudentsModel
+@using System.Text.Json
 @{
     ViewData["Title"] = $"Students - Grade {Model.Grade}";
 }
 
+<!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
 
-<div class="container-fluid px-4 py-3">
-<!-- Summary Cards Row -->
-<div class="row mb-3">
-    <!-- Left: Indicator Performance Overview -->
-    <div class="col-md-6 mb-3 d-flex">
-        <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-center">
-            <h6 class="text-center mb-3">Indicator Performance – Grade @Model.Grade</h6>
-            <div class="row g-2">
-                @foreach (var indicator in Model.IndicatorSummaries)
-                {
-                    <div class="col-6 col-lg-4">
-                        <div class="text-center p-2 border rounded">
-                            <div class="fw-semibold small">@GetIndicatorDisplayName(indicator.Name)</div>
-                            <div class="h5 mb-1 @(indicator.PercentMet >= 80 ? "text-success" : indicator.PercentMet >= 60 ? "text-warning" : "text-danger")">
-                                @indicator.PercentMet.ToString("0")%
-                            </div>
-                            <div class="small text-muted">@indicator.CountMet met</div>
-                        </div>
-                    </div>
-                }
-            </div>
+<div class="row">
+    <!-- Left: Indicator Bar Chart -->
+    <div class="col-md-6 mb-4 d-flex">
+        <div class="card shadow-sm p-3 w-100 d-flex flex-column align-self-end">
+            <!-- Summary Table (no header) -->
+            <table class="table table-sm mb-2">
+                <tr>
+                    <td><strong>Grade:</strong> @Model.Grade</td>
+                    <td><strong>Checkpoint:</strong> @Model.CurrentCheckpoint</td>
+                    <td><strong>Above %:</strong> @Model.FormatPercentage(@Model.AboveTheLineCount)</td>
+                    <td><strong>Above #:</strong> @Model.AboveTheLineCount</td>
+                    <td><strong>Total:</strong> @Model.TotalCount</td>
+                </tr>
+            </table>
+
+            <!-- Detailed Indicator Table -->
+            <table class="table table-sm table-bordered text-center mb-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Grade</th>
+                        <th>CP</th>
+                        <th>Indicator</th>
+                        <th>% Met</th>
+                        <th># Met</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.IndicatorSummaries != null)
+                    {
+                        @foreach (var i in Model.IndicatorSummaries)
+                        {
+                            <tr>
+                                <td>@Model.Grade</td>
+                                <td>@Model.CurrentCheckpoint</td>
+                                <td>@i.Name</td>
+                                <td>@i.PercentMet.ToString("0.0")%</td>
+                                <td>@i.CountMet</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <h6 class="text-center mb-3">Indicators Met – Grade @Model.Grade</h6>
+            @if (Model.IndicatorSummaries?.Any() == true)
+            {
+                <canvas id="indicatorChart"></canvas>
+            }
+            else
+            {
+                <div class="alert alert-info text-center mb-0">
+                    No indicators found for this grade/checkpoint.
+                </div>
+            }
         </div>
     </div>
 
     <!-- Right: Quadrant Pie Chart -->
-    <div class="col-md-6 mb-3 d-flex">
+    <div class="col-md-6 mb-4 d-flex">
         <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-end">
             <h6 class="text-center mb-3">Quadrant Distribution – Grade @Model.Grade</h6>
             <canvas id="quadrantPie"></canvas>
@@ -39,85 +74,92 @@
     </div>
 </div>
 
-<!-- Student Table -->
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-body">
-        <h5 class="card-title mb-4">Student List – Grade @Model.Grade</h5>
+<!-- Updated Student Table with Dynamic Indicators -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-2">
+        <h5 class="card-title mb-3 px-2">Student List – Grade @Model.Grade</h5>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle" id="schoolsTable">
-                <thead class="table-light">
+            <table class="table table-sm table-hover table-striped mb-0" id="studentsTable" style="font-size: 0.85rem;">
+                <thead class="table-dark">
                     <tr>
-                        <th>Name</th>
-                        <th>Local ID</th>
-                        <th>Grade</th>
-                        <th>Counselor</th>
-                        <th>Race / Ethnicity</th>
-                        <th>SWD</th>
-                        <th>SED</th>
-                        <th>LF</th>
-                        <th>Years in Program</th>
-                        <th>Current GPA</th>
-                        <th>Cumulative GPA</th>
-                        <th>Credits</th>
+                        <th class="py-2">Name</th>
+                        <th class="py-2">ID</th>
+                        <th class="py-2">Gr</th>
+                        <th class="py-2">Counselor</th>
+                        <th class="py-2">Race/Ethnicity</th>
+                        <th class="py-2 text-center">SWD</th>
+                        <th class="py-2 text-center">SED</th>
+                        <th class="py-2 text-center">LF</th>
+                        <th class="py-2 text-center">Yrs</th>
+                        <th class="py-2 text-center">Curr GPA</th>
+                        <th class="py-2 text-center">Cum GPA</th>
+                        <th class="py-2 text-center">Credits</th>
                         
                         <!-- Dynamic Indicator Columns -->
-                        @foreach (var indicator in Model.IndicatorSummaries)
+                        @if (Model.IndicatorSummaries != null)
                         {
-                            <th class="text-center">@GetIndicatorDisplayName(indicator.Name)</th>
+                            @foreach (var indicator in Model.IndicatorSummaries)
+                            {
+                                <th class="py-2 text-center">@GetIndicatorDisplayName(indicator.Name)</th>
+                            }
                         }
                         
-                        <th>Quadrant</th>
+                        <th class="py-2 text-center">Quadrant</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var s in Model.Students)
                     {
-                        <tr>
-                            <td>
+                        <tr style="font-size: 0.8rem;">
+                            <td class="py-1">
                                 <a href="#" class="fw-semibold text-decoration-none view-profile" data-bs-toggle="modal"
                                    data-bs-target="#profileModal" data-student-id="@s.ResultId">
                                     @s.LastName, @s.FirstName
                                 </a>
                             </td>
-                            <td><span class="badge bg-secondary">@s.LocalStudentId</span></td>
-                            <td>@s.Grade</td>
-                            <td>@s.CounselorName</td>
-                            <td>@s.RaceEthnicity</td>
-                            <td>
-                                <span class="badge bg-@(s.SWD == true ? "warning" : "light text-muted")">
-                                    @(s.SWD == true ? "Yes" : "No")
+                            <td class="py-1"><span class="badge bg-secondary fs-6">@s.LocalStudentId</span></td>
+                            <td class="py-1">@s.Grade</td>
+                            <td class="py-1">@((!string.IsNullOrEmpty(s.CounselorName) && s.CounselorName.Length > 15) ? s.CounselorName.Substring(0, 15) + "..." : s.CounselorName ?? "-")</td>
+                            <td class="py-1">@((!string.IsNullOrEmpty(s.RaceEthnicity) && s.RaceEthnicity.Length > 20) ? s.RaceEthnicity.Substring(0, 20) + "..." : s.RaceEthnicity ?? "-")</td>
+                            <td class="py-1 text-center">
+                                <span class="badge @(s.SWD == true ? "bg-warning" : "bg-light text-muted") fs-6">
+                                    @(s.SWD == true ? "Y" : "N")
                                 </span>
                             </td>
-                            <td>
-                                <span class="badge bg-@(s.SED == true ? "info" : "light text-muted")">
-                                    @(s.SED == true ? "Yes" : "No")
+                            <td class="py-1 text-center">
+                                <span class="badge @(s.SED == true ? "bg-info" : "bg-light text-muted") fs-6">
+                                    @(s.SED == true ? "Y" : "N")
                                 </span>
                             </td>
-                            <td>@s.LF</td>
-                            <td>@s.YrsInProgram</td>
-                            <td>@(s.CurrentGPA?.ToString("0.00") ?? "-")</td>
-                            <td>@(s.CumulativeGPA?.ToString("0.00") ?? "-")</td>
-                            <td>@(s.CreditsCompleted?.ToString("0.#") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.LF ?? "-")</td>
+                            <td class="py-1 text-center">@(s.YrsInProgram?.ToString("0.0") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.CurrentGPA?.ToString("0.00") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.CumulativeGPA?.ToString("0.00") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.CreditsCompleted?.ToString("0.#") ?? "-")</td>
                             
                             <!-- Dynamic Indicator Values -->
-                            @foreach (var indicator in Model.IndicatorSummaries)
+                            @if (Model.IndicatorSummaries != null)
                             {
-                                var value = GetIndicatorValue(s, indicator.Name);
-                                <td class="text-center">
-                                    <span class="badge bg-@(value == true ? "success" : value == false ? "danger" : "secondary")">
-                                        @(value == true ? "Met" : value == false ? "Not Met" : "N/A")
-                                    </span>
-                                </td>
+                                @foreach (var indicator in Model.IndicatorSummaries)
+                                {
+                                    var value = GetIndicatorValue(s, indicator.Name);
+                                    <td class="py-1 text-center">
+                                        <span class="badge @(value == true ? "bg-success" : value == false ? "bg-danger" : "bg-secondary") fs-6">
+                                            @(value == true ? "✓" : value == false ? "✗" : "-")
+                                        </span>
+                                    </td>
+                                }
                             }
                             
-                            <td>
+                            <td class="py-1 text-center">
                                 <span class="badge 
-                                    @(s.Quadrant == "Q1" ? "bg-success" :
-                                    s.Quadrant == "Q2" ? "bg-warning text-dark" :
-                                    s.Quadrant == "Q3" ? "bg-danger" :
-                                    s.Quadrant == "Q4" ? "bg-info" : "bg-secondary")">
-                                    @(s.Quadrant ?? "N/A")
+                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
+                                    s.Quadrant == "Benchmark" ? "bg-success" :
+                                    s.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                                    s.Quadrant == "Intensive" ? "bg-danger" :
+                                    "bg-secondary") fs-6">
+                                    @(s.Quadrant ?? "-")
                                 </span>
                             </td>
                         </tr>
@@ -127,18 +169,16 @@
         </div>
     </div>
 </div>
-</div>
 
-<!-- Student Profile Modal -->
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="profileContent">
-                <!-- Content loaded via AJAX -->
+            <div class="modal-body">
+                <div id="profileContent">Loading...</div>
             </div>
         </div>
     </div>
@@ -292,7 +332,6 @@
         }
     });
 </script>
-
 
 <script>
     const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));
