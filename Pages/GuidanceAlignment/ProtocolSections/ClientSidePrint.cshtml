@@ -1,0 +1,371 @@
+@page
+@model ORSV2.Pages.GuidanceAlignment.ProtocolSections.ClientSidePrintModel
+@{
+    ViewData["Title"] = "Print Protocol";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Protocol Report - CP @Model.Protocol?.CP</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/css/print-styles.css" rel="stylesheet" />
+    <style>
+        .loading-section {
+            padding: 2rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .section-content {
+            margin-bottom: 2rem;
+            page-break-inside: avoid;
+        }
+        
+        .section-header {
+            color: #0066cc;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            page-break-after: avoid;
+        }
+        
+        .print-controls {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        @@media print {
+            .print-controls { display: none; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Print Controls -->
+    <div class="print-controls no-print">
+        <button id="printBtn" class="btn btn-primary" disabled>
+            <i class="bi bi-printer"></i> Print Report
+        </button>
+        <button id="refreshBtn" class="btn btn-secondary">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+        <div class="mt-2">
+            <small id="loadStatus">Loading sections...</small>
+        </div>
+    </div>
+
+    <!-- Protocol Header -->
+    <header class="mb-4">
+        <h1>Guidance Alignment Protocol - Checkpoint @Model.Protocol?.CP</h1>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>School:</strong> @Model.School?.Name</p>
+                <p><strong>District:</strong> @Model.School?.District?.Name</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>School Year:</strong> @Model.Protocol?.SchoolYear</p>
+                <p><strong>Generated:</strong> <span id="generatedTime"></span></p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sections Container -->
+    <div id="sectionsContainer">
+        <!-- Sections will be loaded here -->
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        const protocolId = @Model.ProtocolId;
+        const sections = [
+            { id: 1, title: 'Introduction', url: '/GuidanceAlignment/ProtocolSections/Introduction' },
+            { id: 2, title: 'Targets', url: '/GuidanceAlignment/ProtocolSections/Targets' },
+            { id: 3, title: 'Above the Line', url: '/GuidanceAlignment/ProtocolSections/Abovetheline' },
+            { id: 4, title: 'Demographics', url: '/GuidanceAlignment/ProtocolSections/Demographics' },
+            { id: 5, title: 'Indicators', url: '/GuidanceAlignment/ProtocolSections/Indicators' },
+            { id: 6, title: 'Trends', url: '/GuidanceAlignment/ProtocolSections/Trends' },
+            { id: 7, title: 'Common Agreements', url: '/GuidanceAlignment/ProtocolSections/CommonAgreements' },
+            { id: 8, title: 'Action Plan', url: '/GuidanceAlignment/ProtocolSections/ActionPlan' },
+            { id: 9, title: 'Wrap Up', url: '/GuidanceAlignment/ProtocolSections/WrapUp' }
+        ];
+
+        let loadedSections = 0;
+
+        async function loadAllSections() {
+            const container = document.getElementById('sectionsContainer');
+            const printBtn = document.getElementById('printBtn');
+            const loadStatus = document.getElementById('loadStatus');
+            
+            container.innerHTML = '';
+            loadedSections = 0;
+            printBtn.disabled = true;
+
+            for (const section of sections) {
+                // Create section container
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'section-content';
+                sectionDiv.id = `section-${section.id}`;
+                
+                // Add section header
+                sectionDiv.innerHTML = `
+                    <h2 class="section-header">${section.id}. ${section.title}</h2>
+                    <div class="loading-section">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading ${section.title}...</p>
+                    </div>
+                `;
+                
+                container.appendChild(sectionDiv);
+                
+                try {
+                    // Load section content
+                    const response = await fetch(`${section.url}?protocolId=${protocolId}`);
+                    
+                    if (response.ok) {
+                        const html = await response.text();
+                        const cleanContent = extractMainContent(html);
+                        
+                        // Replace loading with actual content
+                        sectionDiv.innerHTML = `
+                            <h2 class="section-header">${section.id}. ${section.title}</h2>
+                            <div class="section-body">${cleanContent}</div>
+                        `;
+                        
+                        // Re-initialize Bootstrap components for this section
+                        initializeBootstrapComponents(sectionDiv);
+                    } else {
+                        sectionDiv.innerHTML = `
+                            <h2 class="section-header">${section.id}. ${section.title}</h2>
+                            <div class="alert alert-warning">
+                                Unable to load ${section.title} section (Status: ${response.status})
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    sectionDiv.innerHTML = `
+                        <h2 class="section-header">${section.id}. ${section.title}</h2>
+                        <div class="alert alert-danger">
+                            Error loading ${section.title}: ${error.message}
+                        </div>
+                    `;
+                }
+                
+                loadedSections++;
+                loadStatus.textContent = `Loaded ${loadedSections}/${sections.length} sections`;
+                
+                // Small delay to prevent overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // All sections loaded
+            printBtn.disabled = false;
+            loadStatus.textContent = 'All sections loaded - Ready to print!';
+            loadStatus.className = 'text-success';
+            
+            // Update generated time
+            document.getElementById('generatedTime').textContent = new Date().toLocaleString();
+        }
+
+        function extractMainContent(html) {
+            // Create a temporary DOM element to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Try to find the main content area
+            let mainContent = tempDiv.querySelector('#section-wrapper');
+            if (!mainContent) {
+                mainContent = tempDiv.querySelector('.main-content-container');
+            }
+            if (!mainContent) {
+                // Fallback to body content
+                mainContent = tempDiv.querySelector('main') || tempDiv;
+            }
+            
+            // REMOVE UNWANTED ELEMENTS FIRST (before expanding)
+            const elementsToRemove = [
+                'aside', 'nav', '.sidebar-container', '.sidebar-content', 
+                '.breadcrumb', '.breadcrumbs',
+                'button[type="submit"]', 'form[method="post"]',
+                '.alert-dismissible button', '.btn-close',
+                '.layout-container', // Remove entire layout wrapper
+                '.nav.flex-column', // Remove section navigation
+                '.nav-link', // Remove nav links
+                '.sticky-top', // Remove sticky navigation
+                '.position-sticky' // Remove any sticky elements
+            ];
+            
+            elementsToRemove.forEach(selector => {
+                const elements = mainContent.querySelectorAll(selector);
+                elements.forEach(el => el.remove());
+            });
+            
+            // EXPAND ALL COLLAPSIBLES FOR PRINT
+            const collapseElements = mainContent.querySelectorAll('.collapse');
+            collapseElements.forEach(element => {
+                element.classList.add('show'); // Bootstrap's class for expanded
+                element.classList.remove('collapse'); // Remove collapse class entirely
+                element.style.display = 'block'; // Force visibility
+                element.style.height = 'auto'; // Override any height restrictions
+            });
+            
+            // Handle accordion items specifically
+            const accordionItems = mainContent.querySelectorAll('.accordion-collapse');
+            accordionItems.forEach(element => {
+                element.classList.add('show');
+                element.classList.remove('collapse');
+                element.style.display = 'block';
+                element.style.height = 'auto';
+            });
+            
+            // Handle any other hidden content
+            const hiddenElements = mainContent.querySelectorAll('[style*="display: none"], [style*="display:none"]');
+            hiddenElements.forEach(element => {
+                element.style.display = 'block';
+            });
+            
+            // Remove collapse toggle buttons (they're not needed in print)
+            const toggleButtons = mainContent.querySelectorAll('[data-bs-toggle="collapse"]');
+            toggleButtons.forEach(button => {
+                // Convert to regular header without toggle functionality
+                button.removeAttribute('data-bs-toggle');
+                button.removeAttribute('data-bs-target');
+                button.removeAttribute('aria-expanded');
+                button.removeAttribute('aria-controls');
+                button.style.cursor = 'default';
+                button.classList.remove('collapsed');
+                
+                // Remove collapse icons
+                const icons = button.querySelectorAll('.bi-chevron-down, .bi-chevron-up, .bi-plus, .bi-dash, .bi-caret-down, .bi-caret-up');
+                icons.forEach(icon => icon.remove());
+            });
+            
+            // Clean up protocol header since we have our own
+            const protocolHeaders = mainContent.querySelectorAll('h2');
+            protocolHeaders.forEach(h2 => {
+                if (h2.textContent.includes('Protocol – Checkpoint')) {
+                    h2.remove();
+                }
+            });
+            
+            // Remove any remaining layout containers and move children up
+            const layoutContainers = mainContent.querySelectorAll('.layout-container, .d-flex');
+            layoutContainers.forEach(container => {
+                // If this container only has layout purposes, unwrap it
+                if (container.children.length > 0) {
+                    const parent = container.parentNode;
+                    while (container.firstChild) {
+                        parent.insertBefore(container.firstChild, container);
+                    }
+                    container.remove();
+                }
+            });
+            
+            // Specific fix for Trends section navigation
+            const trendsNavigation = mainContent.querySelectorAll('.nav-pills, .nav-tabs, .nav.nav-pills, .nav.nav-tabs');
+            trendsNavigation.forEach(nav => nav.remove());
+            
+            // Show all tab content (if any tabs exist)
+            const tabContent = mainContent.querySelectorAll('.tab-pane');
+            tabContent.forEach(pane => {
+                pane.classList.add('show', 'active');
+                pane.style.display = 'block';
+            });
+            
+            // Remove any remaining interactive elements
+            const interactiveElements = mainContent.querySelectorAll('button:not(.no-remove), .btn:not(.no-remove), input, select, textarea');
+            interactiveElements.forEach(element => {
+                // Only remove if it's not part of the actual content
+                if (!element.closest('.section-content, .response-content, .data-table')) {
+                    element.remove();
+                }
+            });
+            
+            return mainContent.innerHTML;
+        }
+
+        function initializeBootstrapComponents(container) {
+            // Re-initialize all Bootstrap components in the loaded content
+            
+            // Collapsible components
+            const collapseElements = container.querySelectorAll('[data-bs-toggle="collapse"]');
+            collapseElements.forEach(element => {
+                // Remove any existing Bootstrap instances
+                const existingInstance = bootstrap.Collapse.getInstance(element);
+                if (existingInstance) {
+                    existingInstance.dispose();
+                }
+                // Initialize new instance
+                new bootstrap.Collapse(element);
+            });
+            
+            // Accordions
+            const accordionElements = container.querySelectorAll('.accordion-button');
+            accordionElements.forEach(element => {
+                const existingInstance = bootstrap.Collapse.getInstance(element);
+                if (existingInstance) {
+                    existingInstance.dispose();
+                }
+                new bootstrap.Collapse(element);
+            });
+            
+            // Tooltips
+            const tooltipElements = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipElements.forEach(element => {
+                const existingInstance = bootstrap.Tooltip.getInstance(element);
+                if (existingInstance) {
+                    existingInstance.dispose();
+                }
+                new bootstrap.Tooltip(element);
+            });
+            
+            // Dropdowns
+            const dropdownElements = container.querySelectorAll('[data-bs-toggle="dropdown"]');
+            dropdownElements.forEach(element => {
+                const existingInstance = bootstrap.Dropdown.getInstance(element);
+                if (existingInstance) {
+                    existingInstance.dispose();
+                }
+                new bootstrap.Dropdown(element);
+            });
+        }
+
+        // Event handlers
+        document.getElementById('printBtn').addEventListener('click', () => {
+            window.print();
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            loadAllSections();
+        });
+
+        // Load sections on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllSections();
+        });
+
+        // Auto-print if requested
+        if (window.location.search.includes('autoprint=true')) {
+            window.addEventListener('load', () => {
+                // Wait for all sections to load, then print
+                const checkReady = setInterval(() => {
+                    if (!document.getElementById('printBtn').disabled) {
+                        clearInterval(checkReady);
+                        setTimeout(() => window.print(), 1000);
+                    }
+                }, 500);
+            });
+        }
+    </script>
+</body>
+</html>
