@@ -124,10 +124,10 @@
         <!-- Drag and Drop Grouping Area -->
         <div class="grouping-area" id="groupingArea" 
      data-placeholder="Drag column headers here to group students by that field">
-     </div>
+   </div>
 
         <div class="table-responsive">
-            <table class="table table-sm table-hover table-striped mb-0" id="studentsTable" style="font-size: 0.85rem;">
+            <table class="table table-sm table-hover table-striped mb-0" id="studentsTable">
                 <thead class="table-light">
                     <tr>
                         <th class="py-2 draggable-header" data-column="name">Name</th>
@@ -253,10 +253,32 @@
 </div>
 
 <style>
+    /* Override site-wide CSS to fix sticky positioning context */
+    html {
+        position: static;
+    }
+
     #indicatorChart {
         max-height: 300px;
     }
     
+    #studentsTable {
+        font-size: 0.85rem;
+    }
+
+    /* Removed the max-height from .table-responsive to allow page scroll */
+    .table-responsive {
+        overflow: visible; /* Ensure overflow is not hidden, allowing page scroll */
+    }
+
+    /* CSS-based Sticky Header for page scrolling */
+    #studentsTable > thead > tr > th {
+        position: sticky;
+        top: 95px; /* Stick below the navbar. Adjust if navbar height is different. */
+        z-index: 10;
+        background-color: #f8f9fa; /* Ensures header isn't transparent */
+    }
+
     /* Drag and Drop Grouping Styles */
     .grouping-area {
         background: #f8f9fa;
@@ -386,6 +408,8 @@
     
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.5.0/css/rowGroup.bootstrap5.css">
     <script src="https://cdn.datatables.net/rowgroup/1.5.0/js/dataTables.rowGroup.js"></script>
+    
+    <!-- Removed FixedHeader plugin -->
 
     <link type="text/css" href="https://cdn.datatables.net/1.11.0/css/dataTables.checkboxes.css" rel="stylesheet" />
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.0/js/dataTables.checkboxes.min.js"></script>

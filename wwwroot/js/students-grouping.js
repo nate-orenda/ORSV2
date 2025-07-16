@@ -5,11 +5,12 @@ window.StudentGrouping = (function() {
     const columnMap = new Map();
 
     function init() {
+        // Removed the container-fluid override to allow CSS to handle the layout.
         buildColumnMap();
         initializeModal();
         initializeDragAndDrop();
         initializeDataTable();
-        setupGroupSelectionEvents(); // This call requires the function below to be defined
+        setupGroupSelectionEvents();
         loadJQueryUI();
     }
 
@@ -67,23 +68,19 @@ window.StudentGrouping = (function() {
         }
 
         dataTable = $('#studentsTable').DataTable({
-            // The columnDefs for checkboxes is now removed.
-            // The select style is now 'os' (operating system style) for clicking/ctrl-clicking rows.
             select: {
                 style: 'os',
-                selector: 'td:first-child' // Allows clicking the first cell to select
+                selector: 'td:first-child'
             },
-            responsive: true,
-            // The default order column is now 0 (Name) instead of 1.
             orderFixed: groupingConfig ? groupingConfig.order : [ [0, 'asc'] ],
-            dom: 'Blfrtip',
+            dom: 'Bfrtip', 
             buttons: [
                 {
                     extend: 'excelHtml5',
                     text: '<i class="fas fa-file-excel"></i> Excel',
                     className: 'btn btn-success btn-sm',
                     exportOptions: {
-                        columns: ':visible' // Export all visible columns
+                        columns: ':visible'
                     }
                 },
                 {
@@ -106,8 +103,6 @@ window.StudentGrouping = (function() {
                     text: '<i class="fas fa-download"></i> Export Selected',
                     className: 'btn btn-primary btn-sm',
                     action: function(e, dt, button, config) {
-                        // This creates a new temporary button for selected rows, triggers it, and removes it.
-                        // It targets only the selected rows for export.
                         dt.button('.buttons-csv', {
                             exportOptions: {
                                 modifier: {
@@ -119,14 +114,15 @@ window.StudentGrouping = (function() {
                 }
             ],
             rowGroup: groupingConfig ? groupingConfig.config : false,
-            scrollX: true,
-            scrollY: '65vh',
-            scrollCollapse: true,
-            paging: false
+            paging: false,
+        });
+
+        // Prevent row selection when clicking on the student profile link
+        $('#studentsTable tbody').on('click', 'a.view-profile', function(e) {
+            e.stopPropagation(); // This stops the click from triggering the row selection.
         });
     }
 
-    // MAKE SURE THIS FUNCTION EXISTS IN YOUR FILE
     function setupGroupSelectionEvents() {
         $('#studentsTable tbody').on('click', '.clickable-group-header', function() {
             const groupRow = $(this).closest('tr.dtrg-start');
@@ -151,7 +147,6 @@ window.StudentGrouping = (function() {
             $('.clear-grouping').show();
         }
         
-        // MODIFIED: Added a 'data-group-for' attribute for easy targeting
         var groupTag = $(`<span class="group-tag" data-group-for="${columnName}">${columnText}<span class="remove" onclick="StudentGrouping.removeGrouping('${columnName}')">&times;</span></span>`);
         
         $('#groupingArea').append(groupTag);
@@ -162,10 +157,8 @@ window.StudentGrouping = (function() {
     function removeGrouping(columnName) {
         currentGrouping = currentGrouping.filter(g => g !== columnName);
         
-        // MODIFIED: This selector is now simpler and more reliable
         $(`.group-tag[data-group-for="${columnName}"]`).remove();
         
-        // If the last group was removed, reset the area to show the placeholder
         if (currentGrouping.length === 0) {
             resetGroupingArea();
         }
