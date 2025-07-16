@@ -166,10 +166,14 @@ window.StudentGrouping = (function() {
         applyGrouping();
     }
 
-    function clearGrouping() {
-        currentGrouping = [];
+    function resetGroupingArea() {
         $('#groupingArea').empty().append('<div class="placeholder">Drag column headers here to group students by that field</div>');
         $('.clear-grouping').hide();
+    }
+
+    function clearGrouping() {
+        currentGrouping = [];
+        resetGroupingArea();
         applyGrouping();
     }
 
