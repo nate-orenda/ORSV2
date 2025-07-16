@@ -152,12 +152,15 @@ namespace ORSV2.Pages.GuidanceAlignment
                 ["G"] = "College-Prep Elective"
             };
 
+            var validSubjectCodes = subjectMap.Keys.ToList(); // Create list for client-side filtering
+
+            // Fixed query - remove problematic subjectMap.Keys.Contains() from SQL
             var gradesQuery = from g in _context.Grades
                               join c in _context.Courses
                                 on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, CourseNumber = c.CourseNumber }
                               where g.StudentId == Student.StudentId
                                     && g.DistrictId == school.DistrictId
-                                    && subjectMap.Keys.Contains(c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode)
+                                    && (c.CSU_SubjectAreaCode != null || c.UC_SubjectAreaCode != null)
                               select new
                               {
                                   g.SchoolYear,
@@ -171,7 +174,15 @@ namespace ORSV2.Pages.GuidanceAlignment
                                   SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode
                               };
 
-            var grouped = await gradesQuery.GroupBy(g => g.SubjectCode).ToListAsync();
+            // Execute query and filter on client-side
+            var allGrades = await gradesQuery.ToListAsync();
+            
+            // Client-side filtering to only include valid subject codes
+            var filteredGrades = allGrades
+                .Where(x => x.SubjectCode != null && validSubjectCodes.Contains(x.SubjectCode))
+                .ToList();
+
+            var grouped = filteredGrades.GroupBy(g => g.SubjectCode).ToList();
 
             SubjectGradesByArea = grouped.Select(g => new SubjectGradesGroup
             {
@@ -231,12 +242,12 @@ namespace ORSV2.Pages.GuidanceAlignment
                                       ms.Period
                                   };
 
-            var scheduledGrouped = currentSchedule
-                .AsEnumerable() // ← forces client-side evaluation
-                .Where(x => x.SubjectCode != null && subjectMap.ContainsKey(x.SubjectCode))
+            var allScheduledCourses = await currentSchedule.ToListAsync();
+
+            var scheduledGrouped = allScheduledCourses
+                .Where(x => x.SubjectCode != null && validSubjectCodes.Contains(x.SubjectCode))
                 .GroupBy(x => x.SubjectCode)
                 .ToList();
-
 
             var scheduledSubjectGradesByArea = scheduledGrouped.Select(g => new SubjectGradesGroup
             {
@@ -273,10 +284,6 @@ namespace ORSV2.Pages.GuidanceAlignment
                 if (existing != null)
                 {
                     existing.Grades.AddRange(scheduled.Grades);
-                    existing.Grades = existing.Grades
-                        .OrderByDescending(x => x.SchoolYear)
-                        .ThenBy(x => x.Term)
-                        .ToList();
                 }
                 else
                 {
@@ -287,19 +294,17 @@ namespace ORSV2.Pages.GuidanceAlignment
             return Page();
         }
 
-        public async Task<IActionResult> OnGetAttendanceAsync(int id)
+        // Helper methods for the Razor page
+        public bool HasIndicator(string indicatorName)
         {
-            var student = await _context.GAResults.FindAsync(id);
-            if (student == null) return NotFound();
+            return StudentIndicators.Any(i => i.Name == indicatorName);
+        }
 
-            var attendance = await _context.StudentAttendance
-                .Where(a => a.DistrictId == student.DistrictId &&
-                            a.SchoolId == student.SchoolId &&
-                            a.StudentId == student.StudentId)
-                .Select(a => a.Absences)
-                .FirstOrDefaultAsync();
-
-            return Content($"<div><strong>Total Absences:</strong> {attendance}</div>", "text/html");
+        public string GetRequirementText(string subjectArea)
+        {
+            var requirement = IndicatorRequirements.FirstOrDefault(r => 
+                r.Name.Contains(subjectArea, StringComparison.OrdinalIgnoreCase));
+            return requirement?.RequirementText ?? "No specific requirement found";
         }
     }
 }
