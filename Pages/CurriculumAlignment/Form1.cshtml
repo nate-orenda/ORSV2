@@ -1,0 +1,325 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.Form1Model
+@{
+    ViewData["Title"] = "Form 1 - Curriculum Alignment";
+}
+
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
+<!-- Form1 now uses consolidated CSS classes from site.css -->
+
+<div class="orenda-container-sm">
+    <!-- Header Section -->
+    <div class="orenda-header">
+        <h2>
+            <i class="bi bi-clipboard-data me-2"></i>
+            Form 1 - Assessment Selection
+        </h2>
+        <p>Select your district, unit, and assessment to begin curriculum alignment analysis.</p>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="orenda-card">
+        <div class="orenda-card-body">
+            <form method="post" id="form1">
+                @Html.AntiForgeryToken()
+
+                <!-- District Selection -->
+                <div class="orenda-form-group">
+                    <label class="orenda-form-label" for="district-select">
+                        <i class="bi bi-building me-1"></i>
+                        Select District
+                    </label>
+                    <select id="district-select" 
+                            name="FormData.SelectedDistrictId" 
+                            class="form-select orenda-form-select" 
+                            onchange="onDistrictChange()">
+                        <option value="">-- Choose a District --</option>
+                        @foreach (var district in Model.FormData.AvailableDistricts)
+                        {
+                            @if (Model.FormData.SelectedDistrictId == district.Id)
+                            {
+                                <option value="@district.Id" selected>@district.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@district.Id">@district.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Unit Selection -->
+                <div class="orenda-form-group">
+                    <label class="orenda-form-label" for="unit-select">
+                        <i class="bi bi-collection me-1"></i>
+                        Select Unit
+                    </label>
+                    <select id="unit-select" 
+                            name="FormData.SelectedUnit" 
+                            class="form-select orenda-form-select" 
+                            disabled 
+                            onchange="onUnitChange()">
+                        <option value="">-- First select a district --</option>
+                        @foreach (var unit in Model.FormData.AvailableUnits)
+                        {
+                            @if (Model.FormData.SelectedUnit?.ToString() == unit.Value)
+                            {
+                                <option value="@unit.Value" selected>@unit.Text (@unit.Count assessments)</option>
+                            }
+                            else
+                            {
+                                <option value="@unit.Value">@unit.Text (@unit.Count assessments)</option>
+                            }
+                        }
+                    </select>
+                    <div id="unit-loading" class="d-none orenda-loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="orenda-loading-text">Loading units...</span>
+                    </div>
+                </div>
+
+                <!-- Assessment Selection -->
+                <div class="orenda-form-group">
+                    <label class="orenda-form-label" for="assessment-select">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Select Assessment
+                    </label>
+                    <select id="assessment-select" 
+                            name="FormData.SelectedAssessment" 
+                            class="form-select orenda-form-select" 
+                            disabled>
+                        <option value="">-- First select a unit --</option>
+                        @foreach (var assessment in Model.FormData.AvailableAssessments)
+                        {
+                            @if (Model.FormData.SelectedAssessment == assessment.Value)
+                            {
+                                <option value="@assessment.Value" selected>@assessment.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@assessment.Value">@assessment.Text</option>
+                            }
+                        }
+                    </select>
+                    <div id="assessment-loading" class="d-none orenda-loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="orenda-loading-text">Loading assessments...</span>
+                    </div>
+                </div>
+
+                <!-- Selection Summary -->
+                @if (Model.FormData.SelectedDistrictId.HasValue || Model.FormData.SelectedUnit.HasValue || !string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
+                {
+                    <div class="orenda-summary">
+                        <h6>
+                            <i class="bi bi-check-circle me-1"></i>
+                            Current Selection
+                        </h6>
+                        
+                        @if (Model.FormData.SelectedDistrictId.HasValue)
+                        {
+                            var selectedDistrict = Model.FormData.AvailableDistricts.FirstOrDefault(d => d.Id == Model.FormData.SelectedDistrictId);
+                            <div class="orenda-summary-item">
+                                <span class="orenda-summary-label">District:</span>
+                                <span class="orenda-summary-value">@selectedDistrict?.Name</span>
+                            </div>
+                        }
+                        
+                        @if (Model.FormData.SelectedUnit.HasValue)
+                        {
+                            var selectedUnit = Model.FormData.AvailableUnits.FirstOrDefault(u => u.Value == Model.FormData.SelectedUnit.ToString());
+                            <div class="orenda-summary-item">
+                                <span class="orenda-summary-label">Unit:</span>
+                                <span class="orenda-summary-value">@selectedUnit?.Text</span>
+                            </div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
+                        {
+                            var selectedAssessment = Model.FormData.AvailableAssessments.FirstOrDefault(a => a.Value == Model.FormData.SelectedAssessment);
+                            <div class="orenda-summary-item">
+                                <span class="orenda-summary-label">Assessment:</span>
+                                <span class="orenda-summary-value">@selectedAssessment?.Text</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-end gap-3 mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Reset
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-primary orenda-btn-primary" 
+                            id="continue-btn">
+                        <i class="bi bi-arrow-right me-1"></i>
+                        Continue to Analysis
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variables
+    let isLoading = false;
+
+    // District change handler
+    async function onDistrictChange() {
+        const districtSelect = document.getElementById('district-select');
+        const unitSelect = document.getElementById('unit-select');
+        const assessmentSelect = document.getElementById('assessment-select');
+        const unitLoading = document.getElementById('unit-loading');
+        
+        const districtId = districtSelect.value;
+        
+        // Reset dependent dropdowns
+        resetDropdown(unitSelect, "-- Choose a Unit --");
+        resetDropdown(assessmentSelect, "-- First select a unit --");
+        
+        if (!districtId) {
+            unitSelect.disabled = true;
+            assessmentSelect.disabled = true;
+            return;
+        }
+        
+        // Show loading and disable dropdowns
+        isLoading = true;
+        unitLoading.classList.remove('d-none');
+        unitSelect.disabled = true;
+        assessmentSelect.disabled = true;
+        
+        try {
+            const response = await fetch(`?handler=Units&districtId=${districtId}`);
+            if (response.ok) {
+                const units = await response.json();
+                populateDropdown(unitSelect, units, "-- Choose a Unit --");
+                unitSelect.disabled = false;
+            } else {
+                console.error('Failed to load units');
+                unitSelect.innerHTML = '<option value="">Error loading units</option>';
+            }
+        } catch (error) {
+            console.error('Error fetching units:', error);
+            unitSelect.innerHTML = '<option value="">Error loading units</option>';
+        } finally {
+            isLoading = false;
+            unitLoading.classList.add('d-none');
+        }
+    }
+
+    // Unit change handler
+    async function onUnitChange() {
+        const districtSelect = document.getElementById('district-select');
+        const unitSelect = document.getElementById('unit-select');
+        const assessmentSelect = document.getElementById('assessment-select');
+        const assessmentLoading = document.getElementById('assessment-loading');
+        
+        const districtId = districtSelect.value;
+        const unit = unitSelect.value;
+        
+        // Reset assessment dropdown
+        resetDropdown(assessmentSelect, "-- Choose an Assessment --");
+        
+        if (!districtId || !unit) {
+            assessmentSelect.disabled = true;
+            return;
+        }
+        
+        // Show loading and disable dropdown
+        isLoading = true;
+        assessmentLoading.classList.remove('d-none');
+        assessmentSelect.disabled = true;
+        
+        try {
+            const response = await fetch(`?handler=Assessments&districtId=${districtId}&unit=${unit}`);
+            if (response.ok) {
+                const assessments = await response.json();
+                populateDropdown(assessmentSelect, assessments, "-- Choose an Assessment --");
+                assessmentSelect.disabled = false;
+            } else {
+                console.error('Failed to load assessments');
+                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+            }
+        } catch (error) {
+            console.error('Error fetching assessments:', error);
+            assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
+        } finally {
+            isLoading = false;
+            assessmentLoading.classList.add('d-none');
+        }
+    }
+
+    // Helper function to reset dropdown
+    function resetDropdown(selectElement, defaultText) {
+        selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+        selectElement.disabled = true;
+    }
+
+    // Helper function to populate dropdown
+    function populateDropdown(selectElement, items, defaultText) {
+        let html = `<option value="">${defaultText}</option>`;
+        
+        items.forEach(item => {
+            const countText = item.count > 1 ? ` (${item.count} assessments)` : '';
+            html += `<option value="${item.value}">${item.text}${countText}</option>`;
+        });
+        
+        selectElement.innerHTML = html;
+    }
+
+    // Reset form function
+    function resetForm() {
+        if (confirm('Are you sure you want to reset all selections?')) {
+            document.getElementById('district-select').value = '';
+            resetDropdown(document.getElementById('unit-select'), "-- First select a district --");
+            resetDropdown(document.getElementById('assessment-select'), "-- First select a unit --");
+            
+            // Hide loading indicators
+            document.getElementById('unit-loading').classList.add('d-none');
+            document.getElementById('assessment-loading').classList.add('d-none');
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // If we have selections from a postback, make sure dropdowns are enabled
+        const districtSelect = document.getElementById('district-select');
+        const unitSelect = document.getElementById('unit-select');
+        const assessmentSelect = document.getElementById('assessment-select');
+        const continueBtn = document.getElementById('continue-btn');
+        
+        function updateContinueButton() {
+            if (assessmentSelect.value) {
+                continueBtn.disabled = false;
+            } else {
+                continueBtn.disabled = true;
+            }
+        }
+        
+        // Set initial button state
+        @if (string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
+        {
+            <text>continueBtn.disabled = true;</text>
+        }
+        else
+        {
+            <text>continueBtn.disabled = false;</text>
+        }
+        
+        if (districtSelect.value && unitSelect.options.length > 1) {
+            unitSelect.disabled = false;
+        }
+        
+        if (unitSelect.value && assessmentSelect.options.length > 1) {
+            assessmentSelect.disabled = false;
+        }
+        
+        // Add event listener to assessment select to update button
+        assessmentSelect.addEventListener('change', updateContinueButton);
+    });
+</script>

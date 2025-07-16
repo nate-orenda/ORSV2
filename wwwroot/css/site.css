@@ -103,3 +103,254 @@ button.accept-policy {
 .d-none {
     display: none !important;
 }
+
+:root {
+    --orenda-primary: #0022C5;
+    --orenda-primary-hover: #001aa0;
+    --orenda-primary-light: #1a4fb8;
+    --orenda-secondary: #f8f9fb;
+    --orenda-border: #e9ecef;
+    --orenda-shadow: rgba(0, 34, 197, 0.15);
+    --orenda-shadow-hover: rgba(0, 34, 197, 0.25);
+}
+
+/* === CONTAINER PATTERNS === */
+.orenda-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.orenda-container-sm {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* === HEADER STYLES === */
+.orenda-header {
+    background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px var(--orenda-shadow);
+}
+
+.orenda-header h2 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.orenda-header p {
+    margin-bottom: 0;
+    opacity: 0.9;
+}
+
+/* === CARD STYLES === */
+.orenda-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--orenda-border);
+}
+
+.orenda-card-body {
+    padding: 2rem;
+}
+
+.orenda-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--orenda-border);
+}
+
+/* === TABLE STYLES === */
+.orenda-table {
+    margin-bottom: 0;
+    font-size: 0.95rem;
+}
+
+.orenda-table th {
+    background: linear-gradient(135deg, var(--orenda-secondary) 0%, var(--orenda-border) 100%);
+    color: #495057;
+    font-weight: 600;
+    padding: 1rem 0.75rem;
+    border: none;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.orenda-table td {
+    padding: 1rem 0.75rem;
+    border: none;
+    border-bottom: 1px solid #f1f3f4;
+    vertical-align: middle;
+}
+
+.orenda-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.orenda-table tbody tr:hover {
+    background-color: #f8f9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 34, 197, 0.1);
+}
+
+.orenda-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* === FORM STYLES === */
+.orenda-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.orenda-form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.orenda-form-select {
+    border: 2px solid var(--orenda-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+.orenda-form-select:focus {
+    border-color: var(--orenda-primary);
+    box-shadow: 0 0 0 0.2rem var(--orenda-shadow);
+    outline: none;
+}
+
+.orenda-form-select:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* === BUTTON STYLES === */
+.orenda-btn-primary {
+    background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: white;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.orenda-btn-primary:hover {
+    background: linear-gradient(135deg, var(--orenda-primary-hover) 0%, #1640a0 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--orenda-shadow-hover);
+    color: white;
+}
+
+/* === BADGE STYLES === */
+.orenda-badge {
+    background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.orenda-count-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+/* === SUMMARY/SELECTION STYLES === */
+.orenda-summary {
+    background: linear-gradient(135deg, var(--orenda-secondary) 0%, var(--orenda-border) 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.orenda-summary h6 {
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.orenda-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.orenda-summary-item:last-child {
+    border-bottom: none;
+}
+
+.orenda-summary-label {
+    font-weight: 500;
+    color: #6c757d;
+    min-width: 80px;
+}
+
+.orenda-summary-value {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* === LOADING STYLES === */
+.orenda-loading {
+    margin-top: 0.5rem;
+}
+
+.orenda-loading-text {
+    margin-left: 0.5rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+    .orenda-header {
+        padding: 1.5rem;
+    }
+    
+    .orenda-card-body {
+        padding: 1.5rem;
+    }
+    
+    .orenda-summary-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .orenda-summary-label {
+        min-width: auto;
+        margin-bottom: 0.25rem;
+    }
+    
+    .orenda-container,
+    .orenda-container-sm {
+        margin: 0 1rem;
+        max-width: none;
+    }
+}

@@ -113,6 +113,39 @@ namespace ORSV2.Data
             builder.Entity<School>()
                 .Property(s => s.DateUpdated)
                 .HasDefaultValueSql("SYSUTCDATETIME()");
+
+            builder.Entity<Assessment>(entity =>
+            {
+                entity.ToTable("assessments");
+                
+                entity.HasKey(e => e.TestId);
+                
+                entity.Property(e => e.TestId)
+                    .HasColumnName("test_id")
+                    .HasMaxLength(255)
+                    .IsRequired();
+                    
+                entity.Property(e => e.DistrictId)
+                    .HasColumnName("districtid")
+                    .IsRequired();
+                    
+                entity.Property(e => e.TestName)
+                    .HasColumnName("test_name");
+                    
+                entity.Property(e => e.Unit)
+                    .HasColumnName("unit")
+                    .IsRequired();
+                    
+                entity.Property(e => e.Standards)
+                    .HasColumnName("standards")
+                    .IsRequired();
+
+                // Foreign key relationship
+                entity.HasOne(a => a.District)
+                    .WithMany()
+                    .HasForeignKey(a => a.DistrictId)
+                    .HasConstraintName("FK_assessments_districts");
+            });
         }
     }
 }

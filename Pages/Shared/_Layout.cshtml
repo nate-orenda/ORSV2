@@ -36,10 +36,22 @@
                     <nav class="d-flex align-items-center gap-4">
                         <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/Index">Home</a>
                         <a class="text-white text-uppercase fw-semibold text-decoration-none" asp-page="/GuidanceAlignment/Index">Guidance Alignment</a>
+                        
+                        <div class="dropdown">
+                            <a class="text-white text-uppercase fw-semibold text-decoration-none dropdown-toggle"
+                            href="#" role="button" id="curriculumDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Curriculum Alignment
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="curriculumDropdown">
+                                <li><a class="dropdown-item" asp-page="/CurriculumAlignment/Form1">Form 1</a></li>
+                                <!-- Add more forms here as you create them -->
+                                <!-- <li><a class="dropdown-item" asp-page="/CurriculumAlignment/Form2">Form 2</a></li> -->
+                            </ul>
+                        </div>
 
                         <div class="dropdown">
                             <a class="text-white text-uppercase fw-semibold text-decoration-none dropdown-toggle"
-                               href="#" role="button" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            href="#" role="button" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 Admin
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
