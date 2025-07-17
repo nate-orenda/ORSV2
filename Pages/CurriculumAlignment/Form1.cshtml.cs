@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
-using System.Text.Json;
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
@@ -13,13 +12,14 @@ namespace ORSV2.Pages.CurriculumAlignment
     public class Form1Model : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<Form1Model> _logger;
 
-        public Form1Model(ApplicationDbContext context)
+        public Form1Model(ApplicationDbContext context, ILogger<Form1Model> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        // Filter Properties
         [BindProperty]
         public int SelectedDistrictId { get; set; }
         
@@ -35,328 +35,400 @@ namespace ORSV2.Pages.CurriculumAlignment
         [BindProperty]
         public int? SelectedTeacherId { get; set; }
 
-        // Dropdown Data
-        public List<SelectListItem> Districts { get; set; } = new();
-        public List<SelectListItem> Cycles { get; set; } = new();
-        public List<SelectListItem> TestNames { get; set; } = new();
-        public List<SelectListItem> Schools { get; set; } = new();
-        public List<SelectListItem> Teachers { get; set; } = new();
+        public SelectList Districts { get; set; } = new SelectList(new List<object>());
+        public SelectList Cycles { get; set; } = new SelectList(new List<object>());
+        public SelectList TestNames { get; set; } = new SelectList(new List<object>());
+        public SelectList Schools { get; set; } = new SelectList(new List<object>());
+        public SelectList Teachers { get; set; } = new SelectList(new List<object>());
 
-        // Results Data
         public List<StudentResult> StudentResults { get; set; } = new();
-        public int TotalCount { get; set; }
+        public int TotalResults { get; set; }
 
-        // Summary Data for UI
-        public Dictionary<string, int> SubjectCounts { get; set; } = new();
-        public Dictionary<string, int> QuadrantCounts { get; set; } = new();
-        public Dictionary<string, int> ProficiencyCounts { get; set; } = new();
-
-        public async Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync()
         {
-            // Authorization check
-            if (!await HasAccessToDistrictAsync(SelectedDistrictId))
+            try
             {
-                SelectedDistrictId = 0; // Reset if no access
+                await LoadDistrictsAsync();
+                return Page();
             }
-            
-            await LoadDistrictsAsync();
-            
-            // Load initial data if we have selections
-            if (SelectedDistrictId > 0)
+            catch (Exception ex)
             {
-                await LoadCyclesAsync();
-                await LoadTestNamesAsync();
-                await LoadSchoolsAsync();
-                
-                if (SelectedSchoolId.HasValue)
-                {
-                    await LoadTeachersAsync();
-                }
-                
-                if (!string.IsNullOrEmpty(SelectedCycle) && !string.IsNullOrEmpty(SelectedTestName))
-                {
-                    await LoadStudentResultsAsync();
-                }
+                _logger.LogError(ex, "Error loading Form1 page");
+                ModelState.AddModelError("", "Error loading page data");
+                return Page();
             }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Authorization check
-            if (!await HasAccessToDistrictAsync(SelectedDistrictId))
+            try
             {
+                await LoadDistrictsAsync();
+                await LoadDataBasedOnSelections();
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing Form1 request");
+                ModelState.AddModelError("", "Error processing request");
+                return Page();
+            }
+        }
+
+        // AJAX endpoints for cascading dropdowns
+        public async Task<IActionResult> OnGetCyclesAsync(int districtId)
+        {
+            if (!await HasDistrictAccessAsync(districtId))
                 return Forbid();
-            }
-            
-            await LoadDistrictsAsync();
-            
-            if (SelectedDistrictId > 0)
+
+            var cycles = await _context.Assessments
+                .Where(a => a.DistrictId == districtId)
+                .Select(a => a.Unit)
+                .Distinct()
+                .OrderBy(u => u)
+                .Select(u => new { value = u.ToString(), text = $"Unit {u}" })
+                .ToListAsync();
+
+            return new JsonResult(cycles);
+        }
+
+        public async Task<IActionResult> OnGetTestNamesAsync(int districtId, string cycle)
+        {
+            if (!await HasDistrictAccessAsync(districtId))
+                return Forbid();
+
+            if (!int.TryParse(cycle, out int unitNumber))
+                return new JsonResult(new List<object>());
+
+            var testNames = await _context.Assessments
+                .Where(a => a.DistrictId == districtId && a.Unit == unitNumber)
+                .Select(a => new { value = a.TestId, text = a.TestName ?? a.TestId })
+                .Distinct()
+                .OrderBy(t => t.text)
+                .ToListAsync();
+
+            return new JsonResult(testNames);
+        }
+
+        public async Task<IActionResult> OnGetSchoolsAsync(int districtId, string testId)
+        {
+            if (!await HasDistrictAccessAsync(districtId))
+                return Forbid();
+
+            try
             {
-                await LoadCyclesAsync();
-                await LoadTestNamesAsync();
-                await LoadSchoolsAsync();
-                
-                if (SelectedSchoolId.HasValue)
+                // Parse testId to int since VwStudentResultsClasses.TestId is int
+                if (!int.TryParse(testId, out int testIdInt))
                 {
-                    await LoadTeachersAsync();
+                    return new JsonResult(new List<object>());
                 }
-                
-                if (!string.IsNullOrEmpty(SelectedCycle) && !string.IsNullOrEmpty(SelectedTestName))
-                {
-                    await LoadStudentResultsAsync();
-                }
+
+                // First filter the view by district and test, then get schools
+                var schools = await (
+                    from v in _context.VwStudentResultsClasses
+                    join s in _context.STU on v.StudentId equals s.StuId
+                    join sch in _context.Schools on s.SchoolID equals sch.Id
+                    where s.DistrictID == districtId && v.TestId == testIdInt
+                    group new { sch.Id, sch.Name } by new { sch.Id, sch.Name } into g
+                    select new { 
+                        value = g.Key.Id, 
+                        text = $"{g.Key.Name} ({g.Count()} students)" 
+                    }
+                ).OrderBy(s => s.text)
+                .ToListAsync();
+
+                return new JsonResult(schools);
             }
-            
-            return Page();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading schools for district {DistrictId}, test {TestId}", districtId, testId);
+                return new JsonResult(new List<object>());
+            }
+        }
+
+        public async Task<IActionResult> OnGetTeachersAsync(int districtId, string testId, int? schoolId = null)
+        {
+            if (!await HasDistrictAccessAsync(districtId))
+                return Forbid();
+
+            try
+            {
+                // Parse testId to int since VwStudentResultsClasses.TestId is int
+                if (!int.TryParse(testId, out int testIdInt))
+                {
+                    return new JsonResult(new List<object>());
+                }
+
+                // Filter the view by district, test, and optionally school
+                var query = from v in _context.VwStudentResultsClasses
+                           join s in _context.STU on v.StudentId equals s.StuId
+                           where s.DistrictID == districtId && 
+                                 v.TestId == testIdInt &&
+                                 !string.IsNullOrEmpty(v.TeacherFirstName) &&
+                                 !string.IsNullOrEmpty(v.TeacherLastName)
+                           select new { v, s };
+
+                // Apply school filter if provided
+                if (schoolId.HasValue)
+                {
+                    query = query.Where(x => x.s.SchoolID == schoolId.Value);
+                }
+
+                var teachers = await query
+                    .GroupBy(x => new { x.v.TeacherId, x.v.TeacherFirstName, x.v.TeacherLastName })
+                    .Select(g => new { 
+                        value = g.Key.TeacherId, 
+                        text = $"{g.Key.TeacherLastName}, {g.Key.TeacherFirstName} ({g.Count()} students)" 
+                    })
+                    .OrderBy(t => t.text)
+                    .Take(50) // Limit for performance
+                    .ToListAsync();
+
+                return new JsonResult(teachers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading teachers for district {DistrictId}, test {TestId}", districtId, testId);
+                return new JsonResult(new List<object>());
+            }
+        }
+
+        public async Task<IActionResult> OnGetStudentResultsAsync(int districtId, string testId, int? schoolId = null, int? teacherId = null)
+        {
+            if (!await HasDistrictAccessAsync(districtId))
+                return Forbid();
+
+            try
+            {
+                // Parse testId to int since VwStudentResultsClasses.TestId is int
+                if (!int.TryParse(testId, out int testIdInt))
+                {
+                    return new JsonResult(new List<object>());
+                }
+
+                var query = from v in _context.VwStudentResultsClasses
+                           join s in _context.STU on v.StudentId equals s.StuId
+                           where s.DistrictID == districtId && v.TestId == testIdInt
+                           select new { View = v, Student = s };
+
+                if (schoolId.HasValue)
+                    query = query.Where(x => x.Student.SchoolID == schoolId.Value);
+
+                if (teacherId.HasValue)
+                    query = query.Where(x => x.View.TeacherId == teacherId.Value);
+
+                var results = await query
+                    .Take(1000) // Limit for performance
+                    .Select(x => new
+                    {
+                        StudentId = x.View.StudentId,
+                        LocalStudentId = x.View.LocalStudentId,
+                        FirstName = x.View.FirstName,
+                        LastName = x.View.LastName,
+                        TestId = x.View.TestId,
+                        TestName = x.View.TestName,
+                        Unit = x.View.Unit,
+                        Subject = x.View.Subject,
+                        Results = x.View.Results,
+                        Proficiency = x.View.Proficiency,
+                        Quadrant = x.View.Quadrant,
+                        SectionNumber = x.View.SectionNumber,
+                        CourseNumber = x.View.CourseNumber,
+                        CourseTitle = x.View.CourseTitle,
+                        DepartmentName = x.View.DepartmentName,
+                        TeacherFirstName = x.View.TeacherFirstName,
+                        TeacherLastName = x.View.TeacherLastName,
+                        TeacherId = x.View.TeacherId,
+                        IsPrimaryTeacher = x.View.IsPrimaryTeacherFlag.ToLower() == "true"
+                    })
+                    .OrderBy(r => r.LastName)
+                    .ThenBy(r => r.FirstName)
+                    .ToListAsync();
+
+                return new JsonResult(results);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading student results for district {DistrictId}, test {TestId}", districtId, testId);
+                return new JsonResult(new List<object>());
+            }
         }
 
         private async Task LoadDistrictsAsync()
         {
-            IQueryable<District> query = _context.Districts.Where(d => !d.Inactive);
-            
-            // Apply authorization filters
-            if (User.IsInRole("OrendaAdmin"))
+            var districtsQuery = _context.Districts.Where(d => !d.Inactive);
+
+            // Apply user access restrictions based on your existing pattern
+            if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager"))
             {
-                // Optimized approach: First check if view has any data at all with timeout protection
-                try
-                {
-                    var hasViewData = await _context.VwStudentResultsClasses
-                        .Take(1) // Only check if ANY record exists
-                        .AnyAsync();
-                    
-                    if (hasViewData)
-                    {
-                        // Get sample of student IDs from view (limit to prevent timeout)
-                        var sampleStudentIds = await _context.VwStudentResultsClasses
-                            .Select(v => v.StudentId)
-                            .Distinct()
-                            .Take(1000) // Limit to first 1000 for performance
-                            .ToListAsync();
-                        
-                        if (sampleStudentIds.Any())
-                        {
-                            // Find districts that have these students
-                            var districtIdsWithData = await _context.STU
-                                .Where(s => sampleStudentIds.Contains(s.StuId))
-                                .Select(s => s.DistrictID)
-                                .Distinct()
-                                .ToListAsync();
-                            
-                            if (districtIdsWithData.Any())
-                            {
-                                query = query.Where(d => districtIdsWithData.Contains(d.Id));
-                            }
-                            else
-                            {
-                                // Fallback: Show all districts for OrendaAdmin
-                                // The specific filtering will happen in subsequent dropdowns
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // No assessment data, show no districts
-                        query = query.Where(d => false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // If query times out or fails, fallback to showing all districts for OrendaAdmin
-                    // Log the error but don't crash the page
-                    Console.WriteLine($"District loading fallback for OrendaAdmin: {ex.Message}");
-                }
+                // OrendaAdmin/Manager can see all districts that have assessment data
+                var districtsWithData = await _context.Assessments
+                    .Select(a => a.DistrictId)
+                    .Distinct()
+                    .ToListAsync();
+                
+                districtsQuery = districtsQuery.Where(d => districtsWithData.Contains(d.Id));
             }
             else if (User.IsInRole("DistrictAdmin") || User.IsInRole("SchoolAdmin"))
             {
-                // Get user's district access
-                var userDistrictId = User.FindFirst("DistrictId")?.Value;
-                if (int.TryParse(userDistrictId, out int districtId))
+                // Get user's assigned districts (direct assignment + school-based)
+                var userDistrictIds = await GetUserDistrictIdsAsync();
+                if (userDistrictIds.Any())
                 {
-                    query = query.Where(d => d.Id == districtId);
-                    
-                    // For non-admin users, skip the expensive data check
-                    // They can only see their district anyway, and we'll validate data in subsequent calls
+                    districtsQuery = districtsQuery.Where(d => userDistrictIds.Contains(d.Id));
                 }
                 else
                 {
-                    query = query.Where(d => false); // No access if no district claim
+                    // If no district access, return empty list
+                    Districts = new SelectList(new List<District>(), "Id", "Name", SelectedDistrictId);
+                    return;
                 }
             }
             else
             {
-                query = query.Where(d => false); // No access for other roles
+                // Other roles - get their assigned districts
+                var userDistrictIds = await GetUserDistrictIdsAsync();
+                if (userDistrictIds.Any())
+                {
+                    districtsQuery = districtsQuery.Where(d => userDistrictIds.Contains(d.Id));
+                }
+                else
+                {
+                    // If no district access, return empty list
+                    Districts = new SelectList(new List<District>(), "Id", "Name", SelectedDistrictId);
+                    return;
+                }
             }
-            
-            var districts = await query
+
+            var districts = await districtsQuery
                 .OrderBy(d => d.Name)
-                .Select(d => new SelectListItem 
-                { 
-                    Value = d.Id.ToString(), 
-                    Text = d.Name,
-                    Selected = d.Id == SelectedDistrictId
-                })
                 .ToListAsync();
-            
-            Districts = new List<SelectListItem> 
-            { 
-                new SelectListItem { Value = "", Text = "Select District..." } 
-            };
-            Districts.AddRange(districts);
+
+            Districts = new SelectList(districts, "Id", "Name", SelectedDistrictId);
+        }
+
+        private async Task LoadDataBasedOnSelections()
+        {
+            if (SelectedDistrictId > 0)
+            {
+                await LoadCyclesAsync();
+
+                if (!string.IsNullOrEmpty(SelectedCycle))
+                {
+                    await LoadTestNamesAsync();
+
+                    if (!string.IsNullOrEmpty(SelectedTestName))
+                    {
+                        await LoadSchoolsAsync();
+
+                        if (SelectedSchoolId.HasValue)
+                        {
+                            await LoadTeachersAsync();
+                        }
+
+                        await LoadStudentResultsAsync();
+                    }
+                }
+            }
         }
 
         private async Task LoadCyclesAsync()
         {
-            if (SelectedDistrictId <= 0) return;
-            
-            // Get student IDs for this district
-            var studentIdsInDistrict = await _context.STU
-                .Where(s => s.DistrictID == SelectedDistrictId)
-                .Select(s => s.StuId)
-                .ToListAsync();
-            
-            if (!studentIdsInDistrict.Any()) return;
-            
-            // Get cycles for these students
-            var cycles = await _context.VwStudentResultsClasses
-                .Where(v => studentIdsInDistrict.Contains(v.StudentId))
-                .Select(v => v.Unit)
+            var cycles = await _context.Assessments
+                .Where(a => a.DistrictId == SelectedDistrictId)
+                .Select(a => new { Value = a.Unit.ToString(), Text = $"Unit {a.Unit}" })
                 .Distinct()
-                .Where(unit => !string.IsNullOrEmpty(unit))
-                .OrderBy(c => c)
+                .OrderBy(c => c.Value)
                 .ToListAsync();
-            
-            Cycles = new List<SelectListItem> 
-            { 
-                new SelectListItem { Value = "", Text = "Select Cycle/Unit..." } 
-            };
-            
-            foreach (var cycle in cycles)
-            {
-                Cycles.Add(new SelectListItem 
-                { 
-                    Value = cycle, 
-                    Text = cycle,
-                    Selected = cycle == SelectedCycle
-                });
-            }
+
+            Cycles = new SelectList(cycles, "Value", "Text", SelectedCycle);
         }
 
         private async Task LoadTestNamesAsync()
         {
-            if (SelectedDistrictId <= 0) return;
-            
-            var query = from v in _context.VwStudentResultsClasses
-                       join s in _context.STU on v.StudentId equals s.StuId
-                       where s.DistrictID == SelectedDistrictId
-                       select v;
-            
-            if (!string.IsNullOrEmpty(SelectedCycle))
-                query = query.Where(v => v.Unit == SelectedCycle);
-            
-            var testNames = await query
-                .Select(v => v.TestName)
+            if (!int.TryParse(SelectedCycle, out int unitNumber)) return;
+
+            var testNames = await _context.Assessments
+                .Where(a => a.DistrictId == SelectedDistrictId && a.Unit == unitNumber)
+                .Select(a => new { Value = a.TestId, Text = a.TestName ?? a.TestId })
                 .Distinct()
-                .Where(testName => !string.IsNullOrEmpty(testName))
-                .OrderBy(t => t)
+                .OrderBy(t => t.Text)
                 .ToListAsync();
-            
-            TestNames = new List<SelectListItem> 
-            { 
-                new SelectListItem { Value = "", Text = "Select Test Name..." } 
-            };
-            
-            foreach (var testName in testNames)
-            {
-                TestNames.Add(new SelectListItem 
-                { 
-                    Value = testName, 
-                    Text = testName,
-                    Selected = testName == SelectedTestName
-                });
-            }
+
+            TestNames = new SelectList(testNames, "Value", "Text", SelectedTestName);
         }
 
         private async Task LoadSchoolsAsync()
         {
-            var schools = await _context.Schools
-                .Where(s => s.DistrictId == SelectedDistrictId && !s.Inactive)
-                .OrderBy(s => s.Name)
-                .Select(s => new SelectListItem 
-                { 
-                    Value = s.Id.ToString(), 
-                    Text = s.Name,
-                    Selected = s.Id == SelectedSchoolId
-                })
-                .ToListAsync();
-            
-            Schools = new List<SelectListItem> 
-            { 
-                new SelectListItem { Value = "", Text = "All Schools" } 
-            };
-            Schools.AddRange(schools);
+            var schoolsData = await (
+                from v in _context.VwStudentResultsClasses
+                join s in _context.STU on v.StudentId equals s.StuId
+                join sch in _context.Schools on s.SchoolID equals sch.Id
+                where s.DistrictID == SelectedDistrictId && v.TestId.ToString() == SelectedTestName
+                group new { sch.Id, sch.Name } by new { sch.Id, sch.Name } into g
+                select new { 
+                    Id = g.Key.Id, 
+                    Name = $"{g.Key.Name} ({g.Count()} students)" 
+                }
+            ).OrderBy(s => s.Name)
+            .ToListAsync();
+
+            var schoolsList = new List<object> { new { Id = (int?)null, Name = "All Schools" } };
+            schoolsList.AddRange(schoolsData.Select(s => new { Id = (int?)s.Id, Name = s.Name }));
+
+            Schools = new SelectList(schoolsList, "Id", "Name", SelectedSchoolId);
         }
 
         private async Task LoadTeachersAsync()
         {
-            // Join with STU to get district/school information
-            var query = from v in _context.VwStudentResultsClasses
-                       join s in _context.STU on v.StudentId equals s.StuId
-                       where s.DistrictID == SelectedDistrictId
-                       select new { View = v, Student = s };
-            
-            if (!string.IsNullOrEmpty(SelectedCycle))
-                query = query.Where(x => x.View.Unit == SelectedCycle);
-            
-            if (!string.IsNullOrEmpty(SelectedTestName))
-                query = query.Where(x => x.View.TestName == SelectedTestName);
-            
-            if (SelectedSchoolId.HasValue)
-                query = query.Where(x => x.Student.SchoolID == SelectedSchoolId.Value);
-            
-            var teachers = await query
-                .Select(x => new { x.View.TeacherId, x.View.TeacherFirstName, x.View.TeacherLastName })
-                .Distinct()
-                .Where(t => !string.IsNullOrEmpty(t.TeacherLastName) && !string.IsNullOrEmpty(t.TeacherFirstName))
-                .OrderBy(t => t.TeacherLastName)
-                .ThenBy(t => t.TeacherFirstName)
-                .ToListAsync();
-            
-            Teachers = new List<SelectListItem> 
-            { 
-                new SelectListItem { Value = "", Text = "All Teachers" } 
-            };
-            
-            foreach (var teacher in teachers)
-            {
-                Teachers.Add(new SelectListItem 
-                { 
-                    Value = teacher.TeacherId.ToString(), 
-                    Text = $"{teacher.TeacherLastName}, {teacher.TeacherFirstName}",
-                    Selected = teacher.TeacherId == SelectedTeacherId
-                });
-            }
+            if (!SelectedSchoolId.HasValue) return;
+
+            var teachersData = await (
+                from v in _context.VwStudentResultsClasses
+                join s in _context.STU on v.StudentId equals s.StuId
+                where s.DistrictID == SelectedDistrictId && 
+                      s.SchoolID == SelectedSchoolId.Value && 
+                      v.TestId.ToString() == SelectedTestName &&
+                      !string.IsNullOrEmpty(v.TeacherFirstName) &&
+                      !string.IsNullOrEmpty(v.TeacherLastName)
+                group new { v.TeacherId, v.TeacherFirstName, v.TeacherLastName } 
+                by new { v.TeacherId, v.TeacherFirstName, v.TeacherLastName } into g
+                select new { 
+                    Id = g.Key.TeacherId, 
+                    Name = $"{g.Key.TeacherLastName}, {g.Key.TeacherFirstName} ({g.Count()} students)" 
+                }
+            ).OrderBy(t => t.Name)
+            .ToListAsync();
+
+            var teachersList = new List<object> { new { Id = (int?)null, Name = "All Teachers" } };
+            teachersList.AddRange(teachersData.Select(t => new { Id = (int?)t.Id, Name = t.Name }));
+
+            Teachers = new SelectList(teachersList, "Id", "Name", SelectedTeacherId);
         }
 
         private async Task LoadStudentResultsAsync()
         {
+            // Parse the test ID to int since VwStudentResultsClasses.TestId is int
+            if (!int.TryParse(SelectedTestName, out int testIdInt))
+                return;
+
             var query = from v in _context.VwStudentResultsClasses
                        join s in _context.STU on v.StudentId equals s.StuId
-                       where s.DistrictID == SelectedDistrictId
+                       where s.DistrictID == SelectedDistrictId && v.TestId == testIdInt
                        select new { View = v, Student = s };
-            
-            if (!string.IsNullOrEmpty(SelectedCycle))
-                query = query.Where(x => x.View.Unit == SelectedCycle);
-            
-            if (!string.IsNullOrEmpty(SelectedTestName))
-                query = query.Where(x => x.View.TestName == SelectedTestName);
-            
+
             if (SelectedSchoolId.HasValue)
                 query = query.Where(x => x.Student.SchoolID == SelectedSchoolId.Value);
-            
+
             if (SelectedTeacherId.HasValue)
                 query = query.Where(x => x.View.TeacherId == SelectedTeacherId.Value);
-            
-            var results = await query
+
+            // Get total count
+            TotalResults = await query.CountAsync();
+
+            // Load results with pagination (limit to 1000 for performance)
+            StudentResults = await query
+                .Take(1000)
                 .Select(x => new StudentResult
                 {
                     StudentId = x.View.StudentId,
@@ -377,199 +449,55 @@ namespace ORSV2.Pages.CurriculumAlignment
                     TeacherFirstName = x.View.TeacherFirstName,
                     TeacherLastName = x.View.TeacherLastName,
                     TeacherId = x.View.TeacherId,
-                    IsPrimaryTeacher = !string.IsNullOrEmpty(x.View.IsPrimaryTeacherFlag) && 
-                                     x.View.IsPrimaryTeacherFlag.ToLower() == "true"
+                    IsPrimaryTeacher = x.View.IsPrimaryTeacherFlag.ToLower() == "true"
                 })
                 .OrderBy(r => r.LastName)
                 .ThenBy(r => r.FirstName)
                 .ToListAsync();
-            
-            StudentResults = results;
-            TotalCount = results.Count;
-            
-            // Calculate summary statistics
-            SubjectCounts = results
-                .Where(r => !string.IsNullOrEmpty(r.Subject))
-                .GroupBy(r => r.Subject)
-                .ToDictionary(g => g.Key, g => g.Count());
-            
-            QuadrantCounts = results
-                .Where(r => !string.IsNullOrEmpty(r.Quadrant))
-                .GroupBy(r => r.Quadrant)
-                .ToDictionary(g => g.Key, g => g.Count());
-            
-            ProficiencyCounts = results
-                .Where(r => !string.IsNullOrEmpty(r.Proficiency))
-                .GroupBy(r => r.Proficiency)
-                .ToDictionary(g => g.Key, g => g.Count());
         }
 
-        // Authorization helper method
-        private async Task<bool> HasAccessToDistrictAsync(int districtId)
+        private async Task<bool> HasDistrictAccessAsync(int districtId)
         {
-            if (districtId <= 0) return true; // Allow if no district selected
-            
-            // OrendaAdmins have access to all districts
-            if (User.IsInRole("OrendaAdmin")) return true;
-            
-            // Get user's district from claims
-            var userDistrictId = User.FindFirst("DistrictId")?.Value;
-            if (int.TryParse(userDistrictId, out int userDistrict))
-            {
-                return userDistrict == districtId;
-            }
-            
-            return false;
+            if (User.IsInRole("OrendaAdmin"))
+                return true;
+
+            var userDistrictIds = await GetUserDistrictIdsAsync();
+            return userDistrictIds.Contains(districtId);
         }
 
-        // API endpoints for cascading dropdowns
-        public async Task<IActionResult> OnGetCyclesAsync(int districtId)
+        private async Task<List<int>> GetUserDistrictIdsAsync()
         {
-            // Authorization check
-            if (!await HasAccessToDistrictAsync(districtId))
-            {
-                return Forbid();
-            }
-            
-            try
-            {
-                // Optimized query with limits
-                var studentIdsInDistrict = await _context.STU
-                    .Where(s => s.DistrictID == districtId)
-                    .Select(s => s.StuId)
-                    .Take(5000) // Limit for performance
-                    .ToListAsync();
-                
-                if (!studentIdsInDistrict.Any())
-                {
-                    return new JsonResult(new List<string>());
-                }
-                
-                var cycles = await _context.VwStudentResultsClasses
-                    .Where(v => studentIdsInDistrict.Contains(v.StudentId))
-                    .Select(v => v.Unit)
-                    .Distinct()
-                    .Where(unit => !string.IsNullOrEmpty(unit))
-                    .OrderBy(c => c)
-                    .ToListAsync();
-                
-                return new JsonResult(cycles);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Cycles API error: {ex.Message}");
-                return new JsonResult(new List<string>());
-            }
-        }
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return new List<int>();
 
-        public async Task<IActionResult> OnGetTestNamesAsync(int districtId, string cycle)
-        {
-            // Authorization check
-            if (!await HasAccessToDistrictAsync(districtId))
-            {
-                return Forbid();
-            }
-            
-            try
-            {
-                // Optimized query with limits
-                var studentIdsInDistrict = await _context.STU
-                    .Where(s => s.DistrictID == districtId)
-                    .Select(s => s.StuId)
-                    .Take(5000) // Limit for performance
-                    .ToListAsync();
-                
-                if (!studentIdsInDistrict.Any())
-                {
-                    return new JsonResult(new List<string>());
-                }
-                
-                var query = _context.VwStudentResultsClasses
-                    .Where(v => studentIdsInDistrict.Contains(v.StudentId));
-                
-                if (!string.IsNullOrEmpty(cycle))
-                    query = query.Where(v => v.Unit == cycle);
-                
-                var testNames = await query
-                    .Select(v => v.TestName)
-                    .Distinct()
-                    .Where(testName => !string.IsNullOrEmpty(testName))
-                    .OrderBy(t => t)
-                    .ToListAsync();
-                
-                return new JsonResult(testNames);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Test names API error: {ex.Message}");
-                return new JsonResult(new List<string>());
-            }
-        }
+            var userDistrictIds = new List<int>();
 
-        public async Task<IActionResult> OnGetTeachersAsync(int districtId, string cycle, string testName, int? schoolId)
-        {
-            // Authorization check
-            if (!await HasAccessToDistrictAsync(districtId))
+            // Get the user with their direct district assignment
+            var user = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.DistrictId)
+                .FirstOrDefaultAsync();
+
+            // Add direct district assignment if exists
+            if (user.HasValue)
             {
-                return Forbid();
+                userDistrictIds.Add(user.Value);
             }
-            
-            try
-            {
-                // Optimized query with limits
-                var studentIdsInDistrict = await _context.STU
-                    .Where(s => s.DistrictID == districtId)
-                    .Select(s => s.StuId)
-                    .Take(5000) // Limit for performance
-                    .ToListAsync();
-                
-                if (!studentIdsInDistrict.Any())
-                {
-                    return new JsonResult(new List<object>());
-                }
-                
-                var query = _context.VwStudentResultsClasses
-                    .Where(v => studentIdsInDistrict.Contains(v.StudentId));
-                
-                if (!string.IsNullOrEmpty(cycle))
-                    query = query.Where(v => v.Unit == cycle);
-                
-                if (!string.IsNullOrEmpty(testName))
-                    query = query.Where(v => v.TestName == testName);
-                
-                if (schoolId.HasValue)
-                {
-                    // Filter by school through student records
-                    var schoolStudentIds = await _context.STU
-                        .Where(s => s.SchoolID == schoolId.Value && studentIdsInDistrict.Contains(s.StuId))
-                        .Select(s => s.StuId)
-                        .ToListAsync();
-                    
-                    query = query.Where(v => schoolStudentIds.Contains(v.StudentId));
-                }
-                
-                var teachers = await query
-                    .Select(v => new { 
-                        id = v.TeacherId, 
-                        name = $"{v.TeacherLastName}, {v.TeacherFirstName}" 
-                    })
-                    .Distinct()
-                    .Where(t => !string.IsNullOrEmpty(t.name) && t.name != ", ")
-                    .OrderBy(t => t.name)
-                    .Take(100) // Limit teacher results
-                    .ToListAsync();
-                
-                return new JsonResult(teachers);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Teachers API error: {ex.Message}");
-                return new JsonResult(new List<object>());
-            }
+
+            // Get districts through school assignments  
+            var schoolDistricts = await _context.UserSchools
+                .Where(us => us.UserId == userId)
+                .Join(_context.Schools, us => us.SchoolId, s => s.Id, (us, s) => s.DistrictId)
+                .ToListAsync();
+
+            userDistrictIds.AddRange(schoolDistricts);
+
+            return userDistrictIds.Distinct().ToList();
         }
     }
 
-    // Model for student results - keep this exactly as you had it
+    // Simple result model
     public class StudentResult
     {
         public int StudentId { get; set; }
