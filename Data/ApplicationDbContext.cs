@@ -26,6 +26,9 @@ namespace ORSV2.Data
         public DbSet<GAProtocolSectionResponse> GAProtocolSectionResponses { get; set; }
         public DbSet<GAProtocolTarget> GAProtocolTargets { get; set; }
         public DbSet<GAProtocolActionPlanItem> GAProtocolActionPlanItems { get; set; }
+        public DbSet<Assessment> Assessments { get; set; }
+
+        public DbSet<VwStudentResultsClasses> VwStudentResultsClasses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -114,28 +117,34 @@ namespace ORSV2.Data
                 .Property(s => s.DateUpdated)
                 .HasDefaultValueSql("SYSUTCDATETIME()");
 
+            builder.Entity<VwStudentResultsClasses>(entity =>
+            {
+                entity.HasNoKey(); // Views typically don't have primary keys
+                entity.ToView("vw_student_results_classes"); // Map to the actual view name
+            });
+
             builder.Entity<Assessment>(entity =>
             {
                 entity.ToTable("assessments");
-                
+
                 entity.HasKey(e => e.TestId);
-                
+
                 entity.Property(e => e.TestId)
                     .HasColumnName("test_id")
                     .HasMaxLength(255)
                     .IsRequired();
-                    
+
                 entity.Property(e => e.DistrictId)
                     .HasColumnName("districtid")
                     .IsRequired();
-                    
+
                 entity.Property(e => e.TestName)
                     .HasColumnName("test_name");
-                    
+
                 entity.Property(e => e.Unit)
                     .HasColumnName("unit")
                     .IsRequired();
-                    
+
                 entity.Property(e => e.Standards)
                     .HasColumnName("standards")
                     .IsRequired();

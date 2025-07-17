@@ -1,325 +1,552 @@
 @page
 @model ORSV2.Pages.CurriculumAlignment.Form1Model
 @{
-    ViewData["Title"] = "Form 1 - Curriculum Alignment";
+    ViewData["Title"] = "Curriculum Alignment - Form 1";
 }
 
-@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
-
-<!-- Form1 now uses consolidated CSS classes from site.css -->
-
-<div class="orenda-container-sm">
+<div class="curriculum-alignment-container">
     <!-- Header Section -->
-    <div class="orenda-header">
-        <h2>
-            <i class="bi bi-clipboard-data me-2"></i>
-            Form 1 - Assessment Selection
+    <div class="ca-header mb-4">
+        <h2 class="mb-2">
+            <i class="bi bi-mortarboard me-2"></i>
+            Curriculum Alignment Analysis
         </h2>
-        <p>Select your district, unit, and assessment to begin curriculum alignment analysis.</p>
+        <p class="text-muted mb-0">
+            Analyze student assessment results by curriculum alignment factors
+        </p>
     </div>
 
-    <!-- Main Form Card -->
-    <div class="orenda-card">
-        <div class="orenda-card-body">
-            <form method="post" id="form1">
-                @Html.AntiForgeryToken()
-
-                <!-- District Selection -->
-                <div class="orenda-form-group">
-                    <label class="orenda-form-label" for="district-select">
-                        <i class="bi bi-building me-1"></i>
-                        Select District
-                    </label>
-                    <select id="district-select" 
-                            name="FormData.SelectedDistrictId" 
-                            class="form-select orenda-form-select" 
-                            onchange="onDistrictChange()">
-                        <option value="">-- Choose a District --</option>
-                        @foreach (var district in Model.FormData.AvailableDistricts)
-                        {
-                            @if (Model.FormData.SelectedDistrictId == district.Id)
-                            {
-                                <option value="@district.Id" selected>@district.Name</option>
-                            }
-                            else
-                            {
-                                <option value="@district.Id">@district.Name</option>
-                            }
-                        }
-                    </select>
-                </div>
-
-                <!-- Unit Selection -->
-                <div class="orenda-form-group">
-                    <label class="orenda-form-label" for="unit-select">
-                        <i class="bi bi-collection me-1"></i>
-                        Select Unit
-                    </label>
-                    <select id="unit-select" 
-                            name="FormData.SelectedUnit" 
-                            class="form-select orenda-form-select" 
-                            disabled 
-                            onchange="onUnitChange()">
-                        <option value="">-- First select a district --</option>
-                        @foreach (var unit in Model.FormData.AvailableUnits)
-                        {
-                            @if (Model.FormData.SelectedUnit?.ToString() == unit.Value)
-                            {
-                                <option value="@unit.Value" selected>@unit.Text (@unit.Count assessments)</option>
-                            }
-                            else
-                            {
-                                <option value="@unit.Value">@unit.Text (@unit.Count assessments)</option>
-                            }
-                        }
-                    </select>
-                    <div id="unit-loading" class="d-none orenda-loading">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <span class="orenda-loading-text">Loading units...</span>
+    <!-- Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel me-2"></i>
+                Filter Options
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="filterForm">
+                <div class="row g-3">
+                    <!-- District Filter -->
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="SelectedDistrictId" class="form-label fw-bold">District</label>
+                        <select asp-for="SelectedDistrictId" asp-items="Model.Districts" 
+                                class="form-select" id="districtSelect" onchange="onDistrictChange()">
+                        </select>
                     </div>
-                </div>
 
-                <!-- Assessment Selection -->
-                <div class="orenda-form-group">
-                    <label class="orenda-form-label" for="assessment-select">
-                        <i class="bi bi-file-earmark-text me-1"></i>
-                        Select Assessment
-                    </label>
-                    <select id="assessment-select" 
-                            name="FormData.SelectedAssessment" 
-                            class="form-select orenda-form-select" 
-                            disabled>
-                        <option value="">-- First select a unit --</option>
-                        @foreach (var assessment in Model.FormData.AvailableAssessments)
-                        {
-                            @if (Model.FormData.SelectedAssessment == assessment.Value)
-                            {
-                                <option value="@assessment.Value" selected>@assessment.Text</option>
-                            }
-                            else
-                            {
-                                <option value="@assessment.Value">@assessment.Text</option>
-                            }
-                        }
-                    </select>
-                    <div id="assessment-loading" class="d-none orenda-loading">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <span class="orenda-loading-text">Loading assessments...</span>
+                    <!-- Cycle/Unit Filter -->
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="SelectedCycle" class="form-label fw-bold">Cycle/Unit</label>
+                        <select asp-for="SelectedCycle" asp-items="Model.Cycles" 
+                                class="form-select" id="cycleSelect" onchange="onCycleChange()">
+                        </select>
                     </div>
-                </div>
 
-                <!-- Selection Summary -->
-                @if (Model.FormData.SelectedDistrictId.HasValue || Model.FormData.SelectedUnit.HasValue || !string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
-                {
-                    <div class="orenda-summary">
-                        <h6>
-                            <i class="bi bi-check-circle me-1"></i>
-                            Current Selection
-                        </h6>
-                        
-                        @if (Model.FormData.SelectedDistrictId.HasValue)
-                        {
-                            var selectedDistrict = Model.FormData.AvailableDistricts.FirstOrDefault(d => d.Id == Model.FormData.SelectedDistrictId);
-                            <div class="orenda-summary-item">
-                                <span class="orenda-summary-label">District:</span>
-                                <span class="orenda-summary-value">@selectedDistrict?.Name</span>
-                            </div>
-                        }
-                        
-                        @if (Model.FormData.SelectedUnit.HasValue)
-                        {
-                            var selectedUnit = Model.FormData.AvailableUnits.FirstOrDefault(u => u.Value == Model.FormData.SelectedUnit.ToString());
-                            <div class="orenda-summary-item">
-                                <span class="orenda-summary-label">Unit:</span>
-                                <span class="orenda-summary-value">@selectedUnit?.Text</span>
-                            </div>
-                        }
-                        
-                        @if (!string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
-                        {
-                            var selectedAssessment = Model.FormData.AvailableAssessments.FirstOrDefault(a => a.Value == Model.FormData.SelectedAssessment);
-                            <div class="orenda-summary-item">
-                                <span class="orenda-summary-label">Assessment:</span>
-                                <span class="orenda-summary-value">@selectedAssessment?.Text</span>
-                            </div>
-                        }
+                    <!-- Test Name Filter -->
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="SelectedTestName" class="form-label fw-bold">Test Name</label>
+                        <select asp-for="SelectedTestName" asp-items="Model.TestNames" 
+                                class="form-select" id="testNameSelect" onchange="onTestNameChange()">
+                        </select>
                     </div>
-                }
 
-                <!-- Action Buttons -->
-                <div class="d-flex justify-content-end gap-3 mt-4">
-                    <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
-                        <i class="bi bi-arrow-clockwise me-1"></i>
-                        Reset
-                    </button>
-                    <button type="submit" 
-                            class="btn btn-primary orenda-btn-primary" 
-                            id="continue-btn">
-                        <i class="bi bi-arrow-right me-1"></i>
-                        Continue to Analysis
-                    </button>
+                    <!-- School Filter -->
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="SelectedSchoolId" class="form-label fw-bold">School</label>
+                        <select asp-for="SelectedSchoolId" asp-items="Model.Schools" 
+                                class="form-select" id="schoolSelect" onchange="onSchoolChange()">
+                        </select>
+                    </div>
+
+                    <!-- Teacher Filter -->
+                    <div class="col-md-8 col-lg-9">
+                        <label asp-for="SelectedTeacherId" class="form-label fw-bold">Teacher</label>
+                        <select asp-for="SelectedTeacherId" asp-items="Model.Teachers" 
+                                class="form-select" id="teacherSelect">
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-md-4 col-lg-3 d-flex align-items-end">
+                        <div class="w-100">
+                            <button type="submit" class="btn btn-success w-100 mb-1">
+                                <i class="bi bi-search me-1"></i>
+                                Apply Filters
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
+
+    @if (Model.StudentResults.Any())
+    {
+        <!-- Summary Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-primary mb-1">@Model.TotalCount</h4>
+                        <p class="text-muted mb-0">Total Students</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-success mb-1">@Model.SubjectCounts.Count</h4>
+                        <p class="text-muted mb-0">Subject Areas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-info mb-1">@Model.QuadrantCounts.Count</h4>
+                        <p class="text-muted mb-0">Quadrants</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h4 class="text-warning mb-1">@Model.ProficiencyCounts.Count</h4>
+                        <p class="text-muted mb-0">Proficiency Levels</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Results Table -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-table me-2"></i>
+                    Student Assessment Results
+                </h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportToCSV()">
+                        <i class="bi bi-download me-1"></i>
+                        Export CSV
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="printTable()">
+                        <i class="bi bi-printer me-1"></i>
+                        Print
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container-wrapper">
+                    <div class="table-scroll-container">
+                        <table class="table table-hover table-striped mb-0" id="studentsTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="draggable-header" style="min-width: 150px;">Student Name</th>
+                                    <th class="draggable-header" style="min-width: 120px;">Student ID</th>
+                                    <th class="draggable-header" style="min-width: 100px;">Subject</th>
+                                    <th class="draggable-header" style="min-width: 120px;">Test Name</th>
+                                    <th class="draggable-header" style="min-width: 100px;">Unit</th>
+                                    <th class="draggable-header" style="min-width: 80px;">Score</th>
+                                    <th class="draggable-header" style="min-width: 100px;">Proficiency</th>
+                                    <th class="draggable-header" style="min-width: 100px;">Quadrant</th>
+                                    <th class="draggable-header" style="min-width: 150px;">Course</th>
+                                    <th class="draggable-header" style="min-width: 150px;">Teacher</th>
+                                    <th class="draggable-header" style="min-width: 120px;">Department</th>
+                                    <th class="draggable-header" style="min-width: 80px;">Primary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var student in Model.StudentResults)
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@student.FullName</td>
+                                        <td class="font-monospace">@student.LocalStudentId</td>
+                                        <td>
+                                            <span class="badge @(student.Subject switch 
+                                            {
+                                                "ELA" => "bg-primary",
+                                                "Math" => "bg-success", 
+                                                _ => "bg-secondary"
+                                            })">
+                                                @student.Subject
+                                            </span>
+                                        </td>
+                                        <td>@student.TestName</td>
+                                        <td>@student.Unit</td>
+                                        <td class="text-end">
+                                            @if (student.Results.HasValue)
+                                            {
+                                                @student.Results.Value.ToString("F1")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge @(student.Proficiency switch 
+                                            {
+                                                "Proficient" or "Advanced" => "bg-success",
+                                                "Approaching" or "Developing" => "bg-warning text-dark",
+                                                "Below" or "Beginning" => "bg-danger",
+                                                _ => "bg-secondary"
+                                            })">
+                                                @(student.Proficiency ?? "-")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(student.Quadrant switch 
+                                            {
+                                                "Challenge" => "bg-primary",
+                                                "Benchmark" => "bg-success",
+                                                "Strategic" => "bg-warning text-dark",
+                                                "Intensive" => "bg-danger",
+                                                _ => "bg-secondary"
+                                            })" style="font-size: 0.7rem; padding: 2px 6px;">
+                                                @(student.Quadrant ?? "-")
+                                            </span>
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 150px;" title="@student.CourseTitle">
+                                            @student.CourseTitle
+                                        </td>
+                                        <td>@student.TeacherFullName</td>
+                                        <td>@student.DepartmentName</td>
+                                        <td class="text-center">
+                                            @if (student.IsPrimaryTeacher)
+                                            {
+                                                <i class="bi bi-check-circle-fill text-success" title="Primary Teacher"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-dash-circle text-muted" title="Secondary Teacher"></i>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.SelectedDistrictId > 0 && !string.IsNullOrEmpty(Model.SelectedCycle) && !string.IsNullOrEmpty(Model.SelectedTestName))
+    {
+        <!-- No Results Message -->
+        <div class="card border-0 bg-light">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+                <h4 class="text-muted mt-3">No Results Found</h4>
+                <p class="text-muted">
+                    No student assessment results match your current filter criteria.
+                    Try adjusting your filters or selecting different options.
+                </p>
+            </div>
+        </div>
+    }
+    else if (!Model.Districts.Any() || Model.Districts.Count == 1)
+    {
+        <!-- No Districts Available Message -->
+        <div class="card border-0 bg-light">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                <h4 class="text-muted mt-3">No Assessment Data Available</h4>
+                <p class="text-muted">
+                    No districts with assessment data are available for your account.
+                    Please contact your administrator if you believe this is an error.
+                </p>
+            </div>
+        </div>
+    }
 </div>
 
-<script>
-    // Global variables
-    let isLoading = false;
-
-    // District change handler
-    async function onDistrictChange() {
-        const districtSelect = document.getElementById('district-select');
-        const unitSelect = document.getElementById('unit-select');
-        const assessmentSelect = document.getElementById('assessment-select');
-        const unitLoading = document.getElementById('unit-loading');
-        
-        const districtId = districtSelect.value;
-        
-        // Reset dependent dropdowns
-        resetDropdown(unitSelect, "-- Choose a Unit --");
-        resetDropdown(assessmentSelect, "-- First select a unit --");
-        
-        if (!districtId) {
-            unitSelect.disabled = true;
-            assessmentSelect.disabled = true;
-            return;
+@section Scripts {
+    <script>
+        // Loading indicator functions
+        function showLoading(selectId) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Loading...</option>';
+            select.disabled = true;
         }
-        
-        // Show loading and disable dropdowns
-        isLoading = true;
-        unitLoading.classList.remove('d-none');
-        unitSelect.disabled = true;
-        assessmentSelect.disabled = true;
-        
-        try {
-            const response = await fetch(`?handler=Units&districtId=${districtId}`);
-            if (response.ok) {
-                const units = await response.json();
-                populateDropdown(unitSelect, units, "-- Choose a Unit --");
-                unitSelect.disabled = false;
-            } else {
-                console.error('Failed to load units');
-                unitSelect.innerHTML = '<option value="">Error loading units</option>';
+
+        function hideLoading(selectId) {
+            const select = document.getElementById(selectId);
+            select.disabled = false;
+        }
+
+        // Enhanced error handling for AJAX calls
+        async function handleApiCall(url, errorMessage) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(errorMessage, error);
+                // Show user-friendly error message
+                alert(`${errorMessage}. Please try again or contact support if the problem persists.`);
+                return [];
             }
-        } catch (error) {
-            console.error('Error fetching units:', error);
-            unitSelect.innerHTML = '<option value="">Error loading units</option>';
-        } finally {
-            isLoading = false;
-            unitLoading.classList.add('d-none');
         }
-    }
 
-    // Unit change handler
-    async function onUnitChange() {
-        const districtSelect = document.getElementById('district-select');
-        const unitSelect = document.getElementById('unit-select');
-        const assessmentSelect = document.getElementById('assessment-select');
-        const assessmentLoading = document.getElementById('assessment-loading');
-        
-        const districtId = districtSelect.value;
-        const unit = unitSelect.value;
-        
-        // Reset assessment dropdown
-        resetDropdown(assessmentSelect, "-- Choose an Assessment --");
-        
-        if (!districtId || !unit) {
-            assessmentSelect.disabled = true;
-            return;
-        }
-        
-        // Show loading and disable dropdown
-        isLoading = true;
-        assessmentLoading.classList.remove('d-none');
-        assessmentSelect.disabled = true;
-        
-        try {
-            const response = await fetch(`?handler=Assessments&districtId=${districtId}&unit=${unit}`);
-            if (response.ok) {
-                const assessments = await response.json();
-                populateDropdown(assessmentSelect, assessments, "-- Choose an Assessment --");
-                assessmentSelect.disabled = false;
-            } else {
-                console.error('Failed to load assessments');
-                assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
-            }
-        } catch (error) {
-            console.error('Error fetching assessments:', error);
-            assessmentSelect.innerHTML = '<option value="">Error loading assessments</option>';
-        } finally {
-            isLoading = false;
-            assessmentLoading.classList.add('d-none');
-        }
-    }
-
-    // Helper function to reset dropdown
-    function resetDropdown(selectElement, defaultText) {
-        selectElement.innerHTML = `<option value="">${defaultText}</option>`;
-        selectElement.disabled = true;
-    }
-
-    // Helper function to populate dropdown
-    function populateDropdown(selectElement, items, defaultText) {
-        let html = `<option value="">${defaultText}</option>`;
-        
-        items.forEach(item => {
-            const countText = item.count > 1 ? ` (${item.count} assessments)` : '';
-            html += `<option value="${item.value}">${item.text}${countText}</option>`;
-        });
-        
-        selectElement.innerHTML = html;
-    }
-
-    // Reset form function
-    function resetForm() {
-        if (confirm('Are you sure you want to reset all selections?')) {
-            document.getElementById('district-select').value = '';
-            resetDropdown(document.getElementById('unit-select'), "-- First select a district --");
-            resetDropdown(document.getElementById('assessment-select'), "-- First select a unit --");
+        // Cascading dropdown functions
+        async function onDistrictChange() {
+            const districtId = document.getElementById('districtSelect').value;
             
-            // Hide loading indicators
-            document.getElementById('unit-loading').classList.add('d-none');
-            document.getElementById('assessment-loading').classList.add('d-none');
-        }
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // If we have selections from a postback, make sure dropdowns are enabled
-        const districtSelect = document.getElementById('district-select');
-        const unitSelect = document.getElementById('unit-select');
-        const assessmentSelect = document.getElementById('assessment-select');
-        const continueBtn = document.getElementById('continue-btn');
-        
-        function updateContinueButton() {
-            if (assessmentSelect.value) {
-                continueBtn.disabled = false;
-            } else {
-                continueBtn.disabled = true;
+            if (!districtId) {
+                document.getElementById('cycleSelect').innerHTML = '<option value="">Select Cycle/Unit...</option>';
+                document.getElementById('testNameSelect').innerHTML = '<option value="">Select Test Name...</option>';
+                document.getElementById('schoolSelect').innerHTML = '<option value="">All Schools</option>';
+                document.getElementById('teacherSelect').innerHTML = '<option value="">All Teachers</option>';
+                return;
             }
+
+            // Load cycles
+            showLoading('cycleSelect');
+            const cycles = await handleApiCall(
+                `/CurriculumAlignment/Form1?handler=Cycles&districtId=${districtId}`,
+                'Error loading cycles'
+            );
+            
+            let options = '<option value="">Select Cycle/Unit...</option>';
+            cycles.forEach(cycle => {
+                options += `<option value="${escapeHtml(cycle)}">${escapeHtml(cycle)}</option>`;
+            });
+            
+            document.getElementById('cycleSelect').innerHTML = options;
+            hideLoading('cycleSelect');
+
+            // Load schools (server-side loaded, but reset selection)
+            // Reset dependent dropdowns
+            document.getElementById('testNameSelect').innerHTML = '<option value="">Select Test Name...</option>';
+            document.getElementById('teacherSelect').innerHTML = '<option value="">All Teachers</option>';
         }
-        
-        // Set initial button state
-        @if (string.IsNullOrEmpty(Model.FormData.SelectedAssessment))
-        {
-            <text>continueBtn.disabled = true;</text>
+
+        async function onCycleChange() {
+            const districtId = document.getElementById('districtSelect').value;
+            const cycle = document.getElementById('cycleSelect').value;
+            
+            if (!districtId) return;
+
+            showLoading('testNameSelect');
+            const testNames = await handleApiCall(
+                `/CurriculumAlignment/Form1?handler=TestNames&districtId=${districtId}&cycle=${encodeURIComponent(cycle)}`,
+                'Error loading test names'
+            );
+            
+            let options = '<option value="">Select Test Name...</option>';
+            testNames.forEach(testName => {
+                options += `<option value="${escapeHtml(testName)}">${escapeHtml(testName)}</option>`;
+            });
+            
+            document.getElementById('testNameSelect').innerHTML = options;
+            hideLoading('testNameSelect');
+
+            // Reset teacher dropdown
+            document.getElementById('teacherSelect').innerHTML = '<option value="">All Teachers</option>';
         }
-        else
-        {
-            <text>continueBtn.disabled = false;</text>
+
+        async function onTestNameChange() {
+            await loadTeachers();
         }
-        
-        if (districtSelect.value && unitSelect.options.length > 1) {
-            unitSelect.disabled = false;
+
+        async function onSchoolChange() {
+            await loadTeachers();
         }
-        
-        if (unitSelect.value && assessmentSelect.options.length > 1) {
-            assessmentSelect.disabled = false;
+
+        async function loadTeachers() {
+            const districtId = document.getElementById('districtSelect').value;
+            const cycle = document.getElementById('cycleSelect').value;
+            const testName = document.getElementById('testNameSelect').value;
+            const schoolId = document.getElementById('schoolSelect').value;
+            
+            if (!districtId || !cycle || !testName) return;
+
+            showLoading('teacherSelect');
+            
+            let url = `/CurriculumAlignment/Form1?handler=Teachers&districtId=${districtId}&cycle=${encodeURIComponent(cycle)}&testName=${encodeURIComponent(testName)}`;
+            if (schoolId) url += `&schoolId=${schoolId}`;
+            
+            const teachers = await handleApiCall(url, 'Error loading teachers');
+            
+            let options = '<option value="">All Teachers</option>';
+            teachers.forEach(teacher => {
+                options += `<option value="${teacher.id}">${escapeHtml(teacher.name)}</option>`;
+            });
+            
+            document.getElementById('teacherSelect').innerHTML = options;
+            hideLoading('teacherSelect');
         }
-        
-        // Add event listener to assessment select to update button
-        assessmentSelect.addEventListener('change', updateContinueButton);
-    });
-</script>
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearFilters() {
+            document.getElementById('districtSelect').value = '';
+            document.getElementById('cycleSelect').innerHTML = '<option value="">Select Cycle/Unit...</option>';
+            document.getElementById('testNameSelect').innerHTML = '<option value="">Select Test Name...</option>';
+            document.getElementById('schoolSelect').innerHTML = '<option value="">All Schools</option>';
+            document.getElementById('teacherSelect').innerHTML = '<option value="">All Teachers</option>';
+        }
+
+        function exportToCSV() {
+            const table = document.getElementById('studentsTable');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            
+            const csvContent = rows.map(row => {
+                const cells = Array.from(row.querySelectorAll('th, td'));
+                return cells.map(cell => {
+                    // Clean text content and handle special characters
+                    const text = cell.textContent.trim().replace(/"/g, '""');
+                    return `"${text}"`;
+                }).join(',');
+            }).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `curriculum_alignment_results_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printTable() {
+            const printWindow = window.open('', '_blank');
+            const table = document.getElementById('studentsTable').cloneNode(true);
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Curriculum Alignment Results</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body { font-size: 10px; }
+                        table { width: 100%; }
+                        .badge { padding: 2px 4px; font-size: 8px; }
+                        @@media print {
+                            .btn { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h3>Curriculum Alignment Results</h3>
+                    <p>Generated: ${new Date().toLocaleDateString()}</p>
+                    ${table.outerHTML}
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Initialize sticky headers and other table features
+        document.addEventListener('DOMContentLoaded', function() {
+            initStickyHeaders();
+            
+            // Auto-submit form when filters change (optional)
+            const autoSubmitElements = ['districtSelect', 'cycleSelect', 'testNameSelect'];
+            autoSubmitElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('change', function() {
+                        // Only auto-submit if we have the minimum required filters
+                        const district = document.getElementById('districtSelect').value;
+                        const cycle = document.getElementById('cycleSelect').value;
+                        const testName = document.getElementById('testNameSelect').value;
+                        
+                        if (district && cycle && testName) {
+                            // Small delay to allow cascading dropdowns to update
+                            setTimeout(() => {
+                                document.getElementById('filterForm').submit();
+                            }, 500);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Enhanced sticky header functionality
+        function initStickyHeaders() {
+            const table = document.getElementById('studentsTable');
+            if (!table) return;
+            
+            const thead = table.querySelector('thead');
+            const scrollContainer = document.querySelector('.table-scroll-container');
+            
+            let isSticky = false;
+            let originalColumnWidths = [];
+            
+            function captureColumnWidths() {
+                const headerCells = thead.querySelectorAll('th');
+                originalColumnWidths = Array.from(headerCells).map(th => {
+                    return th.getBoundingClientRect().width;
+                });
+            }
+            
+            function applyColumnWidths() {
+                const headerCells = thead.querySelectorAll('th');
+                headerCells.forEach((th, index) => {
+                    if (originalColumnWidths[index]) {
+                        th.style.width = originalColumnWidths[index] + 'px';
+                        th.style.minWidth = originalColumnWidths[index] + 'px';
+                        th.style.maxWidth = originalColumnWidths[index] + 'px';
+                    }
+                });
+            }
+            
+            function removeColumnWidths() {
+                const headerCells = thead.querySelectorAll('th');
+                headerCells.forEach(th => {
+                    th.style.width = '';
+                    th.style.minWidth = '';
+                    th.style.maxWidth = '';
+                });
+            }
+            
+            function updateStickyHeader() {
+                const tableRect = table.getBoundingClientRect();
+                const shouldBeSticky = tableRect.top <= 95;
+                
+                if (shouldBeSticky && !isSticky) {
+                    captureColumnWidths();
+                    thead.classList.add('sticky-active');
+                    thead.style.width = table.offsetWidth + 'px';
+                    thead.style.left = tableRect.left + 'px';
+                    applyColumnWidths();
+                    isSticky = true;
+                } else if (!shouldBeSticky && isSticky) {
+                    thead.classList.remove('sticky-active');
+                    thead.style.width = '';
+                    thead.style.left = '';
+                    removeColumnWidths();
+                    isSticky = false;
+                }
+            }
+            
+            // Event listeners
+            window.addEventListener('scroll', updateStickyHeader);
+            window.addEventListener('resize', () => {
+                if (isSticky) {
+                    removeColumnWidths();
+                    isSticky = false;
+                    setTimeout(updateStickyHeader, 50);
+                }
+            });
+        }
+    </script>
+}
