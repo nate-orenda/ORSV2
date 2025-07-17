@@ -10,45 +10,65 @@ namespace ORSV2.Models
     [Table("vw_student_results_classes")]
     public class VwStudentResultsClasses
     {
-        // Remove [Key] attribute since views typically don't have primary keys
+        [Column("DistrictId")]
+        public int DistrictId { get; set; }
+        [Column("SchoolId")]
+        public int SchoolId { get; set; }
+        [Column("studentid")]
         public int StudentId { get; set; }
         
-        public int TestId { get; set; }
-        
-        public string Unit { get; set; } = string.Empty;
+        [Column("test_id")]
+        public string TestId { get; set; } = string.Empty; // Changed to string
+
+        [Column("unit")]
+        public int Unit { get; set; }
         
         [Column("test_name")]
         public string TestName { get; set; } = string.Empty;
         
+        [Column("Subject")]
         public string Subject { get; set; } = string.Empty;
         
         [Column("localstudentid")]
         public string LocalStudentId { get; set; } = string.Empty;
-        
+
+        [Column("FirstName")]
         public string FirstName { get; set; } = string.Empty;
-        
+
+        [Column("LastName")]
         public string LastName { get; set; } = string.Empty;
         
-        public decimal? Results { get; set; }
+        [Column("results")]
+        public string Results { get; set; } = string.Empty; // Changed to string
+
+        [Column("proficiency")]
+        public int? Proficiency { get; set; } // Changed to int?
+
+        [Column("quadrant")]
+        public byte? Quadrant { get; set; } // Changed to byte? for tinyint
         
-        public string Proficiency { get; set; } = string.Empty;
-        
-        public string Quadrant { get; set; } = string.Empty;
-        
+        [Column("SectionNumber")]
         public string SectionNumber { get; set; } = string.Empty;
-        
+
+        [Column("CourseNumber")]
         public string CourseNumber { get; set; } = string.Empty;
-        
+
+        [Column("CourseTitle")]
         public string CourseTitle { get; set; } = string.Empty;
         
+        [Column("DepartmentName")]
         public string DepartmentName { get; set; } = string.Empty;
         
+        [Column("TeacherFirstName")]
         public string TeacherFirstName { get; set; } = string.Empty;
-        
+
+        [Column("TeacherLastName")]
         public string TeacherLastName { get; set; } = string.Empty;
-        
-        public int TeacherId { get; set; }
-        
+
+        [Column("TeacherId")]
+        public string TeacherId { get; set; } = string.Empty;
+
+        [Column("IsPrimaryTeacherFlag")]
         public string IsPrimaryTeacherFlag { get; set; } = string.Empty;
         
         // Computed properties for easier use in UI
@@ -60,35 +80,5 @@ namespace ORSV2.Models
         
         [NotMapped]
         public bool IsPrimaryTeacher => IsPrimaryTeacherFlag?.ToLower() == "true";
-        
-        [NotMapped]
-        public string FormattedScore => Results?.ToString("F1") ?? "-";
-        
-        [NotMapped]
-        public string SubjectBadgeClass => Subject switch
-        {
-            "ELA" => "bg-primary",
-            "Math" => "bg-success",
-            _ => "bg-secondary"
-        };
-        
-        [NotMapped]
-        public string ProficiencyBadgeClass => Proficiency switch
-        {
-            "Proficient" or "Advanced" => "bg-success",
-            "Approaching" or "Developing" => "bg-warning text-dark",
-            "Below" or "Beginning" => "bg-danger",
-            _ => "bg-secondary"
-        };
-        
-        [NotMapped]
-        public string QuadrantBadgeClass => Quadrant switch
-        {
-            "Challenge" => "bg-primary",
-            "Benchmark" => "bg-success",
-            "Strategic" => "bg-warning text-dark",
-            "Intensive" => "bg-danger",
-            _ => "bg-secondary"
-        };
     }
 }
