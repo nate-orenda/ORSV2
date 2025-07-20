@@ -27,8 +27,8 @@ namespace ORSV2.Data
         public DbSet<GAProtocolTarget> GAProtocolTargets { get; set; }
         public DbSet<GAProtocolActionPlanItem> GAProtocolActionPlanItems { get; set; }
         public DbSet<Assessment> Assessments { get; set; }
-
         public DbSet<VwStudentResultsClasses> VwStudentResultsClasses { get; set; }
+        public DbSet<ORSV2.Models.Standard> Standards { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

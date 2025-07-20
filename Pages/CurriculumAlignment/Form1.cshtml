@@ -4,13 +4,13 @@
     ViewData["Title"] = "Student Assessment Results";
 }
 
-<div class="form1-container">
+<div class="form1-container no-print">
     <div class="form1-header">
         <h1 class="mb-0">
             <i class="fas fa-chart-line me-2"></i>
             Student Assessment Results
         </h1>
-        <p class="mb-0">Select filters to view a list of students.</p>
+        <p class="mb-0">Select filters to view student and standard proficiency data.</p>
     </div>
 
     <div class="form1-card">
@@ -57,51 +57,218 @@
             </div>
         </div>
     </div>
+</div>
 
-    <div class="form1-card">
-        <div class="form1-card-header">
-             <h5 class="mb-0">
-                <i class="fas fa-users me-2"></i>
-                Student Results
-            </h5>
+<div class="form1-card">
+    <div class="form1-card-header d-flex justify-content-between align-items-center">
+         <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            Student Results
+        </h5>
+        <div id="exportButtons" class="no-print d-none">
+            <button id="printBtn" class="btn btn-sm btn-outline-secondary"><i class="fas fa-print me-1"></i> Print</button>
+            <button id="pdfBtn" class="btn btn-sm btn-outline-danger"><i class="fas fa-file-pdf me-1"></i> PDF</button>
+            <button id="excelBtn" class="btn btn-sm btn-outline-success"><i class="fas fa-file-excel me-1"></i> Excel</button>
+            <button id="csvBtn" class="btn btn-sm btn-outline-primary"><i class="fas fa-file-csv me-1"></i> CSV</button>
         </div>
-        <div class="card-body">
-            <div id="resultsContainer">
-                <p class="text-muted">Please make a selection to view student data.</p>
+    </div>
+    <div class="card-body">
+        <div id="resultsContainer">
+            <p class="text-muted">Please make a selection to view student data.</p>
+        </div>
+        <div class="loading-spinner" id="loadingIndicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
-            <div class="loading-spinner" id="loadingIndicator">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <div class="mt-2 text-muted">Loading...</div>
-            </div>
+            <div class="mt-2 text-muted">Loading...</div>
         </div>
     </div>
 </div>
 
+
 <style>
+    /* ... existing styles ... */
     .form1-container { max-width: 100%; margin: 0 auto; padding: 1rem; }
     .form1-header { background: linear-gradient(135deg, #0022C5, #1a4fb8); color: white; padding: 2rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
-    .form1-header h1 { margin-bottom: 0.5rem; font-weight: 600; }
-    .form1-header p { margin-bottom: 0; opacity: 0.9; }
     .form1-card { background: white; border-radius: 0.5rem; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid #dee2e6; margin-bottom: 1.5rem; }
     .form1-card-header { background-color: #f8f9fa; color: #212529; padding: 1rem 1.5rem; border-bottom: 1px solid #dee2e6; border-radius: 0.5rem 0.5rem 0 0; }
-    .form1-card-header h5 { font-weight: 600; }
     .card-body { padding: 1.5rem; }
     .loading-spinner { display: none; text-align: center; padding: 2rem; }
+    .orenda-table th small { font-weight: normal; display: block; max-width: 250px; white-space: normal; line-height: 1.2; margin-top: 4px; }
+    .teacher-group-header { background-color: #e9ecef; font-size: 1.1rem; padding: 0.75rem !important; }
+
+    /* NEW: Print Styles */
+    @@media print {
+        body * { visibility: hidden; }
+        .no-print { display: none !important; }
+        #resultsContainer, #resultsContainer * { visibility: visible; }
+        #resultsContainer { position: absolute; left: 0; top: 0; width: 100%; }
+        .table { font-size: 10pt; }
+        .teacher-group-header { background-color: #e9ecef !important; -webkit-print-color-adjust: exact; }
+    }
 </style>
 
 @section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const resultsContainer = document.getElementById('resultsContainer');
+    const exportButtons = document.getElementById('exportButtons');
+    let tableData = null; // Store data for export functions
+
+    // ... other const declarations for filters ...
     const districtSelect = document.getElementById('districtSelect');
     const unitSelect = document.getElementById('unitSelect');
     const testIdSelect = document.getElementById('testIdSelect');
     const schoolSelect = document.getElementById('schoolSelect');
     const teacherSelect = document.getElementById('teacherSelect');
     const loadingIndicator = document.getElementById('loadingIndicator');
-    const resultsContainer = document.getElementById('resultsContainer');
 
+    function loadStudentResults() {
+        // ... get filter values ...
+        const districtId = districtSelect.value;
+        const testId = testIdSelect.value;
+        const schoolId = schoolSelect.value;
+        const teacherId = teacherSelect.value;
+        
+        if (!districtId || !testId || !schoolId) {
+            clearResults('Please select a District, Unit, Test, and School to see results.');
+            return;
+        }
+
+        showLoading(true);
+        setExportButtons(false);
+        let url = `/CurriculumAlignment/Form1?handler=StudentResults&districtId=${districtId}&testId=${testId}&schoolId=${schoolId}`;
+        if (teacherId) url += `&teacherId=${teacherId}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                tableData = data; // Store data for export
+                if (!data || !data.teacherGroups || data.teacherGroups.length === 0) {
+                    clearResults('No students found for the current selection.');
+                    return;
+                }
+                
+                const colCount = 2 + data.headers.length + 1;
+                let tableHtml = `<div class="table-responsive orenda-table-wrapper"><table class="table orenda-table table-hover">`;
+                
+                // Build Table Header
+                tableHtml += `<thead><tr>`;
+                tableHtml += `<th>Student Name</th>`;
+                tableHtml += `<th>Student Local ID</th>`;
+                data.headers.forEach(header => {
+                    const statement = header.fullStatement.length > 100 ? header.fullStatement.substring(0, 100) + '...' : header.fullStatement;
+                    tableHtml += `<th><strong>${header.humanCodingScheme}</strong><small class="text-muted">${statement}</small></th>`;
+                });
+                tableHtml += `<th>Total Passed</th>`;
+                tableHtml += `</tr></thead>`;
+
+                // Build Table Body with Groups
+                tableHtml += `<tbody>`;
+                data.teacherGroups.forEach(group => {
+                    tableHtml += `<tr><td colspan="${colCount}" class="teacher-group-header"><strong>Teacher: ${group.teacherName}</strong></td></tr>`;
+                    group.studentRows.forEach(row => {
+                        tableHtml += `<tr>`;
+                        tableHtml += `<td>${row.studentName}</td>`;
+                        tableHtml += `<td>${row.localStudentId}</td>`;
+                        
+                        data.headers.forEach(header => {
+                            const score = row.standardScores[header.humanCodingScheme];
+                            const cellContent = (score !== undefined && score !== null) ? score : '';
+                            tableHtml += `<td class="text-center align-middle fw-bold">${cellContent}</td>`;
+                        });
+
+                        tableHtml += `<td class="text-center align-middle fw-bold">${row.totalStandardsPassed}</td>`;
+                        tableHtml += `</tr>`;
+                    });
+                });
+                tableHtml += `</tbody></table></div>`;
+
+                resultsContainer.innerHTML = tableHtml;
+                setExportButtons(true);
+            })
+            .catch(error => {
+                console.error("Error loading student results:", error);
+                clearResults('<p class="text-danger">An error occurred while loading results. Please try again.</p>');
+            })
+            .finally(() => showLoading(false));
+    }
+
+    // --- Export Functions ---
+    function getExportData() {
+        const headers = ['Teacher', 'Student Name', 'Local ID', ...tableData.headers.map(h => h.humanCodingScheme), 'Total Passed'];
+        const rows = [];
+        tableData.teacherGroups.forEach(group => {
+            group.studentRows.forEach(row => {
+                const studentRow = [
+                    group.teacherName,
+                    row.studentName,
+                    row.localStudentId,
+                    ...tableData.headers.map(h => {
+                        const score = row.standardScores[h.humanCodingScheme];
+                        return (score !== undefined && score !== null) ? score : '';
+                    }),
+                    row.totalStandardsPassed
+                ];
+                rows.push(studentRow);
+            });
+        });
+        return { headers, rows };
+    }
+
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+    document.getElementById('pdfBtn').addEventListener('click', () => {
+        const { headers, rows } = getExportData();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.autoTable({ head: [headers], body: rows });
+        doc.save('student_results.pdf');
+    });
+
+    document.getElementById('excelBtn').addEventListener('click', () => {
+        const { headers, rows } = getExportData();
+        const data = [headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Results');
+        XLSX.writeFile(wb, 'student_results.xlsx');
+    });
+
+    document.getElementById('csvBtn').addEventListener('click', () => {
+        const { headers, rows } = getExportData();
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "student_results.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // --- Helper & Event Listener Functions ---
+    function setExportButtons(enabled) {
+        if (enabled) {
+            exportButtons.classList.remove('d-none');
+        } else {
+            exportButtons.classList.add('d-none');
+        }
+    }
+    
+    function clearResults(message = "Please make a selection to view student data.") {
+        resultsContainer.innerHTML = `<p class="text-muted">${message}</p>`;
+        tableData = null;
+        setExportButtons(false);
+    }
+    
+    // ... all other helper and event listener functions (fetchAndPopulate, showLoading, resetSelect, etc.) are unchanged ...
     function fetchAndPopulate(url, selectElement, placeholder) {
         showLoading(true);
         return fetch(url)
@@ -110,6 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert("You are not authorized to view this data.");
                     return Promise.reject("Forbidden");
                 }
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
                 return response.json();
             })
             .then(data => {
@@ -118,45 +286,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     selectElement.add(new Option(item.text, item.value));
                 });
                 selectElement.disabled = false;
-                showLoading(false);
             })
-            .catch(error => {
-                console.error("Fetch Error:", error);
-                showLoading(false);
-            });
-    }
-
-    function loadStudentResults() {
-        const districtId = districtSelect.value;
-        const testId = testIdSelect.value;
-        const schoolId = schoolSelect.value;
-        const teacherId = teacherSelect.value;
-
-        // Only fetch if we have the main filters up to the school level
-        if (!districtId || !testId || !schoolId) {
-            resultsContainer.innerHTML = '<p class="text-muted">Please select a District, Unit, Test, and School to see results.</p>';
-            return;
-        }
-
-        showLoading(true);
-        let url = `/CurriculumAlignment/Form1?handler=StudentResults&districtId=${districtId}&testId=${testId}&schoolId=${schoolId}`;
-        if (teacherId) url += `&teacherId=${teacherId}`;
-        
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (!data || data.length === 0) {
-                    resultsContainer.innerHTML = '<p class="text-muted">No students found for the current selection.</p>';
-                } else {
-                    let listHtml = `<p><strong>Showing ${data.length} students:</strong></p><ul class="list-group">`;
-                    data.forEach(student => {
-                        listHtml += `<li class="list-group-item">${student.fullName}</li>`;
-                    });
-                    listHtml += '</ul>';
-                    resultsContainer.innerHTML = listHtml;
-                }
-                showLoading(false);
-            });
+            .catch(error => console.error("Fetch Error:", error))
+            .finally(() => showLoading(false));
     }
 
     districtSelect.addEventListener('change', function () {
@@ -191,7 +323,6 @@ document.addEventListener('DOMContentLoaded', function () {
         clearResults("Please select a school to continue.");
         if (districtId && testId) {
             fetchAndPopulate(`/CurriculumAlignment/Form1?handler=Schools&districtId=${districtId}&testId=${testId}`, schoolSelect, '-- Select School --');
-            // **CHANGE**: We no longer load results here.
         }
     });
 
@@ -203,26 +334,21 @@ document.addEventListener('DOMContentLoaded', function () {
         clearResults();
         if (districtId && testId && schoolId) {
             fetchAndPopulate(`/CurriculumAlignment/Form1?handler=Teachers&districtId=${districtId}&testId=${testId}&schoolId=${schoolId}`, teacherSelect, '-- All Teachers --');
-            // **CHANGE**: We now load results for the school here.
             loadStudentResults(); 
         }
     });
 
     teacherSelect.addEventListener('change', loadStudentResults);
-
-    function resetSelect(selectElement, placeholder, disabled = false) {
-        selectElement.innerHTML = '';
-        selectElement.add(new Option(placeholder, ''));
-        selectElement.disabled = disabled;
-    }
     
     function showLoading(show) {
         loadingIndicator.style.display = show ? 'block' : 'none';
         if (show) resultsContainer.innerHTML = '';
     }
-
-    function clearResults(message = "Please make a selection to view student data.") {
-        resultsContainer.innerHTML = `<p class="text-muted">${message}</p>`;
+    
+    function resetSelect(selectElement, placeholder, disabled = false) {
+        selectElement.innerHTML = '';
+        selectElement.add(new Option(placeholder, ''));
+        selectElement.disabled = disabled;
     }
 });
 </script>

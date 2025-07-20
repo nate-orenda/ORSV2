@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
@@ -40,8 +42,6 @@ namespace ORSV2.Pages.CurriculumAlignment
         public SelectList TestNames { get; set; } = new(new List<object>());
         public SelectList Schools { get; set; } = new(new List<object>());
         public SelectList Teachers { get; set; } = new(new List<object>());
-        
-        public List<StudentResult> StudentResults { get; set; } = new();
         #endregion
 
         public async Task OnGetAsync()
@@ -60,6 +60,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
         
         #region AJAX Handlers
+        // ... OnGetUnitsAsync, OnGetTestNamesAsync, etc. are unchanged ...
         public async Task<JsonResult> OnGetUnitsAsync(int districtId)
         {
             if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
@@ -90,7 +91,6 @@ namespace ORSV2.Pages.CurriculumAlignment
         {
             if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
 
-            // SECURE: Filter the list of schools to only those the user can access.
             var accessibleSchoolIds = await GetUserSchoolIdsAsync();
 
             var schools = await _context.VwStudentResultsClasses
@@ -107,7 +107,6 @@ namespace ORSV2.Pages.CurriculumAlignment
         public async Task<JsonResult> OnGetTeachersAsync(int districtId, string testId, int schoolId)
         {
             if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
-            // SECURE: Add a check for the specific school ID.
             if (!await HasSchoolAccessAsync(schoolId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
             
             var teachers = await _context.VwStudentResultsClasses
@@ -120,41 +119,90 @@ namespace ORSV2.Pages.CurriculumAlignment
             
             return new JsonResult(teachers);
         }
-
+        
         public async Task<JsonResult> OnGetStudentResultsAsync(int districtId, string testId, int? schoolId, string? teacherId)
         {
-            if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
-            
-            // SECURE: If a school ID is provided, verify access to it.
+            if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new { }) { StatusCode = 403 };
             if (schoolId.HasValue && !await HasSchoolAccessAsync(schoolId.Value))
             {
-                 return new JsonResult(new List<object>()) { StatusCode = 403 };
+                 return new JsonResult(new { }) { StatusCode = 403 };
             }
 
-            var query = _context.VwStudentResultsClasses
+            var query = _context.VwStudentResultsClasses.AsNoTracking()
                 .Where(v => v.DistrictId == districtId && v.TestId == testId);
 
-            if (schoolId.HasValue)
-            {
-                query = query.Where(v => v.SchoolId == schoolId.Value);
-            }
+            if (schoolId.HasValue) query = query.Where(v => v.SchoolId == schoolId.Value);
+            if (!string.IsNullOrEmpty(teacherId)) query = query.Where(v => v.TeacherId == teacherId);
 
-            if (!string.IsNullOrEmpty(teacherId))
-            {
-                query = query.Where(v => v.TeacherId == teacherId);
-            }
+            var studentData = await query.ToListAsync();
+            if (!studentData.Any()) return new JsonResult(new StudentResultTableViewModel());
 
-            var students = await query
-                .Select(v => new StudentResult { StudentId = v.StudentId, FirstName = v.FirstName, LastName = v.LastName })
-                .OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
-                .Take(2000)
-                .ToListAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var uniqueStandardIds = studentData
+                .Where(r => !string.IsNullOrWhiteSpace(r.Results))
+                .SelectMany(r => JsonSerializer.Deserialize<List<StandardResult>>(r.Results, options) ?? new List<StandardResult>())
+                .Select(sr => sr.StandardId)
+                .Distinct()
+                .ToList();
+
+            var standardsDict = await _context.Standards
+                .Where(s => uniqueStandardIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s);
+
+            var tableViewModel = new StudentResultTableViewModel();
+            tableViewModel.Headers = standardsDict.Values
+                .OrderBy(s => s.HumanCodingScheme)
+                .Select(s => new StandardHeader
+                {
+                    HumanCodingScheme = s.HumanCodingScheme,
+                    FullStatement = s.FullStatement
+                }).ToList();
             
-            return new JsonResult(students);
+            var standardIdToCodeMap = standardsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.HumanCodingScheme);
+
+            var studentRows = studentData
+                .GroupBy(s => s.StudentId)
+                .Select(g => g.First())
+                .Select(s => {
+                    var results = JsonSerializer.Deserialize<List<StandardResult>>(s.Results, options) ?? new List<StandardResult>();
+                    var scores = new Dictionary<string, int>();
+                    foreach(var result in results)
+                    {
+                        if (standardIdToCodeMap.TryGetValue(result.StandardId, out var code))
+                        {
+                            scores[code] = result.Score;
+                        }
+                    }
+                    return new StudentResultRow
+                    {
+                        // TeacherName removed from here
+                        StudentName = s.StudentFullName,
+                        LocalStudentId = s.LocalStudentId,
+                        StandardScores = scores,
+                        TotalStandardsPassed = results.Count(r => r.Proficient),
+                        _TeacherNameInternal = s.TeacherFullName // Temp property for grouping
+                    };
+                })
+                .ToList();
+
+            // Group by teacher
+            tableViewModel.TeacherGroups = studentRows
+                .GroupBy(row => row._TeacherNameInternal)
+                .Select(g => new TeacherGroup
+                {
+                    TeacherName = g.Key,
+                    StudentRows = g.OrderBy(s => s.StudentName).ToList()
+                })
+                .OrderBy(tg => tg.TeacherName)
+                .ToList();
+
+
+            return new JsonResult(tableViewModel);
         }
         #endregion
 
         #region Authorization Helpers
+        // ... Unchanged ...
         private async Task<List<int>> GetUserDistrictIdsAsync()
         {
             if (User.IsInRole("OrendaAdmin"))
@@ -191,8 +239,6 @@ namespace ORSV2.Pages.CurriculumAlignment
                     .Select(s => s.Id).ToListAsync();
             }
             
-            // For other roles, return only their directly assigned schools.
-            // This assumes you have a UserSchools table linking users to schools.
             return await _context.UserSchools
                 .Where(us => us.UserId == userId)
                 .Select(us => us.SchoolId).ToListAsync();
@@ -206,11 +252,45 @@ namespace ORSV2.Pages.CurriculumAlignment
         #endregion
     }
 
-    public class StudentResult
+    #region View Models
+    public class StudentResultTableViewModel
     {
-        public int StudentId { get; set; }
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string FullName => $"{LastName}, {FirstName}";
+        public List<StandardHeader> Headers { get; set; } = new();
+        public List<TeacherGroup> TeacherGroups { get; set; } = new(); // <-- CHANGED
     }
+
+    // NEW Class for Grouping
+    public class TeacherGroup
+    {
+        public string TeacherName { get; set; } = string.Empty;
+        public List<StudentResultRow> StudentRows { get; set; } = new();
+    }
+
+    public class StandardHeader
+    {
+        public string HumanCodingScheme { get; set; } = string.Empty;
+        public string FullStatement { get; set; } = string.Empty;
+    }
+
+    public class StudentResultRow
+    {
+        public string StudentName { get; set; } = string.Empty;
+        public string LocalStudentId { get; set; } = string.Empty;
+        public int TotalStandardsPassed { get; set; }
+        public Dictionary<string, int> StandardScores { get; set; } = new();
+        
+        [JsonIgnore] // Internal property, not sent to client
+        public string _TeacherNameInternal { get; set; } = string.Empty;
+    }
+    
+    public class StandardResult
+    {
+        [JsonPropertyName("standard_id")]
+        public string StandardId { get; set; } = string.Empty;
+        [JsonPropertyName("score")]
+        public int Score { get; set; }
+        [JsonPropertyName("proficient")]
+        public bool Proficient { get; set; }
+    }
+    #endregion
 }
