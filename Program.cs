@@ -1,14 +1,36 @@
 using ORSV2.Data;
 using ORSV2.Models;
+using ORSV2.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Azure Key Vault for production
+if (builder.Environment.IsProduction())
+{
+    var keyVaultEndpoint = new Uri("https://promotekeys.vault.azure.net/");
+    builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
+}
 
 // Connect to SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Configure SMTP settings from configuration (Key Vault in production, appsettings in development)
+builder.Services.Configure<SmtpSettings>(options =>
+{
+    options.Host = builder.Configuration["SMTP-HOST"] ?? "";
+    options.Port = int.Parse(builder.Configuration["SMTP-PORT"] ?? "587");
+    options.Username = builder.Configuration["SMTP-EMAIL"] ?? "";
+    options.Password = builder.Configuration["SMTP-PASSWORD"] ?? "";
+});
+
+// Register email service
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 // Set up Identity with roles
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
@@ -24,6 +46,11 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Register");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/AccessDenied");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPassword");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResetPassword");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ConfirmEmail");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/RegisterConfirmation");
+    options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResendEmailConfirmation");
     options.Conventions.AllowAnonymousToAreaFolder("Identity", "/Account");
 });
 
@@ -41,7 +68,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax; // ✅ Critical for external logins
 });
 
-
 // Add Google authentication
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
@@ -55,7 +81,6 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
             options.ClientSecret = googleClientSecret;
         });
 }
-
 
 // Require authentication globally
 builder.Services.AddAuthorization(options =>

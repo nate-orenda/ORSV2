@@ -60,19 +60,23 @@ namespace ORSV2.Areas.Identity.Pages.Account
             }
 
             Email = email;
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
-            DisplayConfirmAccountLink = true;
-            if (DisplayConfirmAccountLink)
-            {
-                var userId = await _userManager.GetUserIdAsync(user);
-                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                EmailConfirmationUrl = Url.Page(
-                    "/Account/ConfirmEmail",
-                    pageHandler: null,
-                    values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                    protocol: Request.Scheme);
-            }
+            
+            // Since you now have a real email sender, set this to false
+            // This will show "Please check your email to confirm your account" instead
+            DisplayConfirmAccountLink = false;
+            
+            // Remove or comment out the confirmation link generation since emails are working
+            // if (DisplayConfirmAccountLink)
+            // {
+            //     var userId = await _userManager.GetUserIdAsync(user);
+            //     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            //     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            //     EmailConfirmationUrl = Url.Page(
+            //         "/Account/ConfirmEmail",
+            //         pageHandler: null,
+            //         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
+            //         protocol: Request.Scheme);
+            // }
 
             return Page();
         }
