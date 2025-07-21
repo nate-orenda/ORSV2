@@ -49,6 +49,8 @@ namespace ORSV2.Models
         
         [Column("SectionNumber")]
         public string SectionNumber { get; set; } = string.Empty;
+        [Column("Period")]
+        public string Period { get; set; } = string.Empty;
 
         [Column("CourseNumber")]
         public string CourseNumber { get; set; } = string.Empty;

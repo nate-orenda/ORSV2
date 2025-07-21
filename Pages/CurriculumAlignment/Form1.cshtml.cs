@@ -22,6 +22,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
         #region Page Properties
+        // Unchanged
         [BindProperty(SupportsGet = true)]
         public int? SelectedDistrictId { get; set; }
 
@@ -46,6 +47,7 @@ namespace ORSV2.Pages.CurriculumAlignment
 
         public async Task OnGetAsync()
         {
+            // Unchanged
             var userDistrictIds = await GetUserDistrictIdsAsync();
             
             var districts = await _context.VwStudentResultsClasses
@@ -60,7 +62,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
         
         #region AJAX Handlers
-        // ... OnGetUnitsAsync, OnGetTestNamesAsync, etc. are unchanged ...
+        // Unchanged
         public async Task<JsonResult> OnGetUnitsAsync(int districtId)
         {
             if (!await HasDistrictAccessAsync(districtId)) return new JsonResult(new List<object>()) { StatusCode = 403 };
@@ -175,34 +177,42 @@ namespace ORSV2.Pages.CurriculumAlignment
                     }
                     return new StudentResultRow
                     {
-                        // TeacherName removed from here
                         StudentName = s.StudentFullName,
                         LocalStudentId = s.LocalStudentId,
                         StandardScores = scores,
                         TotalStandardsPassed = results.Count(r => r.Proficient),
-                        _TeacherNameInternal = s.TeacherFullName // Temp property for grouping
+                        _TeacherNameInternal = s.TeacherFullName,
+                        _CourseTitleInternal = s.CourseTitle,
+                        _PeriodInternal = s.Period // Use the new Period property
                     };
                 })
                 .ToList();
 
-            // Group by teacher
+            // Group by teacher, then by class & period
             tableViewModel.TeacherGroups = studentRows
                 .GroupBy(row => row._TeacherNameInternal)
-                .Select(g => new TeacherGroup
+                .Select(teacherGroup => new TeacherGroup
                 {
-                    TeacherName = g.Key,
-                    StudentRows = g.OrderBy(s => s.StudentName).ToList()
+                    TeacherName = teacherGroup.Key,
+                    ClassGroups = teacherGroup
+                        .GroupBy(row => $"{row._CourseTitleInternal} - {row._PeriodInternal}") // Combine Class and Period for grouping
+                        .Select(classGroup => new ClassGroup
+                        {
+                            CourseTitle = classGroup.Key, // The key is now "Class - Period"
+                            StudentRows = classGroup.OrderBy(s => s.StudentName).ToList()
+                        })
+                        .OrderBy(cg => cg.CourseTitle)
+                        .ToList()
                 })
                 .OrderBy(tg => tg.TeacherName)
                 .ToList();
-
 
             return new JsonResult(tableViewModel);
         }
         #endregion
 
         #region Authorization Helpers
-        // ... Unchanged ...
+        // Unchanged
         private async Task<List<int>> GetUserDistrictIdsAsync()
         {
             if (User.IsInRole("OrendaAdmin"))
@@ -256,13 +266,18 @@ namespace ORSV2.Pages.CurriculumAlignment
     public class StudentResultTableViewModel
     {
         public List<StandardHeader> Headers { get; set; } = new();
-        public List<TeacherGroup> TeacherGroups { get; set; } = new(); // <-- CHANGED
+        public List<TeacherGroup> TeacherGroups { get; set; } = new();
     }
 
-    // NEW Class for Grouping
     public class TeacherGroup
     {
         public string TeacherName { get; set; } = string.Empty;
+        public List<ClassGroup> ClassGroups { get; set; } = new();
+    }
+    
+    public class ClassGroup
+    {
+        public string CourseTitle { get; set; } = string.Empty; // Will now hold "ClassName - Period"
         public List<StudentResultRow> StudentRows { get; set; } = new();
     }
 
@@ -279,8 +294,12 @@ namespace ORSV2.Pages.CurriculumAlignment
         public int TotalStandardsPassed { get; set; }
         public Dictionary<string, int> StandardScores { get; set; } = new();
         
-        [JsonIgnore] // Internal property, not sent to client
+        [JsonIgnore]
         public string _TeacherNameInternal { get; set; } = string.Empty;
+        [JsonIgnore]
+        public string _CourseTitleInternal { get; set; } = string.Empty;
+        [JsonIgnore]
+        public string _PeriodInternal { get; set; } = string.Empty; // Add internal period
     }
     
     public class StandardResult
