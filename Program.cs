@@ -10,11 +10,12 @@ using Azure.Identity;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Azure Key Vault for production
+/*
 if (builder.Environment.IsProduction())
 {
     var keyVaultEndpoint = new Uri("https://promotekeys.vault.azure.net/");
     builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
-}
+}*/
 
 // Connect to SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
