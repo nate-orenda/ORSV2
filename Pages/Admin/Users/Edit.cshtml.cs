@@ -1,3 +1,5 @@
+// File: ORSV2/Pages/Admin/Users/Edit.cshtml.cs
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -33,10 +35,16 @@ namespace ORSV2.Pages.Admin.Users
             public List<int> SchoolIds { get; set; } = new();
             public List<string> Roles { get; set; } = new();
             public int? StaffId { get; set; }
+            
+            // New property to bind to the unlock checkbox
+            public bool UnlockUser { get; set; }
         }
 
         [BindProperty]
         public EditInputModel Input { get; set; } = new();
+        
+        // New property to control UI visibility
+        public bool IsLockedOut { get; set; }
 
         public SelectList Districts { get; set; } = null!;
         public List<SelectListItem> AllRoles { get; set; } = new();
@@ -48,6 +56,9 @@ namespace ORSV2.Pages.Admin.Users
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null) return NotFound();
+
+            // Check if the user is currently locked out
+            IsLockedOut = await _userManager.IsLockedOutAsync(user);
 
             Input = new EditInputModel
             {
@@ -77,7 +88,20 @@ namespace ORSV2.Pages.Admin.Users
 
             if (user == null) return NotFound();
 
+            // === Add User Unlock Logic ===
+            if (Input.UnlockUser)
+            {
+                var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
+                if (!unlockResult.Succeeded)
+                {
+                    // Handle potential errors if unlocking fails
+                    ModelState.AddModelError(string.Empty, "Error: Could not unlock user account.");
+                    return Page();
+                }
+            }
+
             user.Email = Input.Email;
+            user.UserName = Input.Email; // Keep username in sync with email
             user.FirstName = Input.FirstName;
             user.LastName = Input.LastName;
             user.DistrictId = Input.DistrictId;

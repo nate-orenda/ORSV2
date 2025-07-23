@@ -44,12 +44,39 @@
                                 <a asp-page="/GuidanceAlignment/Index" class="nav-link">
                                     <i class="bi bi-compass me-1"></i>Guidance Alignment
                                 </a>
-                                <a asp-page="/CurriculumAlignment/Form1" class="nav-link">
-                                    <i class="bi bi-book me-1"></i>Curriculum Alignment
-                                </a>
-                                <a asp-page="/Admin/Index" class="nav-link">
-                                    <i class="bi bi-gear me-1"></i>Administration
-                                </a>
+                                
+                                <!-- Curriculum Alignment Dropdown -->
+                                <div class="dropdown">
+                                    <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-book me-1"></i>Curriculum Alignment
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" asp-page="/CurriculumAlignment/Form1">
+                                                <i class="bi bi-file-text me-2"></i>Form 1
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Administration Dropdown -->
+                                <div class="dropdown">
+                                    <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-gear me-1"></i>Administration
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" asp-page="/Admin/Users/Index">
+                                                <i class="bi bi-people me-2"></i>Users
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-page="/Districts/Index">
+                                                <i class="bi bi-building me-2"></i>Districts
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </nav>
 
                             <!-- User Profile Section -->
@@ -89,9 +116,7 @@
     }
 
     <main class="flex-grow-1">
-        <div class="container py-4">
-            @RenderBody()
-        </div>
+        @RenderBody()
     </main>
 
     <footer class="bg-white border-top" style="border-color: #e5e5e5 !important;">
@@ -99,6 +124,9 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <p class="mb-0 text-muted">&copy; 2025 - ORSV2</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <small class="text-muted">&copy; Built with ASP.NET Core</small>
                 </div>
             </div>
         </div>

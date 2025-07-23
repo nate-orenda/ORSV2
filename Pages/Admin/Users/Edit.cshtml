@@ -29,6 +29,18 @@
         <p class="form-control-plaintext text-muted">@Model.Input.StaffId</p>
     </div>
 
+    @if (Model.IsLockedOut)
+    {
+        <div class="form-group alert alert-warning">
+            <div class="form-check">
+                <input asp-for="Input.UnlockUser" class="form-check-input" />
+                <label asp-for="Input.UnlockUser" class="form-check-label">
+                    <b>This account is locked.</b> Check this box to unlock it.
+                </label>
+            </div>
+        </div>
+    }
+    
     <div class="form-group">
         <label asp-for="Input.DistrictId">District</label>
         <select asp-for="Input.DistrictId" asp-items="Model.Districts" class="form-control" id="districtDropdown"></select>
@@ -37,8 +49,7 @@
     <div class="form-group">
         <label>Schools</label>
         <div id="schoolCheckboxList" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
-            <!-- Will be populated by JavaScript -->
-        </div>
+            </div>
     </div>
 
     <div class="form-group">
@@ -71,11 +82,13 @@
 
     document.getElementById('districtDropdown').addEventListener('change', function () {
         const districtId = this.value;
-        fetch(`?handler=Schools&districtId=${districtId}`)
-            .then(res => res.json())
-            .then(data => {
-                renderSchoolsCheckboxList(data);
-            });
+        if (districtId) { // Prevent fetch on initial empty value if any
+            fetch(`?handler=Schools&districtId=${districtId}`)
+                .then(res => res.json())
+                .then(data => {
+                    renderSchoolsCheckboxList(data);
+                });
+        }
     });
 
     // Load schools immediately if editing existing user
