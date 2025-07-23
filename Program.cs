@@ -4,90 +4,46 @@ using ORSV2.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Azure Key Vault for production with robust error handling
+// Configure Azure Key Vault for production - simplified
+/*
 if (builder.Environment.IsProduction())
 {
     try
     {
-        Console.WriteLine("Configuring Azure Key Vault...");
         var keyVaultEndpoint = new Uri("https://promotekeys.vault.azure.net/");
-        
-        // Configure DefaultAzureCredential for App Service Managed Identity
-        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            ExcludeEnvironmentCredential = false,
-            ExcludeManagedIdentityCredential = false, // This is what we want for App Service
-            ExcludeSharedTokenCacheCredential = true,
-            ExcludeVisualStudioCredential = true,
-            ExcludeAzureCliCredential = true,
-            ExcludeInteractiveBrowserCredential = true
-        });
-
-        builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, credential);
-        Console.WriteLine("✅ Azure Key Vault configured successfully");
-        
-        // Test Key Vault access by trying to read a configuration value
-        var testValue = builder.Configuration["SMTP-HOST"];
-        Console.WriteLine($"✅ Key Vault test - SMTP-HOST: {(string.IsNullOrEmpty(testValue) ? "NOT FOUND" : "Found")}");
+        builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
     }
-    catch (Exception ex)
+    catch
     {
-        Console.WriteLine($"❌ Azure Key Vault configuration failed: {ex.Message}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        Console.WriteLine("⚠️  Will attempt to use App Service Configuration as fallback");
-        
-        // Don't throw - we'll use App Service configuration as fallback
+        // Silent fallback to environment variables if Key Vault fails
     }
-}
+}*/
 
-// Get connection string with multiple fallback options
-string? connectionString = 
-    builder.Configuration.GetConnectionString("DefaultConnection") ??
-    builder.Configuration["DefaultConnection"] ??
-    builder.Configuration["SQLCONNSTR_DefaultConnection"] ??
-    builder.Configuration["CUSTOMCONNSTR_DefaultConnection"];
+// Get connection string - simplified
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+                      builder.Configuration["DefaultConnection"];
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new InvalidOperationException("❌ Connection string 'DefaultConnection' not found in any configuration source.");
+    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 }
-
-Console.WriteLine("✅ Database connection string found");
 
 // Connect to SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString, sqlOptions =>
-    {
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null);
-        sqlOptions.CommandTimeout(30);
-    }));
+    options.UseSqlServer(connectionString));
 
-// Configure SMTP settings with detailed logging
+// Configure SMTP settings - simplified
 builder.Services.Configure<SmtpSettings>(options =>
 {
     options.Host = builder.Configuration["SMTP-HOST"] ?? "";
-    
-    var portString = builder.Configuration["SMTP-PORT"] ?? "587";
-    options.Port = int.TryParse(portString, out var port) ? port : 587;
-    
+    options.Port = int.TryParse(builder.Configuration["SMTP-PORT"], out var port) ? port : 587;
     options.Username = builder.Configuration["SMTP-EMAIL"] ?? "";
     options.Password = builder.Configuration["SMTP-PASSWORD"] ?? "";
     options.EnableSsl = true;
-    
-    // Log SMTP configuration status (without sensitive data)
-    Console.WriteLine($"SMTP Configuration:");
-    Console.WriteLine($"  Host: {(string.IsNullOrEmpty(options.Host) ? "❌ NOT SET" : "✅ " + options.Host)}");
-    Console.WriteLine($"  Port: {options.Port}");
-    Console.WriteLine($"  Username: {(string.IsNullOrEmpty(options.Username) ? "❌ NOT SET" : "✅ Set")}");
-    Console.WriteLine($"  Password: {(string.IsNullOrEmpty(options.Password) ? "❌ NOT SET" : "✅ Set")}");
 });
 
 // Register email service
@@ -97,20 +53,6 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
-    
-    // Password settings
-    options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireLowercase = true;
-    
-    // Lockout settings  
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    
-    // User settings
-    options.User.RequireUniqueEmail = true;
 })
 .AddRoles<ApplicationRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -155,11 +97,6 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
             options.ClientId = googleClientId;
             options.ClientSecret = googleClientSecret;
         });
-    Console.WriteLine("✅ Google authentication configured");
-}
-else
-{
-    Console.WriteLine("⚠️  Google authentication not configured (missing client ID or secret)");
 }
 
 // Require authentication globally
@@ -192,18 +129,4 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// Test database connection
-try
-{
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var canConnect = await context.Database.CanConnectAsync();
-    Console.WriteLine($"Database connection: {(canConnect ? "✅ SUCCESS" : "❌ FAILED")}");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"❌ Database connection test failed: {ex.Message}");
-}
-
-Console.WriteLine($"🚀 Application starting in {app.Environment.EnvironmentName} environment");
 app.Run();
