@@ -114,7 +114,9 @@ window.StudentGrouping = (function() {
                 }
             ],
             rowGroup: groupingConfig ? groupingConfig.config : false,
-            paging: false,
+            paging: true,
+            pageLength: 50,
+            deferRender: true,
         });
 
         // Prevent row selection when clicking on the student profile link

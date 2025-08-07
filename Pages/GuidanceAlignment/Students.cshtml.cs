@@ -54,18 +54,87 @@ namespace ORSV2.Pages.GuidanceAlignment
             var districtId = school.DistrictId;
 
             Students = await _context.GAResults
+                .AsNoTracking()
                 .Where(r => r.SchoolId == SchoolId && r.Grade == Grade && r.CP == cp && r.SchoolYear == schoolYear)
+                .Select(r => new GAResults
+                {
+                    ResultId = r.ResultId,
+                    LocalStudentId = r.LocalStudentId,
+                    LastName = r.LastName,
+                    FirstName = r.FirstName,
+                    Grade = r.Grade,
+                    CounselorName = r.CounselorName,
+                    RaceEthnicity = r.RaceEthnicity,
+                    SWD = r.SWD,
+                    SED = r.SED,
+                    LF = r.LF,
+                    YrsInProgram = r.YrsInProgram,
+                    CurrentGPA = r.CurrentGPA,
+                    CumulativeGPA = r.CumulativeGPA,
+                    CreditsCompleted = r.CreditsCompleted,
+                    OnTrack = r.OnTrack,
+                    GPA = r.GPA,
+                    AGGrades = r.AGGrades,
+                    AGSchedule = r.AGSchedule,
+                    Affiliation = r.Affiliation,
+                    FAFSA = r.FAFSA,
+                    CollegeApplication = r.CollegeApplication,
+                    Attendance = r.Attendance,
+                    Referrals = r.Referrals,
+                    Grades = r.Grades,
+                    AssessmentsELA = r.AssessmentsELA,
+                    AssessmentsMath = r.AssessmentsMath,
+                    Quadrant = r.Quadrant
+                })
                 .ToListAsync();
 
             // Quadrant breakdown for this grade level
-           QuadrantSummaries = await _context.GAResults
-            .Where(r => r.SchoolId == SchoolId && r.CP == cp && r.Grade == Grade && !string.IsNullOrEmpty(r.Quadrant))
-            .GroupBy(r => new { r.Grade, r.Quadrant })
-            .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant!, g.Count()))
-            .ToListAsync();
+           var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
+            var indicatorCounts = new Dictionary<string, int>
+            {
+                ["OnTrack"] = 0,
+                ["GPA"] = 0,
+                ["AGGrades"] = 0,
+                ["AGSchedule"] = 0,
+                ["Affiliation"] = 0,
+                ["FAFSA"] = 0,
+                ["CollegeApplication"] = 0,
+                ["Attendance"] = 0,
+                ["Referrals"] = 0,
+                ["Grades"] = 0,
+                ["ELA"] = 0,
+                ["Math"] = 0
+            };
+
+            foreach (var s in Students)
+            {
+                if (s.OnTrack == true) indicatorCounts["OnTrack"]++;
+                if (s.GPA == true) indicatorCounts["GPA"]++;
+                if (s.AGGrades == true) indicatorCounts["AGGrades"]++;
+                if (s.AGSchedule == true) indicatorCounts["AGSchedule"]++;
+                if (s.Affiliation == true) indicatorCounts["Affiliation"]++;
+                if (s.FAFSA == true) indicatorCounts["FAFSA"]++;
+                if (s.CollegeApplication == true) indicatorCounts["CollegeApplication"]++;
+                if (s.Attendance == true) indicatorCounts["Attendance"]++;
+                if (s.Referrals == true) indicatorCounts["Referrals"]++;
+                if (s.Grades == true) indicatorCounts["Grades"]++;
+                if (s.AssessmentsELA == true) indicatorCounts["ELA"]++;
+                if (s.AssessmentsMath == true) indicatorCounts["Math"]++;
+
+                if (!string.IsNullOrEmpty(s.Quadrant))
+                {
+                    var key = (s.Grade, s.Quadrant!);
+                    quadrantDict[key] = quadrantDict.TryGetValue(key, out var q) ? q + 1 : 1;
+                }
+            }
+
+            QuadrantSummaries = quadrantDict
+                .Select(kvp => new QuadrantSummary(kvp.Key.Grade, kvp.Key.Quadrant, kvp.Value))
+                .ToList();
 
             // Indicator performance based on enabled indicators
             var indicators = await _context.GAQuadrantIndicators
+                .AsNoTracking()
                 .Where(i => i.Grade == Grade && i.CP == cp && i.IsEnabled == true &&
                     (i.SchoolId == null || i.SchoolId == SchoolId) &&
                     (i.DistrictId == null || i.DistrictId == districtId))
@@ -75,28 +144,13 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             foreach (var ind in indicators)
             {
-                double metCount = ind.IndicatorName switch
-                {
-                    "OnTrack" => Students.Count(s => s.OnTrack == true),
-                    "GPA" => Students.Count(s => s.GPA == true),
-                    "AGGrades" => Students.Count(s => s.AGGrades == true),
-                    "AGSchedule" => Students.Count(s => s.AGSchedule == true),
-                    "Affiliation" => Students.Count(s => s.Affiliation == true),
-                    "FAFSA" => Students.Count(s => s.FAFSA == true),
-                    "CollegeApplication" => Students.Count(s => s.CollegeApplication == true),
-                    "Attendance" => Students.Count(s => s.Attendance == true),
-                    "Referrals" => Students.Count(s=> s.Referrals == true),
-                    "Grades" => Students.Count(s=> s.Grades == true),
-                    "ELA" => Students.Count(s=> s.AssessmentsELA == true),
-                    "Math" => Students.Count(s=> s.AssessmentsMath == true),
-                    _ => 0
-                };
+                indicatorCounts.TryGetValue(ind.IndicatorName, out var metCount);
 
                 IndicatorSummaries.Add(new IndicatorSummary
                 {
                     Name = ind.IndicatorName,
                     PercentMet = Students.Count > 0 ? (metCount * 100.0 / Students.Count) : 0,
-                    CountMet = (int)metCount
+                    CountMet = metCount
                 });
             }
 
