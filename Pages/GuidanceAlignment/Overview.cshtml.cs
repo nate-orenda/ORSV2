@@ -62,7 +62,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             CurrentCheckpoint = cp.ToString();
 
             QuadrantSummaries = await _context.GAResults
-                .Where(r => r.SchoolId == SchoolId && r.CP == cp)
+                .Where(r => r.SchoolId == SchoolId && r.CP == cp && r.SchoolYear == schoolYear)
                 .GroupBy(r => new { r.Grade, r.Quadrant })
                 .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant ?? "Unknown", g.Count()))
                 .ToListAsync();

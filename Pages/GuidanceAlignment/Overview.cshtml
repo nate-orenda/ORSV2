@@ -7,7 +7,7 @@
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 <div class="card shadow-sm mb-4 p-4">
     <div class="text-center mb-4">
-        <h5 class="mb-1">@Model.School.Name</h5>
+        <h5 class="mb-1">@Model.School?.Name</h5>
         <h6 class="text-muted">Quadrant Summary – Checkpoint @Model.CurrentCheckpoint</h6>
     </div>
     @if (Model.QuadrantCounts != null && Model.QuadrantCounts.Any())
@@ -55,7 +55,7 @@
                         {
                             <a class="btn btn-sm btn-outline-primary"
                             asp-page="/GuidanceAlignment/Students"
-                            asp-route-schoolId="@Model.School.Id"
+                            asp-route-schoolId="@Model.School?.Id"
                             asp-route-grade="@grade">
                                 Grade @grade
                             </a>
@@ -63,7 +63,7 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
-                    <a asp-page="/GuidanceAlignment/Protocols" asp-route-schoolId="@Model.School.Id" class="btn btn-sm btn-outline-primary">
+                    <a asp-page="/GuidanceAlignment/Protocols" asp-route-schoolId="@Model.School?.Id" class="btn btn-sm btn-outline-primary">
                         View Protocols
                     </a>
                 </div>
@@ -81,7 +81,7 @@
     else
     {
         <div class="alert alert-info text-center">
-            Quadrant data is not yet available for this checkpoint at @Model.School.Name.
+            Quadrant data is not yet available for this checkpoint at @Model.School?.Name.
         </div>
     }
 </div>
