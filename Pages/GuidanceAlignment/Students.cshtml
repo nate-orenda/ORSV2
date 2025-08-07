@@ -117,21 +117,21 @@
             <h5 class="card-title mb-0">Student List – Grade @Model.Grade</h5>
             <div class="d-flex align-items-center">
                 <small class="text-muted me-3">Drag column headers below to group students</small>
-                <button class="clear-grouping" onclick="clearGrouping()" style="display: none;">Clear Grouping</button>
+                <button class="clear-grouping" onclick="StudentGrouping.clearGrouping()" style="display: none;">Clear Grouping</button>
             </div>
         </div>
 
         <!-- Drag and Drop Grouping Area -->
         <div class="grouping-area" id="groupingArea" 
-     data-placeholder="Drag column headers here to group students by that field">
-   </div>
+             data-placeholder="Drag column headers here to group students by that field">
+        </div>
 
-        <!-- MODIFIED: Dual-container approach for sticky + horizontal scroll -->
-        <div class="table-container-wrapper">
-            <div class="table-scroll-container">
-                <table class="table table-sm table-hover table-striped mb-0" id="studentsTable">
+        <!-- Container for scrolling -->
+        <div class="table-scroll-container">
+            <table class="table table-sm table-hover table-striped mb-0" id="studentsTable">
                 <thead class="table-light">
                     <tr>
+                        <!-- REMOVED sort icons. DataTables will add them automatically. -->
                         <th class="py-2 draggable-header" data-column="name">Name</th>
                         <th class="py-2 draggable-header" data-column="id">ID</th>
                         <th class="py-2 draggable-header" data-column="grade">Gr</th>
@@ -255,81 +255,28 @@
 </div>
 
 <style>
-    /* Override site-wide CSS to fix sticky positioning context */
-    html {
-        position: static;
-    }
-
     #indicatorChart {
         max-height: 300px;
     }
     
-    #studentsTable {
-        font-size: 0.85rem;
-    }
-
-    /* Simple horizontal scroll container */
-    .table-container-wrapper {
+    /* NEW: This container enables both vertical scrolling for the table body and horizontal scrolling for the whole table */
+    .table-scroll-container {
+        overflow: auto; /* Handles both x and y scroll */
+        max-height: 70vh; /* Example height, adjust as needed */
         position: relative;
     }
 
-    .table-scroll-container {
-        overflow-x: auto;
-        overflow-y: visible;
-        max-width: 100%;
-        /* Custom scrollbar */
-        scrollbar-width: thin;
-        scrollbar-color: #007bff #f8f9fa;
-    }
-
-    .table-scroll-container::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .table-scroll-container::-webkit-scrollbar-track {
-        background: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .table-scroll-container::-webkit-scrollbar-thumb {
-        background: #007bff;
-        border-radius: 4px;
-    }
-
-    .table-scroll-container::-webkit-scrollbar-thumb:hover {
-        background: #0056b3;
-    }
-
-    /* Headers will be positioned by JavaScript */
-    #studentsTable > thead > tr > th {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
-        white-space: nowrap;
+    /* NEW: This makes the header sticky within the scrolling container */
+    #studentsTable > thead th {
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        top: 0;
         z-index: 10;
+        background-color: #f8f9fa; /* Match table-light */
+        box-shadow: inset 0 -2px 0 #dee2e6; /* Clean bottom border */
     }
 
-    /* Enhanced table styling */
-    #studentsTable {
-        min-width: max-content;
-        margin-bottom: 0;
-    }
-
-    #studentsTable td,
-    #studentsTable th {
-        white-space: nowrap;
-        padding: 8px;
-    }
-
-    /* Sticky header when active */
-    #studentsTable > thead.sticky-active {
-        position: fixed;
-        top: 70px;
-        z-index: 1000;
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    /* Keep all your existing drag/drop styles unchanged */
+    /* Keep all your existing drag/drop and grouping styles */
     .grouping-area {
         background: #f8f9fa;
         border: 2px dashed #dee2e6;
@@ -361,7 +308,6 @@
         border-radius: 20px;
         font-size: 0.85rem;
         cursor: pointer;
-        position: relative;
     }
     
     .group-tag .remove {
@@ -370,72 +316,9 @@
         font-weight: bold;
     }
     
-    .group-tag:hover {
-        background: #0056b3;
-    }
-    
     .draggable-header {
         cursor: move;
         user-select: none;
-        position: relative;
-    }
-    
-    .draggable-header:hover {
-        background: #e3f2fd;
-    }
-    
-    .draggable-header.dragging {
-        opacity: 0.5;
-    }
-    
-    .grouped-table {
-        margin-top: 20px;
-    }
-    
-    .group-header {
-        background: #f1f3f4;
-        font-weight: bold;
-        color: #495057;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    .group-content {
-        border-left: 3px solid #007bff;
-    }
-    
-    .clear-grouping {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        cursor: pointer;
-        margin-left: 10px;
-    }
-    
-    .clear-grouping:hover {
-        background: #c82333;
-    }
-    
-    .group-select-all {
-        margin-right: 8px;
-    }
-    
-    .group-header-text {
-        vertical-align: middle;
-    }
-    
-    .clickable-group-header {
-        cursor: pointer;
-        user-select: none;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: background-color 0.2s ease-in-out;
-    }
-
-    .clickable-group-header:hover {
-        background-color: #e9ecef;
     }
 </style>
 
@@ -461,8 +344,6 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.5.0/css/rowGroup.bootstrap5.css">
     <script src="https://cdn.datatables.net/rowgroup/1.5.0/js/dataTables.rowGroup.js"></script>
     
-    <!-- Removed FixedHeader plugin -->
-
     <link type="text/css" href="https://cdn.datatables.net/1.11.0/css/dataTables.checkboxes.css" rel="stylesheet" />
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.0/js/dataTables.checkboxes.min.js"></script>
 
@@ -470,7 +351,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
    <script src="~/js/students-grouping.js"></script>
-    <script>
+   <script>
         // Initialize page with data from server
         window.studentPageData = {
             indicatorData: @Html.Raw(JsonSerializer.Serialize(Model.IndicatorSummaries)),
@@ -480,117 +361,10 @@
             total: @Model.TotalCount
         };
         
-        // Enhanced sticky header functionality with column width preservation
-        function initStickyHeaders() {
-            const table = document.getElementById('studentsTable');
-            const thead = table.querySelector('thead');
-            const scrollContainer = document.querySelector('.table-scroll-container');
-            
-            let isSticky = false;
-            let originalColumnWidths = [];
-            
-            function captureColumnWidths() {
-                // Capture the actual rendered widths of each column
-                const headerCells = thead.querySelectorAll('th');
-                originalColumnWidths = Array.from(headerCells).map(th => {
-                    return th.getBoundingClientRect().width;
-                });
-            }
-            
-            function applyColumnWidths() {
-                const headerCells = thead.querySelectorAll('th');
-                headerCells.forEach((th, index) => {
-                    if (originalColumnWidths[index]) {
-                        th.style.width = originalColumnWidths[index] + 'px';
-                        th.style.minWidth = originalColumnWidths[index] + 'px';
-                        th.style.maxWidth = originalColumnWidths[index] + 'px';
-                    }
-                });
-            }
-            
-            function removeColumnWidths() {
-                const headerCells = thead.querySelectorAll('th');
-                headerCells.forEach(th => {
-                    th.style.width = '';
-                    th.style.minWidth = '';
-                    th.style.maxWidth = '';
-                });
-            }
-            
-            function updateStickyHeader() {
-                const tableRect = table.getBoundingClientRect();
-                const shouldBeSticky = tableRect.top <= 95;
-                
-                if (shouldBeSticky && !isSticky) {
-                    // Capture widths before making sticky
-                    captureColumnWidths();
-                    
-                    // Make sticky
-                    thead.classList.add('sticky-active');
-                    thead.style.width = table.offsetWidth + 'px';
-                    thead.style.left = tableRect.left + 'px';
-                    
-                    // Apply the captured widths
-                    applyColumnWidths();
-                    
-                    isSticky = true;
-                } else if (!shouldBeSticky && isSticky) {
-                    // Remove sticky
-                    thead.classList.remove('sticky-active');
-                    thead.style.width = '';
-                    thead.style.left = '';
-                    
-                    // Remove fixed widths
-                    removeColumnWidths();
-                    
-                    isSticky = false;
-                } else if (isSticky) {
-                    // Update position when sticky (but keep widths)
-                    const newTableRect = table.getBoundingClientRect();
-                    thead.style.left = newTableRect.left + 'px';
-                }
-            }
-            
-            // Update on scroll
-            window.addEventListener('scroll', updateStickyHeader);
-            
-            // Update on horizontal scroll to maintain alignment
-            scrollContainer.addEventListener('scroll', function() {
-                if (isSticky) {
-                    const tableRect = table.getBoundingClientRect();
-                    thead.style.left = tableRect.left + 'px';
-                }
-            });
-            
-            // Update on resize - recalculate everything
-            window.addEventListener('resize', function() {
-                if (isSticky) {
-                    // Temporarily remove sticky to get natural widths
-                    thead.classList.remove('sticky-active');
-                    removeColumnWidths();
-                    
-                    // Recalculate
-                    setTimeout(function() {
-                        updateStickyHeader();
-                    }, 10);
-                } else {
-                    updateStickyHeader();
-                }
-            });
-            
-            // Initial check
-            updateStickyHeader();
-        }
-        
         // Initialize when DOM is ready
         $(document).ready(function() {
             StudentGrouping.init();
             StudentCharts.init();
-            
-            // Initialize sticky headers after DataTable is loaded and rendered
-            setTimeout(function() {
-                initStickyHeaders();
-            }, 200); // Increased timeout to ensure DataTable is fully rendered
         });
     </script>
 }

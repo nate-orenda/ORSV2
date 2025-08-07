@@ -47,6 +47,8 @@ window.StudentGrouping = (function() {
         $('.draggable-header').draggable({
             helper: 'clone',
             revert: 'invalid',
+            appendTo: 'body', // FIX: This ensures the clone is visible outside the table container
+            zIndex: 9999      // FIX: This ensures the clone appears on top of other elements
         });
 
         $('#groupingArea').droppable({
@@ -72,7 +74,7 @@ window.StudentGrouping = (function() {
                 style: 'os',
                 selector: 'td:first-child'
             },
-            orderFixed: groupingConfig ? groupingConfig.order : [ [0, 'asc'] ],
+            order: groupingConfig ? groupingConfig.order : [ [0, 'asc'] ],
             dom: 'Bfrtip', 
             buttons: [
                 {
@@ -114,7 +116,7 @@ window.StudentGrouping = (function() {
                 }
             ],
             rowGroup: groupingConfig ? groupingConfig.config : false,
-            paging: true,
+            paging: false,
             pageLength: 50,
             deferRender: true,
         });
