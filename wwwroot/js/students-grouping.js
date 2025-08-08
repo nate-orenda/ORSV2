@@ -9,6 +9,8 @@ window.StudentGrouping = (function() {
     let suppressOrderBounce = false; // prevents infinite order loops
 
     function init() {
+        // NEW: Inject CSS for a more compact table layout.
+        injectCompactStyles();
         buildColumnMap();
         initializeModal();
         initializeDragAndDrop();
@@ -16,6 +18,36 @@ window.StudentGrouping = (function() {
         setupGroupSelectionEvents();
         loadJQueryUI();
     }
+
+    // NEW: Function to add CSS styles for table condensation directly to the page.
+    function injectCompactStyles() {
+        const styleId = 'datatable-compact-styles';
+        if (document.getElementById(styleId)) return; // Avoid adding styles more than once.
+
+        const css = `
+            /* Reduce padding on all table cells */
+            #studentsTable td, #studentsTable th {
+                padding: 4px 8px !important; /* Smaller vertical and horizontal padding */
+                white-space: nowrap; /* Prevent text from wrapping, which can increase row height */
+            }
+            /* Make toolbar buttons smaller */
+            .btn.condensed-btn {
+                padding: 0.15rem 0.4rem;
+                font-size: 0.8rem;
+            }
+            /* Example class for very narrow columns */
+            .narrow-column {
+                width: 50px;
+            }
+        `;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.type = 'text/css';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    }
+
 
     function buildColumnMap() {
         $('#studentsTable thead th').each(function() {
@@ -104,27 +136,35 @@ window.StudentGrouping = (function() {
             select: {
                 style: 'os',
                 items: 'row',
-                // Any data cell will toggle the row, but ignore cells we mark as blockers
                 selector: 'td:not(.select-blocker)'
             },
-
             order: lastUserOrder && lastUserOrder.length ? lastUserOrder : [[0, 'asc']],
             orderMulti: true,
             processing: false,
             info: false,
             dom: 'Bfrtip',
+            // MODIFIED: Added 'condensed-btn' class to make buttons more compact.
             buttons: [
-                { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm', exportOptions: { columns: ':visible' } },
-                { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm',    exportOptions: { columns: ':visible' } },
-                { extend: 'print',      text: '<i class="fas fa-print"></i> Print',    className: 'btn btn-secondary btn-sm', exportOptions: { columns: ':visible' } },
+                { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
+                { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm condensed-btn',    exportOptions: { columns: ':visible' } },
+                { extend: 'print',      text: '<i class="fas fa-print"></i> Print',   className: 'btn btn-secondary btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
                 {
                     text: '<i class="fas fa-download"></i> Export Selected',
-                    className: 'btn btn-primary btn-sm',
+                    className: 'btn btn-primary btn-sm condensed-btn',
                     action: function (e, dt) {
                         dt.button('.buttons-csv', {
                             exportOptions: { modifier: { selected: true } }
                         }).trigger();
                     }
+                }
+            ],
+            // NEW: Added columnDefs to control column widths.
+            columnDefs: [
+                {
+                    // Example: Make the first column (index 0) narrow.
+                    // You can add more objects to this array to target other columns.
+                    "targets": [0],
+                    "className": "narrow-column"
                 }
             ],
             orderFixed: groupIndices.length ? { pre: groupIndices.map(i => [i, 'asc']) } : null,
@@ -134,7 +174,6 @@ window.StudentGrouping = (function() {
             deferRender: true
         });
 
-        // Remember non-group secondary order; don't reorder here
         dataTable
             .off('order.dt.remember')
             .on('order.dt.remember', function () {
@@ -151,14 +190,13 @@ window.StudentGrouping = (function() {
                 if (secondary.length) lastUserOrder = secondary;
             });
 
-        // Allow sorting grouped columns by clicking their headers (no recursion)
         $('#studentsTable thead')
             .off('click.groupSort')
             .on('click.groupSort', 'th', function (e) {
                 if (!groupIndices.length) return;
 
                 const idx = dataTable.column(this).index();
-                if (!groupIndices.includes(idx)) return; // not grouped → let DT handle
+                if (!groupIndices.includes(idx)) return;
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -173,8 +211,6 @@ window.StudentGrouping = (function() {
                 dataTable.order([...fixedPre, ...lastUserOrder]).draw(false);
             });
 
-        // Prevent row select on profile link (namespaced, idempotent)
-        // Don't toggle selection when clicking interactive controls
         $('#studentsTable')
             .off('click.stopSelectOnControls')
             .on('click.stopSelectOnControls', 'a, button, input, label, select, textarea', function (e) {
@@ -186,16 +222,11 @@ window.StudentGrouping = (function() {
 
     function setupGroupSelectionEvents() {
         const $table = $('#studentsTable');
-
-        // Ensure we don't stack listeners on re-init
         $table.off('click.selectGroup');
-
-        // Delegate from the stable table element (survives redraws)
         $table.on('click.selectGroup', 'tr.dtrg-start, .clickable-group-header', function (e) {
             const $groupRow = $(this).closest('tr.dtrg-start');
             if (!$groupRow.length) return;
 
-            // All rows until the next group header; exclude group-start/end markers
             const $range = $groupRow.nextUntil('tr.dtrg-start');
             const $dataRows = $range.filter('tr').not('.dtrg-start,.dtrg-end');
 
@@ -208,7 +239,6 @@ window.StudentGrouping = (function() {
             (selected < total) ? dtRows.select() : dtRows.deselect();
         });
     }
-
 
     function addGrouping(columnName, columnText) {
         currentGrouping.push(columnName);
@@ -251,8 +281,6 @@ window.StudentGrouping = (function() {
         currentGrouping = [];
         resetGroupingArea();
         applyGrouping();
-
-        // Reset any lingering “busy” cursor
         $('body, #studentsTable, .dataTables_wrapper').css('cursor', 'auto');
         $('.dataTables_processing').hide();
     }
@@ -275,7 +303,6 @@ window.StudentGrouping = (function() {
                     const columnIndex = groupIndices[level];
                     const columnHeader = $('#studentsTable thead th').eq(columnIndex).text().trim();
                     const displayText = `${columnHeader}: ${group} (${rows.count()} students)`;
-                    // Return only the cell content; RowGroup builds the <tr>/<td> with dtrg-start
                     return `<span class="clickable-group-header">${displayText}</span>`;
                 }
             }
