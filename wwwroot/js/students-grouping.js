@@ -3,9 +3,12 @@ window.StudentGrouping = (function() {
     let currentGrouping = [];
     let dataTable = null;
     const columnMap = new Map();
+    // Remember user's last non-group order so sorting stays within groups
+    let lastUserOrder = [[0, 'asc']];
+    let groupSort = new Map();   // columnIndex -> 'asc' | 'desc'
+    let suppressOrderBounce = false; // prevents infinite order loops
 
     function init() {
-        // Removed the container-fluid override to allow CSS to handle the layout.
         buildColumnMap();
         initializeModal();
         initializeDragAndDrop();
@@ -19,16 +22,20 @@ window.StudentGrouping = (function() {
             const columnName = $(this).data('column');
             if (columnName) {
                 const columnIndex = $(this).index();
-                columnMap.set(columnName, columnIndex);
+                if (columnIndex === -1) {
+                    console.warn('Could not resolve column index for', columnName);
+                } else {
+                    columnMap.set(columnName, columnIndex);
+                }
             }
         });
     }
 
     function initializeModal() {
-        var modal = document.getElementById('profileModal');
+        const modal = document.getElementById('profileModal');
         modal.addEventListener('show.bs.modal', function(event) {
-            var button = event.relatedTarget;
-            var studentId = button.getAttribute('data-student-id');
+            const button = event.relatedTarget;
+            const studentId = button.getAttribute('data-student-id');
             fetch(`/GuidanceAlignment/GAProfileCard?id=${studentId}`)
                 .then(response => response.text())
                 .then(html => {
@@ -58,40 +65,55 @@ window.StudentGrouping = (function() {
             accept: '.draggable-header',
             hoverClass: 'drag-over',
             drop: function(event, ui) {
-                var columnName = ui.draggable.data('column');
-                var columnText = ui.draggable.text().trim();
+                const columnName = ui.draggable.data('column');
+                const columnText = ui.draggable.text().trim();
                 if (currentGrouping.indexOf(columnName) === -1) {
                     addGrouping(columnName, columnText);
                 }
-            }
+            },
+            activate: function(){ $('#groupingArea').addClass('drag-over'); },
+            deactivate: function(){ $('#groupingArea').removeClass('drag-over'); },
+            over: function(){ $('#groupingArea').addClass('drag-over'); },
+            out: function(){ $('#groupingArea').removeClass('drag-over'); }
         });
     }
 
     function wireToolbar() {
         if (!dataTable) return;
 
-        // Move Buttons to fixed toolbar
         const buttons = dataTable.buttons().container();
         $('#dtButtons').empty().append(buttons);
 
-        // Custom search box (outside table)
         $('#studentsSearch')
-            .off('input')
-            .on('input', function () {
-            dataTable.search(this.value).draw();
+            .off('input.dtSearch')
+            .on('input.dtSearch', function () {
+                dataTable.search(this.value).draw();
             });
+    }
+
+    function initializeDataTable(groupingConfig = null) {
+        if ($.fn.DataTable.isDataTable('#studentsTable')) {
+            $('#studentsTable').DataTable().destroy();
         }
 
-        function initializeDataTable(groupingConfig = false) {
-            if ($.fn.DataTable.isDataTable('#studentsTable')) {
-                $('#studentsTable').DataTable().destroy();
-            }
+        const groupIndices = groupingConfig && groupingConfig.groupIndices ? groupingConfig.groupIndices : [];
+        groupSort = new Map();
+        groupIndices.forEach(i => groupSort.set(i, 'asc'));
 
-            dataTable = $('#studentsTable').DataTable({
-                select: { style: 'os', selector: 'td:first-child' },
-                order: groupingConfig ? groupingConfig.order : [[0, 'asc']],
-                dom: 'Bfrtip', // keep Buttons DOM so we can move them to the fixed toolbar
-                buttons: [
+        dataTable = $('#studentsTable').DataTable({
+            select: {
+                style: 'os',
+                items: 'row',
+                // Any data cell will toggle the row, but ignore cells we mark as blockers
+                selector: 'td:not(.select-blocker)'
+            },
+
+            order: lastUserOrder && lastUserOrder.length ? lastUserOrder : [[0, 'asc']],
+            orderMulti: true,
+            processing: false,
+            info: false,
+            dom: 'Bfrtip',
+            buttons: [
                 { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm', exportOptions: { columns: ':visible' } },
                 { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm',    exportOptions: { columns: ':visible' } },
                 { extend: 'print',      text: '<i class="fas fa-print"></i> Print',    className: 'btn btn-secondary btn-sm', exportOptions: { columns: ':visible' } },
@@ -99,71 +121,129 @@ window.StudentGrouping = (function() {
                     text: '<i class="fas fa-download"></i> Export Selected',
                     className: 'btn btn-primary btn-sm',
                     action: function (e, dt) {
-                    dt.button('.buttons-csv', {
-                        exportOptions: { modifier: { selected: true } }
-                    }).trigger();
+                        dt.button('.buttons-csv', {
+                            exportOptions: { modifier: { selected: true } }
+                        }).trigger();
                     }
                 }
-                ],
-                rowGroup: groupingConfig ? groupingConfig.config : false,
-                paging: false,
-                pageLength: 50,
-                deferRender: true
+            ],
+            orderFixed: groupIndices.length ? { pre: groupIndices.map(i => [i, 'asc']) } : null,
+            rowGroup: groupingConfig ? groupingConfig.config : false,
+            paging: false,
+            pageLength: 50,
+            deferRender: true
+        });
+
+        // Remember non-group secondary order; don't reorder here
+        dataTable
+            .off('order.dt.remember')
+            .on('order.dt.remember', function () {
+                if (!groupIndices.length) {
+                    lastUserOrder = dataTable.order();
+                    return;
+                }
+                if (suppressOrderBounce) {
+                    suppressOrderBounce = false;
+                    return;
+                }
+                const current = dataTable.order();
+                const secondary = current.filter(([idx]) => !groupIndices.includes(idx));
+                if (secondary.length) lastUserOrder = secondary;
             });
 
-            // Prevent row select on profile link
-            $('#studentsTable tbody').on('click', 'a.view-profile', function (e) { e.stopPropagation(); });
+        // Allow sorting grouped columns by clicking their headers (no recursion)
+        $('#studentsTable thead')
+            .off('click.groupSort')
+            .on('click.groupSort', 'th', function (e) {
+                if (!groupIndices.length) return;
 
-            // Move controls to the fixed toolbar
-            wireToolbar();
-        }
+                const idx = dataTable.column(this).index();
+                if (!groupIndices.includes(idx)) return; // not grouped → let DT handle
 
+                e.preventDefault();
+                e.stopPropagation();
+
+                const nextDir = (groupSort.get(idx) === 'asc') ? 'desc' : 'asc';
+                groupSort.set(idx, nextDir);
+
+                const fixedPre = groupIndices.map(i => [i, groupSort.get(i) || 'asc']);
+                dataTable.order.fixed({ pre: fixedPre });
+
+                suppressOrderBounce = true;
+                dataTable.order([...fixedPre, ...lastUserOrder]).draw(false);
+            });
+
+        // Prevent row select on profile link (namespaced, idempotent)
+        // Don't toggle selection when clicking interactive controls
+        $('#studentsTable')
+            .off('click.stopSelectOnControls')
+            .on('click.stopSelectOnControls', 'a, button, input, label, select, textarea', function (e) {
+                e.stopPropagation();
+        });
+
+        wireToolbar();
+    }
 
     function setupGroupSelectionEvents() {
-        $('#studentsTable tbody').on('click', '.clickable-group-header', function() {
-            const groupRow = $(this).closest('tr.dtrg-start');
-            const childRows = groupRow.nextUntil('tr.dtrg-start');
-            const groupDtRows = dataTable.rows(childRows);
-            const selectedInGroupCount = groupDtRows.nodes().to$().filter('.selected').length;
-            const totalInGroupCount = groupDtRows.count();
-            const shouldSelect = selectedInGroupCount < totalInGroupCount;
-            if (shouldSelect) {
-                groupDtRows.select();
-            } else {
-                groupDtRows.deselect();
-            }
+        const $table = $('#studentsTable');
+
+        // Ensure we don't stack listeners on re-init
+        $table.off('click.selectGroup');
+
+        // Delegate from the stable table element (survives redraws)
+        $table.on('click.selectGroup', 'tr.dtrg-start, .clickable-group-header', function (e) {
+            const $groupRow = $(this).closest('tr.dtrg-start');
+            if (!$groupRow.length) return;
+
+            // All rows until the next group header; exclude group-start/end markers
+            const $range = $groupRow.nextUntil('tr.dtrg-start');
+            const $dataRows = $range.filter('tr').not('.dtrg-start,.dtrg-end');
+
+            if (!$dataRows.length) return;
+
+            const dtRows = dataTable.rows($dataRows);
+            const total = dtRows.count();
+            const selected = dtRows.nodes().to$().filter('.selected').length;
+
+            (selected < total) ? dtRows.select() : dtRows.deselect();
         });
     }
 
+
     function addGrouping(columnName, columnText) {
         currentGrouping.push(columnName);
-        
+
         if (currentGrouping.length === 1) {
-            $('#groupingArea .placeholder').remove(); 
+            $('#groupingArea .ga-placeholder').remove();
             $('.clear-grouping').show();
         }
-        
-        var groupTag = $(`<span class="group-tag" data-group-for="${columnName}">${columnText}<span class="remove" onclick="StudentGrouping.removeGrouping('${columnName}')">&times;</span></span>`);
-        
+
+        const groupTag = $(
+            `<span class="group-tag" data-group-for="${columnName}">
+                ${columnText}
+                <span class="remove" onclick="StudentGrouping.removeGrouping('${columnName}')">&times;</span>
+            </span>`
+        );
         $('#groupingArea').append(groupTag);
-        
+
         applyGrouping();
     }
 
     function removeGrouping(columnName) {
         currentGrouping = currentGrouping.filter(g => g !== columnName);
-        
         $(`.group-tag[data-group-for="${columnName}"]`).remove();
-        
         if (currentGrouping.length === 0) {
             resetGroupingArea();
         }
-        
         applyGrouping();
     }
 
     function resetGroupingArea() {
-        $('#groupingArea').empty().append('<div class="placeholder">Drag column headers here to group students by that field</div>');
+        $('#groupingArea')
+            .removeClass('drag-over ui-droppable-active ui-state-active ui-state-hover')
+            .css('cursor', 'auto')
+            .empty()
+            .append('<div class="ga-placeholder">Drag column headers here to group students by that field</div>');
         $('.clear-grouping').hide();
     }
 
@@ -171,26 +251,34 @@ window.StudentGrouping = (function() {
         currentGrouping = [];
         resetGroupingArea();
         applyGrouping();
+
+        // Reset any lingering “busy” cursor
+        $('body, #studentsTable, .dataTables_wrapper').css('cursor', 'auto');
+        $('.dataTables_processing').hide();
     }
 
     function applyGrouping() {
         if (!currentGrouping.length) {
-            initializeDataTable(false);
+            initializeDataTable(null);
             return;
         }
+
         const groupIndices = currentGrouping.map(name => columnMap.get(name));
+        groupSort = new Map();
+        groupIndices.forEach(i => groupSort.set(i, 'asc'));
+
         const groupingConfig = {
+            groupIndices,
             config: {
                 dataSrc: groupIndices,
-                startRender: function(rows, group, level) {
+                startRender: function (rows, group, level) {
                     const columnIndex = groupIndices[level];
                     const columnHeader = $('#studentsTable thead th').eq(columnIndex).text().trim();
                     const displayText = `${columnHeader}: ${group} (${rows.count()} students)`;
-                    const cellContent = `<span class="clickable-group-header">${displayText}</span>`;
-                    return $('<tr/>').append(`<td colspan="${rows.columns().nodes().length}">${cellContent}</td>`);
+                    // Return only the cell content; RowGroup builds the <tr>/<td> with dtrg-start
+                    return `<span class="clickable-group-header">${displayText}</span>`;
                 }
-            },
-            order: groupIndices.map(index => [index, 'asc'])
+            }
         };
         initializeDataTable(groupingConfig);
     }

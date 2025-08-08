@@ -117,7 +117,7 @@
             <h5 class="card-title mb-0">Student List – Grade @Model.Grade</h5>
             <div class="d-flex align-items-center">
                 <small class="text-muted me-3">Drag column headers below to group students</small>
-                <button class="clear-grouping" onclick="StudentGrouping.clearGrouping()" style="display: none;">Clear Grouping</button>
+                <button class="btn btn-outline-danger btn-sm clear-grouping" onclick="StudentGrouping.clearGrouping()" style="display: none;"><i class="bi bi-x-circle"></i> Clear Grouping</button>
             </div>
         </div>
 
@@ -299,12 +299,14 @@
         border-color: #2196f3;
     }
     
-    .grouping-area .placeholder {
+    .grouping-area .ga-placeholder {
         color: #6c757d;
         font-style: italic;
         text-align: center;
         line-height: 30px;
+        background: transparent; /* ensure no grey fill */
     }
+
     
     .group-tag {
         display: inline-block;
@@ -327,6 +329,35 @@
         cursor: move;
         user-select: none;
     }
+    /* Show/hide clear grouping button nicely */
+    .clear-grouping {
+        margin-left: auto;
+        display: none; /* JS shows it when groups exist */
+    }
+
+    button.clear-grouping.btn {
+        --bs-btn-padding-y: .25rem;
+        --bs-btn-padding-x: .5rem;
+        --bs-btn-font-size: .875rem;
+    }
+
+    /* Kill jQuery UI’s default active/hover grey states */
+    .grouping-area.ui-droppable-active,
+    .grouping-area.ui-state-active,
+    .grouping-area.ui-state-hover {
+        background: #f8f9fa !important;
+        border-color: #dee2e6 !important;
+    }
+
+    #studentsTable tbody tr { cursor: pointer; }
+    tr.dtrg-start { cursor: pointer; } /* group headers still clickable */
+
+
+    /* Optional: nicer drag cursor */
+    .draggable-header { cursor: grab; }
+    .ui-draggable-dragging { cursor: grabbing; }
+    .clickable-group-header { cursor: pointer; pointer-events: auto; }
+
 </style>
 
 @section Scripts {
@@ -355,7 +386,7 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-   <script src="~/js/students-grouping.js"></script>
+   <script src="~/js/students-grouping.js" asp-append-version="true"></script>
    <script>
         // Initialize page with data from server
         window.studentPageData = {
