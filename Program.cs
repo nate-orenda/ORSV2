@@ -109,7 +109,12 @@ builder.Services.AddAuthorization(options =>
 builder.Services.Configure<FunctionEndpointsOptions>(
     builder.Configuration.GetSection("FunctionEndpoints"));
     
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("ImportsClient")
+    .ConfigureHttpClient(c =>
+    {
+        c.Timeout = TimeSpan.FromMinutes(10); // extend to 10 minutes
+    });
+
 
 var app = builder.Build();
 

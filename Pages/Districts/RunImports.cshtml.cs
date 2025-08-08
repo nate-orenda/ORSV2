@@ -47,7 +47,7 @@ namespace ORSV2.Pages.Districts
 
             try
             {
-                var client = _httpClientFactory.CreateClient();
+                var client = _httpClientFactory.CreateClient("ImportsClient");
                 var url = AppendDistrict(endpoint.Url!, endpoint.DistrictQueryName, districtId);
                 using var req = new HttpRequestMessage(new HttpMethod(endpoint.Method), url);
 
