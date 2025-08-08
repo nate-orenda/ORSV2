@@ -106,8 +106,14 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
+builder.Services.Configure<FunctionEndpointsOptions>(
+    builder.Configuration.GetSection("FunctionEndpoints"));
+    
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

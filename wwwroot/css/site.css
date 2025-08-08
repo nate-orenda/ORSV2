@@ -275,3 +275,51 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .students-toolbar .left,
 .students-toolbar .right{ display:flex; gap:.5rem; align-items:center; }
 .students-toolbar input.form-control{ height:32px; padding:.25rem .5rem; font-size:.9rem; }
+/* ===== Orenda Buttons ===== */
+.btn-orenda {
+    background: var(--orenda-primary);
+    color: var(--orenda-text-white);
+    border: none;
+    border-radius: .375rem;
+    padding: .5rem 1rem;
+    font-weight: 500;
+    font-size: .95rem;
+    box-shadow: 0 4px 12px var(--orenda-shadow);
+    transition: all .3s ease;
+}
+
+.btn-orenda:hover {
+    background: var(--orenda-primary-hover);
+    box-shadow: 0 6px 16px var(--orenda-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.btn-orenda:active {
+    background: var(--orenda-primary-hover);
+    transform: translateY(0);
+    box-shadow: 0 3px 8px var(--orenda-shadow);
+}
+
+.btn-orenda-outline {
+    background: transparent;
+    color: var(--orenda-primary);
+    border: 2px solid var(--orenda-primary);
+    border-radius: .375rem;
+    padding: .5rem 1rem;
+    font-weight: 500;
+    font-size: .95rem;
+    transition: all .3s ease;
+}
+
+.btn-orenda-outline:hover {
+    background: var(--orenda-primary);
+    color: var(--orenda-text-white);
+    box-shadow: 0 6px 16px var(--orenda-shadow-hover);
+}
+/* Small size variant for Orenda buttons */
+.btn-orenda.btn-sm,
+.btn-orenda-outline.btn-sm {
+    padding: .25rem .5rem;
+    font-size: .8rem;
+    border-radius: .25rem;
+}

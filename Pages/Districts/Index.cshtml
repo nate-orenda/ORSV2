@@ -1,51 +1,98 @@
 @page
 @model ORSV2.Pages.Districts.IndexModel
 @using ORSV2.Models
-@using Microsoft.AspNetCore.Identity
-@inject UserManager<ApplicationUser> UserManager
 
 @{
     ViewData["Title"] = "Districts";
-    var user = await UserManager.GetUserAsync(User);
-    var roles = await UserManager.GetRolesAsync(user);
-    bool canEdit = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager");
+    bool canEdit = User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager");
 }
 
 <h1>Districts</h1>
 
-<p>
-    <a asp-page="Create" class="btn btn-primary">Create New District</a>
-</p>
+@if (canEdit)
+{
+    <p>
+        <a asp-page="Create" class="btn-orenda btn-sm shadow-orenda-hover">Create New District</a>
+    </p>
+}
 
-<table class="table table-striped">
+<table class="table table-striped align-middle">
     <thead>
         <tr>
             <th>Name</th>
             <th>CDS Code</th>
-            <th>Notes</th>
-            <th></th>
+            <th class="text-center">Actions</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var district in Model.Districts)
         {
             <tr>
-                <td>@district.Name</td>
-                <td>@district.CDSCode</td>
-                <td>@district.Notes</td>
                 <td>
-                    <a asp-page="/Schools/Index" asp-route-districtId="@district.Id">View Schools</a> | 
-                    <a asp-page="/Courses/Index" asp-route-districtId="@district.Id">View Courses</a> | 
-                    <a asp-page="/Districts/CheckpointSchedules" asp-route-DistrictId="@district.Id">Edit Checkpoint Dates</a> |
-                    @if (canEdit)
+                    @district.Name
+                    @if (!string.IsNullOrWhiteSpace(district.Notes))
                     {
-                        <a asp-page="Edit" asp-route-id="@district.Id">Edit</a>
-                        <span class="mx-1">|</span>
-                        <a asp-page="Delete" asp-route-id="@district.Id">Delete</a>
+                        <span class="ms-1 text-muted"
+                              data-bs-toggle="tooltip"
+                              title="@district.Notes">
+                            <i class="bi bi-info-circle"></i>
+                        </span>
                     }
                 </td>
+                <td>@district.CDSCode</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-page="/Schools/Index"
+                           asp-route-districtId="@district.Id"
+                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                            View Schools
+                        </a>
 
+                        <a asp-page="/Courses/Index"
+                           asp-route-districtId="@district.Id"
+                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                            View Courses
+                        </a>
+
+                        <a asp-page="/Districts/CheckpointSchedules"
+                           asp-route-DistrictId="@district.Id"
+                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                            Edit Checkpoint Dates
+                        </a>
+
+                        @if (canEdit)
+                        {
+                            <a asp-page="/Districts/RunImports"
+                               asp-route-districtId="@district.Id"
+                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                                Run Imports
+                            </a>
+
+                            <a asp-page="Edit"
+                               asp-route-id="@district.Id"
+                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                                Edit
+                            </a>
+
+                            <a asp-page="Delete"
+                               asp-route-id="@district.Id"
+                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                                Delete
+                            </a>
+                        }
+                    </div>
+                </td>
             </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
+}
