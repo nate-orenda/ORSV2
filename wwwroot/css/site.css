@@ -721,3 +721,47 @@ button.accept-policy {
         transition: height 0.35s ease;
     }
 }
+
+/* Students table header: slightly smaller + tighter padding */
+#studentsTable thead th {
+  font-size: 0.72rem;   /* was ~0.8rem via .orenda-table th */
+  padding: 0.5rem 0.5rem;
+}
+
+/* Keep the drag helper above the droppable/scrolling container */
+.ui-draggable-dragging {
+  z-index: 20000 !important;
+  pointer-events: none; /* smoother hit-testing while dragging */
+}
+
+/* Optional: ensure landing area doesn't create a higher stacking context */
+#groupingArea { position: relative; z-index: 1; }
+
+/* Sticky toolbar that stays put when the table below scrolls */
+.students-toolbar {
+  position: sticky;
+  top: 0;               /* adjusts under your page header if needed */
+  z-index: 1025;        /* above table but under navbar */
+  background: #fff;
+  padding: .5rem .75rem;
+  border: 1px solid var(--orenda-border);
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.students-toolbar .left,
+.students-toolbar .right {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+.students-toolbar input.form-control {
+  height: 32px;
+  padding: .25rem .5rem;
+  font-size: .9rem;
+}

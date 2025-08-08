@@ -47,8 +47,11 @@ window.StudentGrouping = (function() {
         $('.draggable-header').draggable({
             helper: 'clone',
             revert: 'invalid',
-            appendTo: 'body', // FIX: This ensures the clone is visible outside the table container
-            zIndex: 9999      // FIX: This ensures the clone appears on top of other elements
+            appendTo: 'body',
+            zIndex: 9999,
+            scroll: true,
+            containment: 'window',
+            opacity: 0.95
         });
 
         $('#groupingArea').droppable({
@@ -64,68 +67,57 @@ window.StudentGrouping = (function() {
         });
     }
 
-    function initializeDataTable(groupingConfig = false) {
-        if ($.fn.DataTable.isDataTable('#studentsTable')) {
-            $('#studentsTable').DataTable().destroy();
+    function wireToolbar() {
+        if (!dataTable) return;
+
+        // Move Buttons to fixed toolbar
+        const buttons = dataTable.buttons().container();
+        $('#dtButtons').empty().append(buttons);
+
+        // Custom search box (outside table)
+        $('#studentsSearch')
+            .off('input')
+            .on('input', function () {
+            dataTable.search(this.value).draw();
+            });
         }
 
-        dataTable = $('#studentsTable').DataTable({
-            select: {
-                style: 'os',
-                selector: 'td:first-child'
-            },
-            order: groupingConfig ? groupingConfig.order : [ [0, 'asc'] ],
-            dom: 'Bfrtip', 
-            buttons: [
-                {
-                    extend: 'excelHtml5',
-                    text: '<i class="fas fa-file-excel"></i> Excel',
-                    className: 'btn btn-success btn-sm',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
-                {
-                    extend: 'csvHtml5',
-                    text: '<i class="fas fa-file-csv"></i> CSV',
-                    className: 'btn btn-info btn-sm',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
-                {
-                    extend: 'print',
-                    text: '<i class="fas fa-print"></i> Print',
-                    className: 'btn btn-secondary btn-sm',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
+        function initializeDataTable(groupingConfig = false) {
+            if ($.fn.DataTable.isDataTable('#studentsTable')) {
+                $('#studentsTable').DataTable().destroy();
+            }
+
+            dataTable = $('#studentsTable').DataTable({
+                select: { style: 'os', selector: 'td:first-child' },
+                order: groupingConfig ? groupingConfig.order : [[0, 'asc']],
+                dom: 'Bfrtip', // keep Buttons DOM so we can move them to the fixed toolbar
+                buttons: [
+                { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm', exportOptions: { columns: ':visible' } },
+                { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm',    exportOptions: { columns: ':visible' } },
+                { extend: 'print',      text: '<i class="fas fa-print"></i> Print',    className: 'btn btn-secondary btn-sm', exportOptions: { columns: ':visible' } },
                 {
                     text: '<i class="fas fa-download"></i> Export Selected',
                     className: 'btn btn-primary btn-sm',
-                    action: function(e, dt, button, config) {
-                        dt.button('.buttons-csv', {
-                            exportOptions: {
-                                modifier: {
-                                    selected: true
-                                }
-                            }
-                        }).trigger();
+                    action: function (e, dt) {
+                    dt.button('.buttons-csv', {
+                        exportOptions: { modifier: { selected: true } }
+                    }).trigger();
                     }
                 }
-            ],
-            rowGroup: groupingConfig ? groupingConfig.config : false,
-            paging: false,
-            pageLength: 50,
-            deferRender: true,
-        });
+                ],
+                rowGroup: groupingConfig ? groupingConfig.config : false,
+                paging: false,
+                pageLength: 50,
+                deferRender: true
+            });
 
-        // Prevent row selection when clicking on the student profile link
-        $('#studentsTable tbody').on('click', 'a.view-profile', function(e) {
-            e.stopPropagation(); // This stops the click from triggering the row selection.
-        });
-    }
+            // Prevent row select on profile link
+            $('#studentsTable tbody').on('click', 'a.view-profile', function (e) { e.stopPropagation(); });
+
+            // Move controls to the fixed toolbar
+            wireToolbar();
+        }
+
 
     function setupGroupSelectionEvents() {
         $('#studentsTable tbody').on('click', '.clickable-group-header', function() {
