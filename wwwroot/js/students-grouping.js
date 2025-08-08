@@ -5,10 +5,11 @@ window.StudentGrouping = (function() {
     const columnMap = new Map();
 
     function init() {
+        // Removed the container-fluid override to allow CSS to handle the layout.
         buildColumnMap();
         initializeModal();
-        initializeDataTable();       // <-- move this BEFORE drag
-        initializeDragAndDrop();     // <-- bind after DT builds thead
+        initializeDragAndDrop();
+        initializeDataTable();
         setupGroupSelectionEvents();
         loadJQueryUI();
     }
@@ -42,106 +43,80 @@ window.StudentGrouping = (function() {
         });
     }
 
-    function initializeDragAndDrop(rebind = false) {
-  if (rebind) {
-    try { $('.draggable-header').draggable('destroy'); } catch {}
-  }
-
-  $('.draggable-header').draggable({
-    helper: function () {
-      const $th = $(this).clone();
-      $th
-        .css({ width: $(this).outerWidth(), 'pointer-events': 'none', 'z-index': 200000 })
-        .addClass('drag-helper');
-      return $th;
-    },
-    appendTo: 'body',
-    zIndex: 200000,
-    revert: 'invalid',
-    scroll: false,
-    containment: 'window',
-    opacity: 0.95,
-    distance: 3
-  });
-
-  $('#groupingArea').droppable({
-    accept: '.draggable-header',
-    tolerance: 'pointer',      // important for reliable drop in prod
-    greedy: true,
-    hoverClass: 'drag-over',
-    drop: function (event, ui) {
-      const columnName = ui.draggable.data('column');
-      const columnText = ui.draggable.text().trim();
-      if (!currentGrouping.includes(columnName)) addGrouping(columnName, columnText);
-    }
-  });
-}
-
-
-    function moveButtonsToToolbar() {
-  const $target = $('#dtButtons');
-  if (!$target.length) return;
-  if (!dataTable || !dataTable.buttons || !dataTable.buttons().container) return;
-
-  const $container = $(dataTable.buttons().container());
-  if (!$container.length) return;
-
-  if (!$container.parent().is($target)) {
-    $container.detach().appendTo($target);
-  }
-}
-
-function wireToolbar() {
-  moveButtonsToToolbar();
-  setTimeout(moveButtonsToToolbar, 0);
-  setTimeout(moveButtonsToToolbar, 100);
-  setTimeout(moveButtonsToToolbar, 300);
-}
-
-function watchButtonsWrapper() {
-  const wrapper = $('#studentsTable').closest('.dataTables_wrapper')[0];
-  if (!wrapper || wrapper.__dtObserver) return;
-  const obs = new MutationObserver(() => moveButtonsToToolbar());
-  obs.observe(wrapper, { childList: true, subtree: true });
-  wrapper.__dtObserver = obs;
-}
-
-    function initializeDataTable(groupingConfig = false) {
-  const $table = $('#studentsTable');
-  if ($.fn.DataTable.isDataTable($table)) $table.DataTable().destroy();
-
-  dataTable = $table.DataTable({
-    dom: 'Bfrtip',
-    buttons: [
-      { extend: 'excelHtml5', className: 'btn btn-success btn-sm', exportOptions: { columns: ':visible' } },
-      { extend: 'csvHtml5',   className: 'btn btn-info btn-sm',    exportOptions: { columns: ':visible' } },
-      { extend: 'print',      className: 'btn btn-secondary btn-sm', exportOptions: { columns: ':visible' } },
-      {
-        text: 'Export Selected',
-        className: 'btn btn-primary btn-sm',
-        action: function (e, dt) {
-          dt.button('.buttons-csv', { exportOptions: { modifier: { selected: true } } }).trigger();
-        }
-      }
-    ],
-            rowGroup: groupingConfig ? groupingConfig.config : false,
-            paging: false,
-            pageLength: 50,
-            deferRender: true
+    function initializeDragAndDrop() {
+        $('.draggable-header').draggable({
+            helper: 'clone',
+            revert: 'invalid',
+            appendTo: 'body',
+            zIndex: 9999,
+            scroll: true,
+            containment: 'window',
+            opacity: 0.95
         });
 
-       // Buttons wiring you already added
-  $table.off('.dtToolbar');
-  $table.on('init.dt.dtToolbar draw.dt.dtToolbar', wireToolbar);
-  watchButtonsWrapper();
-  wireToolbar();
+        $('#groupingArea').droppable({
+            accept: '.draggable-header',
+            hoverClass: 'drag-over',
+            drop: function(event, ui) {
+                var columnName = ui.draggable.data('column');
+                var columnText = ui.draggable.text().trim();
+                if (currentGrouping.indexOf(columnName) === -1) {
+                    addGrouping(columnName, columnText);
+                }
+            }
+        });
+    }
 
-  // Rebind draggables after DT (re)renders header
-  $table.off('init.dt.drag draw.dt.drag');
-  $table.on('init.dt.drag draw.dt.drag', function () {
-    initializeDragAndDrop(true);  // pass true to force rebind
-  });
-}
+    function wireToolbar() {
+        if (!dataTable) return;
+
+        // Move Buttons to fixed toolbar
+        const buttons = dataTable.buttons().container();
+        $('#dtButtons').empty().append(buttons);
+
+        // Custom search box (outside table)
+        $('#studentsSearch')
+            .off('input')
+            .on('input', function () {
+            dataTable.search(this.value).draw();
+            });
+        }
+
+        function initializeDataTable(groupingConfig = false) {
+            if ($.fn.DataTable.isDataTable('#studentsTable')) {
+                $('#studentsTable').DataTable().destroy();
+            }
+
+            dataTable = $('#studentsTable').DataTable({
+                select: { style: 'os', selector: 'td:first-child' },
+                order: groupingConfig ? groupingConfig.order : [[0, 'asc']],
+                dom: 'Bfrtip', // keep Buttons DOM so we can move them to the fixed toolbar
+                buttons: [
+                { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm', exportOptions: { columns: ':visible' } },
+                { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm',    exportOptions: { columns: ':visible' } },
+                { extend: 'print',      text: '<i class="fas fa-print"></i> Print',    className: 'btn btn-secondary btn-sm', exportOptions: { columns: ':visible' } },
+                {
+                    text: '<i class="fas fa-download"></i> Export Selected',
+                    className: 'btn btn-primary btn-sm',
+                    action: function (e, dt) {
+                    dt.button('.buttons-csv', {
+                        exportOptions: { modifier: { selected: true } }
+                    }).trigger();
+                    }
+                }
+                ],
+                rowGroup: groupingConfig ? groupingConfig.config : false,
+                paging: false,
+                pageLength: 50,
+                deferRender: true
+            });
+
+            // Prevent row select on profile link
+            $('#studentsTable tbody').on('click', 'a.view-profile', function (e) { e.stopPropagation(); });
+
+            // Move controls to the fixed toolbar
+            wireToolbar();
+        }
 
 
     function setupGroupSelectionEvents() {
