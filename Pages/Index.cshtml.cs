@@ -75,9 +75,8 @@ namespace ORSV2.Pages
             }
             else
             {
-                // School-level roles
                 var userSchoolIds = user.UserSchools
-                    .Where(us => us.School != null && !us.School.Inactive)
+                    .Where(us => us.School != null && !us.School.Inactive && us.School!.enabled)
                     .Select(us => us.SchoolId)
                     .Distinct()
                     .ToList();
