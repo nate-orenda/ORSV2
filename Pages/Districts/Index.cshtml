@@ -12,7 +12,7 @@
 @if (canEdit)
 {
     <p>
-        <a asp-page="Create" class="btn-orenda btn-sm shadow-orenda-hover">Create New District</a>
+        <a asp-page="Create" class="btn btn-primary btn-sm">Create New District</a>
     </p>
 }
 
@@ -44,19 +44,19 @@
                     <div class="d-flex flex-wrap gap-2">
                         <a asp-page="/Schools/Index"
                            asp-route-districtId="@district.Id"
-                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                           class="btn btn-outline-primary btn-sm">
                             View Schools
                         </a>
 
                         <a asp-page="/Courses/Index"
                            asp-route-districtId="@district.Id"
-                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                           class="btn btn-outline-primary btn-sm">
                             View Courses
                         </a>
 
                         <a asp-page="/Districts/CheckpointSchedules"
                            asp-route-DistrictId="@district.Id"
-                           class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                           class="btn btn-outline-primary btn-sm">
                             Edit Checkpoint Dates
                         </a>
 
@@ -64,19 +64,19 @@
                         {
                             <a asp-page="/Districts/RunImports"
                                asp-route-districtId="@district.Id"
-                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                               class="btn btn-outline-primary btn-sm">
                                 Run Imports
                             </a>
 
                             <a asp-page="Edit"
                                asp-route-id="@district.Id"
-                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                               class="btn btn-outline-primary btn-sm">
                                 Edit
                             </a>
 
                             <a asp-page="Delete"
                                asp-route-id="@district.Id"
-                               class="btn-orenda-outline btn-sm shadow-orenda-hover">
+                               class="btn btn-outline-danger btn-sm">
                                 Delete
                             </a>
                         }
