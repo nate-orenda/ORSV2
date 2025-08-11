@@ -63,7 +63,7 @@ namespace ORSV2.Pages
                 scopedSchools = _context.Schools
                     .AsNoTracking()
                     .Include(s => s.District)
-                    .Where(s => !s.Inactive);
+                    .Where(s => !s.Inactive && s.enabled);
             }
             else if (roles.Contains("DistrictAdmin") && user.DistrictId.HasValue)
             {
@@ -71,7 +71,7 @@ namespace ORSV2.Pages
                 scopedSchools = _context.Schools
                     .AsNoTracking()
                     .Include(s => s.District)
-                    .Where(s => !s.Inactive && s.DistrictId == districtId);
+                    .Where(s => !s.Inactive && s.enabled && s.DistrictId == districtId);
             }
             else
             {
@@ -85,7 +85,7 @@ namespace ORSV2.Pages
                 scopedSchools = _context.Schools
                     .AsNoTracking()
                     .Include(s => s.District)
-                    .Where(s => !s.Inactive && userSchoolIds.Contains(s.Id));
+                    .Where(s => !s.Inactive && s.enabled && userSchoolIds.Contains(s.Id));
             }
 
             var schools = await scopedSchools
