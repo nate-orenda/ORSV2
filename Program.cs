@@ -120,24 +120,27 @@ var app = builder.Build();
 
 
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
-}
-else
-{
+    // Use your custom Error page in PROD
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+else
+{
+    // Optional in ASP.NET Core 6+: shows detailed errors locally
+    app.UseDeveloperExceptionPage();
+}
 
+// (optional but recommended) pretty status-code pages like 404:
+app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
+
+// the rest of your pipeline...
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
-
 app.Run();
