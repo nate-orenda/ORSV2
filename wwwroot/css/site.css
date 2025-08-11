@@ -403,3 +403,38 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
     font-size: .8rem;
     border-radius: .25rem;
 }
+/* Collapsible district header */
+.district-header-toggle{
+  background:#fff;
+  border:1px solid var(--orenda-border);
+  border-radius:12px;
+  padding:.75rem 1rem;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+  cursor:pointer;
+  transition:box-shadow .2s ease, transform .15s ease, background .2s ease;
+  text-align:left;
+}
+.district-header-toggle:hover{
+  background:#f8f9ff;
+  box-shadow:0 4px 16px rgba(0,34,197,.12);
+  transform:translateY(-1px);
+}
+.district-header-toggle .chevron{
+  display:inline-block;
+  transition:transform .2s ease;
+}
+.district-header-toggle[aria-expanded="false"] .chevron{
+  transform:rotate(-90deg);
+}
+
+/* Collapse body animation */
+.collapse-body{
+  transition:max-height .25s ease, opacity .2s ease, margin-top .2s ease;
+  overflow:hidden;
+}
+.collapse-body.is-collapsed{
+  max-height:0 !important;
+  opacity:0;
+  margin-top:0 !important;
+}
+
