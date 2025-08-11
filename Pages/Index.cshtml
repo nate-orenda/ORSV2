@@ -1,86 +1,67 @@
 ﻿@page
 @model ORSV2.Pages.IndexModel
 @{
-    ViewData["Title"] = "Welcome";
-    Layout = "_Layout";
+    ViewData["Title"] = "Overview";
 }
-<div class="container py-4">
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h4 class="mb-3">Welcome, @Model.UserName</h4>
-            <canvas id="enrollmentChart" height="120"></canvas>
-        </div>
+<div class="orenda-container">
+    <div class="orenda-header shadow-orenda">
+        <h2 class="mb-1">Welcome, @Model.UserName</h2>
+        <p class="mb-0">Choose a school to dive into Guidance Alignment.</p>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <h5 class="mb-3">Currently Assigned Schools</h5>
-            @if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser"))
-            {
-                <ul class="list-group list-group-flush">
-                    @foreach (var district in Model.DistrictSchools)
-                    {
-                        <li class="list-group-item">
-                            <strong>@district.Key</strong>
-                            <ul class="ms-3 mt-1">
-                                @foreach (var schoolName in district.Value)
-                                {
-                                    <li>@schoolName</li>
-                                }
-                            </ul>
-                        </li>
-                    }
-                </ul>
-            }
-            else
-            {
-                <ul class="list-group list-group-flush">
-                    @foreach (var school in Model.EnrollmentSummaries)
-                    {
-                        <li class="list-group-item">@school.Name (@school.Count students)</li>
-                    }
-                </ul>
-            }
+    @if (Model.DistrictBlocks == null || !Model.DistrictBlocks.Any())
+    {
+        <div class="orenda-card shadow-orenda">
+            <div class="orenda-card-body">
+                <p class="mb-0 text-muted">No schools available in your scope.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        foreach (var district in Model.DistrictBlocks)
+        {
+            <section class="mb-4 ga-section visible">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h4 class="mb-0">@district.DistrictName</h4>
+                    <span class="badge school-badge">@(district.Schools.Count) School@(district.Schools.Count == 1 ? "" : "s")</span>
+                </div>
 
+                <div class="row g-3">
+                    @foreach (var s in district.Schools)
+                    {
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <div class="orenda-card shadow-orenda-hover smooth-transition h-100">
+    <div class="orenda-card-body py-3" style="min-width:0;">
+        <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap mb-2">
+            <h5 class="mb-0 text-orenda-primary text-truncate me-2" title="@s.SchoolName" style="font-weight:600; max-width:100%;">
+                @s.SchoolName
+            </h5>
+            <span class="checkpoint-badge flex-shrink-0">CP @(s.CurrentCP.HasValue && s.CurrentCP.Value > 0 ? s.CurrentCP!.Value.ToString() : "—")</span>
+        </div>
+
+        <div class="d-flex flex-column gap-1 small text-muted">
+            <div class="d-flex justify-content-between orenda-summary-item">
+                <span class="orenda-summary-label">Enrollment</span>
+                <span class="fw-semibold">@s.Enrollment</span>
+            </div>
+            <div class="d-flex justify-content-between orenda-summary-item">
+                <span class="orenda-summary-label">GAResults Updated</span>
+                <span class="fw-semibold">
+                    @(s.GAResultsLastUpdated.HasValue 
+                        ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy h:mm tt") 
+                        : "—")
+                </span>
+            </div>
         </div>
     </div>
 </div>
 
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const ctx = document.getElementById('enrollmentChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [@Html.Raw(Model.ChartLabels)],
-                datasets: [{
-                    label: 'Enrollment',
-                    data: [@Html.Raw(Model.ChartData)],
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            autoSkip: false,
-                            maxRotation: 0,
-                            font: { size: 10 }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true
+                        </div>
                     }
-                }
-            }
-        });
-    </script>
-}
+                </div>
+            </section>
+        }
+    }
+</div>

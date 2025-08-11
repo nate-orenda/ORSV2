@@ -208,7 +208,9 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .checkpoint-badge{
   background:linear-gradient(135deg,#28a745 0%,#20c997 100%);
   color:#fff; padding:.3rem .7rem; border-radius:15px; font-size:.75rem; font-weight:500;
+  white-space: nowrap; /* keep "CP X" on one line */
 }
+
 
 /* Responsive tweaks */
 @media (max-width:768px){
