@@ -116,19 +116,34 @@
     const token = form.querySelector('input[name="__RequestVerificationToken"]');
     return token ? token.value : '';
   }
+  function disableAllRunButtons(disable, runningText) {
+    document.querySelectorAll('form.ajax-form button[type="submit"], form.ajax-form-sp button[type="submit"]').forEach(b => {
+      if (disable) {
+        b.disabled = true;
+        b.setAttribute('aria-disabled', 'true');
+        b.classList.add('btn-busy');
+        if (runningText) b.textContent = runningText;
+      } else {
+        b.disabled = false;
+        b.removeAttribute('aria-disabled');
+        b.classList.remove('btn-busy');
+        if (b.closest('form').classList.contains('ajax-form-sp')) {
+          b.textContent = 'Run Stored Procedure';
+        } else {
+          b.textContent = 'Run';
+        }
+      }
+    });
+  }
 
-  // Run individual functions (disable the clicked button until done)
+  // Run individual functions
   document.querySelectorAll('form.ajax-form').forEach(form => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const job = form.dataset.job;
       const data = new FormData(form);
-      const btn = form.querySelector('button[type="submit"]');
 
-      // guard against double-submits
-      if (btn && btn.disabled) return;
-      if (btn) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
-
+      disableAllRunButtons(true, 'Running…');
       setBusy(job, true);
       setStatus(job, 'Running…', true);
       setOutput('out-' + job, '');
@@ -141,26 +156,27 @@
         });
         const json = await resp.json();
         setOutput('out-' + job, json.output);
-        setStatus(job, json.ok ? 'Completed (' + (json.status ?? 200) + ')' : 'Failed (' + (json.status ?? resp.status) + ')', json.ok);
+        setStatus(job,
+          json.ok ? 'Completed (' + (json.status ?? 200) + ')' : 'Failed (' + (json.status ?? resp.status) + ')',
+          json.ok
+        );
       } catch(err){
         setOutput('out-' + job, 'Client error: ' + err);
         setStatus(job, 'Failed (client)', false);
       } finally {
         setBusy(job, false);
-        if (btn) { btn.disabled = false; btn.removeAttribute('aria-disabled'); }
+        disableAllRunButtons(false);
       }
     });
   });
 
-  // Run stored procedure (disable until done)
+  // Run stored procedure
   const spForm = document.querySelector('form.ajax-form-sp');
   if (spForm){
     spForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = spForm.querySelector('button[type="submit"]');
-      if (btn && btn.disabled) return;
-      if (btn) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); }
 
+      disableAllRunButtons(true, 'Running…');
       setBusy(null, true);
       setOutput('out-sp', 'Running…');
 
@@ -176,7 +192,7 @@
         setOutput('out-sp', 'Client error: ' + err);
       } finally {
         setBusy(null, false);
-        if (btn) { btn.disabled = false; btn.removeAttribute('aria-disabled'); }
+        disableAllRunButtons(false);
       }
     });
   }
