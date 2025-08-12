@@ -1,5 +1,5 @@
 // Students Grouping and Table Management
-window.StudentGrouping = (function() {
+window.StudentGrouping = (function () {
     // Private variables for module state
     let currentGrouping = [];
     let dataTable = null;
@@ -36,7 +36,13 @@ window.StudentGrouping = (function() {
         if (createGroupModal && window.bootstrap) {
             bsCreateGroupModal = new bootstrap.Modal(createGroupModal);
         }
-        
+        if (createGroupModal) {
+            createGroupModal.addEventListener('shown.bs.modal', () => {
+                const input = document.getElementById('tgName');
+                if (input) input.focus();
+            });
+        }
+
         bindCreateModalConfirm();
         setupGroupSelectionEvents();
         loadJQueryUI();
@@ -65,7 +71,7 @@ window.StudentGrouping = (function() {
      * Maps column names from data attributes to their index.
      */
     function buildColumnMap() {
-        $('#studentsTable thead th').each(function() {
+        $('#studentsTable thead th').each(function () {
             const columnName = $(this).data('column');
             if (columnName) {
                 const columnIndex = $(this).index();
@@ -79,7 +85,8 @@ window.StudentGrouping = (function() {
      */
     function initializeModal() {
         const modal = document.getElementById('profileModal');
-        modal.addEventListener('show.bs.modal', function(event) {
+        if (!modal) return; // prevent errors if the modal is absent
+        modal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const studentId = button.getAttribute('data-student-id');
             fetch(`/GuidanceAlignment/GAProfileCard?id=${studentId}`)
@@ -110,7 +117,7 @@ window.StudentGrouping = (function() {
         $('#groupingArea').droppable({
             accept: '.draggable-header',
             hoverClass: 'drag-over',
-            drop: function(event, ui) {
+            drop: function (event, ui) {
                 const columnName = ui.draggable.data('column');
                 const columnText = ui.draggable.text().trim();
                 if (currentGrouping.indexOf(columnName) === -1) {
@@ -142,78 +149,39 @@ window.StudentGrouping = (function() {
         const table = window.studentsTable;
         const createBtn = $('#createTargetGroupBtn');
 
-        table.off('select.targetGroup deselect.targetGroup').on('select.targetGroup deselect.targetGroup', function () {
-            const selectedRows = table.rows({ selected: true }).count();
-            createBtn.prop('disabled', selectedRows === 0);
-        });
+        const updateState = () =>
+            createBtn.prop('disabled', table.rows({ selected: true }).count() === 0);
 
+        // Keep button state in sync with selections
+        table.off('select.targetGroup deselect.targetGroup')
+            .on('select.targetGroup deselect.targetGroup', updateState);
+
+        // Open modal with selected IDs
         createBtn.off('click.targetGroup').on('click.targetGroup', function () {
-        const ids = [];
-        table.rows({ selected: true }).nodes().each(function (rowNode) {
-            const sid = parseInt($(rowNode).find('.view-profile').attr('data-student-id'), 10);
-            if (sid) ids.push(sid);
-        });
+            const ids = [];
+            table.rows({ selected: true }).nodes().each(function (rowNode) {
+                const sid = parseInt($(rowNode).find('.view-profile').attr('data-student-id'), 10);
+                if (sid) ids.push(sid);
+            });
 
-        if (!ids.length) {
-            alert("No students selected or could not find student IDs.");
-            return;
-        }
-
-        // Fill count and show modal
-        $('#tgCount').text(ids.length);
-        $('#tgName').val(`Target Group (${ids.length})`);
-        $('#tgNote').val('');
-        $('#confirmCreateGroupBtn').data('ids', ids);
-
-        if (bsCreateGroupModal) bsCreateGroupModal.show();
-        else $('#createGroupModal').modal('show'); // fallback if bootstrap var not global
-        });
-
-    }
-    
-    /**
-     * Sends the data to the server to create a new target group.
-     * @param {string} name - The name for the new group.
-     * @param {number[]} studentIds - An array of student GAResult IDs.
-     */
-    function createGroup(name, studentIds, note) {
-        const verificationToken = $('input[name="__RequestVerificationToken"]').val();
-        
-        // FIX: Construct the correct URL with route parameters
-        const url = `${window.location.pathname}?handler=CreateTargetGroup`;
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': verificationToken
-            },
-            body: JSON.stringify({
-                groupName: name,
-                studentIds: studentIds,
-                note: note,
-                schoolId: schoolId
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => { 
-                    throw new Error(text || `Server returned status ${response.status}`); 
-                });
+            if (!ids.length) {
+                alert("No students selected or could not find student IDs.");
+                return;
             }
-            return response.json();
-        })
-        .then(data => {
-            if (data.newGroupId) {
-                alert('Successfully created target group!');
-                window.location.href = `/GuidanceAlignment/TargetGroup/${data.newGroupId}`;
-            }
-        })
-        .catch(error => {
-            console.error('Error creating target group:', error);
-            alert(`Error: ${error.message}`);
+
+            $('#tgCount').text(ids.length);
+            $('#tgName').val(`Target Group (${ids.length})`);
+            $('#tgNote').val('');
+            $('#confirmCreateGroupBtn').data('ids', ids);
+
+            if (bsCreateGroupModal) bsCreateGroupModal.show();
+            else $('#createGroupModal').modal('show');
         });
+
+        // ⬇️ NEW: ensure correct initial enabled/disabled state after (re)init
+        updateState();
     }
+
 
     /**
      * Initializes or re-initializes the main DataTable with optional grouping.
@@ -237,8 +205,8 @@ window.StudentGrouping = (function() {
             dom: 'Bfrtip',
             buttons: [
                 { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
-                { extend: 'csvHtml5',   text: '<i class="fas fa-file-csv"></i> CSV',   className: 'btn btn-info btn-sm condensed-btn',    exportOptions: { columns: ':visible' } },
-                { extend: 'print',      text: '<i class="fas fa-print"></i> Print',   className: 'btn btn-secondary btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
+                { extend: 'csvHtml5', text: '<i class="fas fa-file-csv"></i> CSV', className: 'btn btn-info btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
+                { extend: 'print', text: '<i class="fas fa-print"></i> Print', className: 'btn btn-secondary btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
                 {
                     text: '<i class="fas fa-download"></i> Export Selected',
                     className: 'btn btn-primary btn-sm condensed-btn',
@@ -285,62 +253,62 @@ window.StudentGrouping = (function() {
     }
 
     function setupGroupSelectionEvents() {
-    const $table = $('#studentsTable');
+        const $table = $('#studentsTable');
 
-    // FIX 1: Bind the click event to the entire group row ('tr.dtrg-start').
-    // This makes the entire row, including the text, a reliable and intuitive click target.
-    $table.off('click.selectGroup').on('click.selectGroup', 'tr.dtrg-start', function () {
-        const $groupRow = $(this);
+        // FIX 1: Bind the click event to the entire group row ('tr.dtrg-start').
+        // This makes the entire row, including the text, a reliable and intuitive click target.
+        $table.off('click.selectGroup').on('click.selectGroup', 'tr.dtrg-start', function () {
+            const $groupRow = $(this);
 
-        // FIX 2: Implement logic that correctly handles nested groups.
-        // We find the clicked group's level and then gather all rows until we hit another
-        // group header at the same (or a higher) level.
+            // FIX 2: Implement logic that correctly handles nested groups.
+            // We find the clicked group's level and then gather all rows until we hit another
+            // group header at the same (or a higher) level.
 
-        // Find the level of the clicked group (e.g., 'dtrg-level-0').
-        const levelMatch = $groupRow.attr('class').match(/dtrg-level-(\d+)/);
-        if (!levelMatch) return; // Exit if the group level class isn't found
-        const groupLevel = parseInt(levelMatch[1], 10);
+            // Find the level of the clicked group (e.g., 'dtrg-level-0').
+            const levelMatch = $groupRow.attr('class').match(/dtrg-level-(\d+)/);
+            if (!levelMatch) return; // Exit if the group level class isn't found
+            const groupLevel = parseInt(levelMatch[1], 10);
 
-        const memberRows = [];
-        let currentRow = $groupRow.next(); // Start with the row immediately after the header
+            const memberRows = [];
+            let currentRow = $groupRow.next(); // Start with the row immediately after the header
 
-        // Traverse through all subsequent rows
-        while (currentRow.length) {
-            // Check if the current row is another group header
-            if (currentRow.hasClass('dtrg-start')) {
-                const nextLevelMatch = currentRow.attr('class').match(/dtrg-level-(\d+)/);
-                if (nextLevelMatch) {
-                    const nextGroupLevel = parseInt(nextLevelMatch[1], 10);
-                    // If we find a group at the same or a higher level, it's the boundary.
-                    if (nextGroupLevel <= groupLevel) {
-                        break; // Exit the loop; we've collected all members of our group.
+            // Traverse through all subsequent rows
+            while (currentRow.length) {
+                // Check if the current row is another group header
+                if (currentRow.hasClass('dtrg-start')) {
+                    const nextLevelMatch = currentRow.attr('class').match(/dtrg-level-(\d+)/);
+                    if (nextLevelMatch) {
+                        const nextGroupLevel = parseInt(nextLevelMatch[1], 10);
+                        // If we find a group at the same or a higher level, it's the boundary.
+                        if (nextGroupLevel <= groupLevel) {
+                            break; // Exit the loop; we've collected all members of our group.
+                        }
                     }
                 }
+
+                // We only want to select actual data rows, not subgroup headers or group footers.
+                if (!currentRow.hasClass('dtrg-start') && !currentRow.hasClass('dtrg-end')) {
+                    memberRows.push(currentRow[0]); // Add the raw DOM element to our list
+                }
+
+                currentRow = currentRow.next(); // Move to the next row
             }
 
-            // We only want to select actual data rows, not subgroup headers or group footers.
-            if (!currentRow.hasClass('dtrg-start') && !currentRow.hasClass('dtrg-end')) {
-                memberRows.push(currentRow[0]); // Add the raw DOM element to our list
+            if (memberRows.length === 0) {
+                return; // Nothing to do if the group is empty.
             }
 
-            currentRow = currentRow.next(); // Move to the next row
-        }
+            // Use the collected rows to perform the selection/deselection.
+            const dtRows = dataTable.rows(memberRows);
+            const isAllSelected = dtRows.nodes().to$().filter('.selected').length === memberRows.length;
 
-        if (memberRows.length === 0) {
-            return; // Nothing to do if the group is empty.
-        }
-
-        // Use the collected rows to perform the selection/deselection.
-        const dtRows = dataTable.rows(memberRows);
-        const isAllSelected = dtRows.nodes().to$().filter('.selected').length === memberRows.length;
-
-        if (isAllSelected) {
-            dtRows.deselect();
-        } else {
-            dtRows.select();
-        }
-    });
-}
+            if (isAllSelected) {
+                dtRows.deselect();
+            } else {
+                dtRows.select();
+            }
+        });
+    }
 
     function addGrouping(columnName, columnText) {
         currentGrouping.push(columnName);
@@ -372,24 +340,24 @@ window.StudentGrouping = (function() {
     }
 
     function bindCreateModalConfirm() {
-        // (Re)bind safely
         $(document).off('click.createGroup', '#confirmCreateGroupBtn')
-        .on('click.createGroup', '#confirmCreateGroupBtn', function () {
-            const ids  = $(this).data('ids') || [];
-            const name = ($('#tgName').val() || '').trim();
-            const note = ($('#tgNote').val() || '').trim();
+            .on('click.createGroup', '#confirmCreateGroupBtn', function () {
+                const ids = $(this).data('ids') || [];
+                const name = ($('#tgName').val() || '').trim();
+                const note = ($('#tgNote').val() || '').trim();
 
-            if (!name) { $('#tgName').focus(); return; }
-            if (!ids.length) { alert('No students selected.'); return; }
+                if (!name) { $('#tgName').focus(); return; }
+                if (!ids.length) { alert('No students selected.'); return; }
 
-            // Call the module's private function
-            createGroup(name, ids, note);
+                // Fill the hidden form and submit (classic POST with antiforgery)
+                $('#tgFormName').val(name);
+                $('#tgFormNote').val(note);
+                $('#tgFormIds').val(ids.join(',')); // comma-separated StuIds
 
-            // Close the modal using the module's modal instance
-            if (bsCreateGroupModal) bsCreateGroupModal.hide();
-            else $('#createGroupModal').modal('hide');
-        });
+                document.getElementById('createGroupForm').submit();
+            });
     }
+
 
 
     function applyGrouping() {
@@ -428,7 +396,7 @@ window.StudentGrouping = (function() {
     };
 })();
 
-window.StudentCharts = (function() {
+window.StudentCharts = (function () {
     function init() {
         if (window.studentPageData) {
             initializeIndicatorChart();
@@ -480,7 +448,7 @@ window.StudentCharts = (function() {
                     legend: { display: true, position: 'top', align: 'center' },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const value = context.parsed;
                                 const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 return `${context.label}: ${value} (${percent}%)`;
@@ -495,7 +463,7 @@ window.StudentCharts = (function() {
     return { init: init };
 })();
 
-window.clearGrouping = function() {
+window.clearGrouping = function () {
     StudentGrouping.clearGrouping();
 };
 

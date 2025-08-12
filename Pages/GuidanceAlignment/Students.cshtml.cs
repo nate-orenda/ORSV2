@@ -175,53 +175,54 @@ namespace ORSV2.Pages.GuidanceAlignment
             return Page();
         }
 
-        public sealed class CreateGroupDto
+        // Replace the JSON handler with this form-post version
+        public async Task<IActionResult> OnPostCreateTargetGroupAsync(
+            int schoolId,
+            string groupName,
+            string? note,
+            string studentIds // comma-separated StuIds
+        )
         {
-            public int SchoolId { get; set; }
-            public string GroupName { get; set; } = string.Empty;
-            public List<int> StudentIds { get; set; } = new();
-            public string? Note { get; set; }
-        }
+            if (!await AuthorizeAsync(schoolId)) return Forbid();
+            if (string.IsNullOrWhiteSpace(groupName)) return BadRequest("Group name is required.");
 
-        public async Task<IActionResult> OnPostCreateTargetGroupAsync([FromBody] CreateGroupDto data)
-        {
-            if (!await AuthorizeAsync(data.SchoolId)) return Forbid();
-            if (string.IsNullOrWhiteSpace(data.GroupName) || data.StudentIds.Count == 0)
-                return BadRequest("Group name and at least one StudentId are required.");
+            var ids = (studentIds ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var val) ? (int?)val : null)
+                .Where(v => v.HasValue).Select(v => v!.Value)
+                .Distinct()
+                .ToList();
+
+            if (ids.Count == 0) return BadRequest("At least one StudentId is required.");
 
             var group = new TargetGroup {
-                Name = data.GroupName.Trim(),
-                SchoolId = data.SchoolId,
+                Name = groupName.Trim(),
+                SchoolId = schoolId,
                 CreatedAt = DateTime.UtcNow,
-                Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim()  // <— NEW
+                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
             };
             _context.TargetGroups.Add(group);
             await _context.SaveChangesAsync();
 
-            // Validate provided IDs exist in STU
-            // validate StudentIds belong to this school (use STU.SchoolID)
+            // Only add members that belong to this school
             var valid = await _context.STU.AsNoTracking()
-                .Where(s => s.SchoolID == data.SchoolId && data.StudentIds.Contains(s.StuId))
+                .Where(s => s.SchoolID == schoolId && ids.Contains(s.StuId))
                 .Select(s => s.StuId)
                 .ToListAsync();
 
-            var existing = await _context.TargetGroupStudents.AsNoTracking()
-                .Where(t => t.TargetGroupId == group.Id && valid.Contains(t.StudentId))
-                .Select(t => t.StudentId)
-                .ToListAsync();
-
-            var toAdd = valid.Except(existing)
-                .Select(id => new TargetGroupStudent { TargetGroupId = group.Id, StudentId = id })
-                .ToList();
-
-            if (toAdd.Count > 0)
+            if (valid.Count > 0)
             {
-                _context.TargetGroupStudents.AddRange(toAdd);
+                var links = valid.Select(id => new TargetGroupStudent {
+                    TargetGroupId = group.Id, StudentId = id
+                }).ToList();
+                _context.TargetGroupStudents.AddRange(links);
                 await _context.SaveChangesAsync();
             }
 
-            return new JsonResult(new { newGroupId = group.Id, added = toAdd.Count });
+            // Go to the new group page after success
+            return RedirectToPage("/GuidanceAlignment/TargetGroup", new { id = group.Id });
         }
+
 
     }
 }

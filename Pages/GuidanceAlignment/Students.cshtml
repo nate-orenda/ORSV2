@@ -43,6 +43,13 @@
 
 <!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+<form id="createGroupForm" method="post" asp-page-handler="CreateTargetGroup" class="d-none">
+  @Html.AntiForgeryToken()
+  <input type="hidden" name="SchoolId" value="@Model.SchoolId" />
+  <input type="hidden" name="GroupName" id="tgFormName" />
+  <input type="hidden" name="Note" id="tgFormNote" />
+  <input type="hidden" name="StudentIds" id="tgFormIds" />
+</form>
 
 <div class="row">
     <!-- Left: Indicator Bar Chart -->
@@ -117,7 +124,9 @@
             <h5 class="card-title mb-0">Student List – Grade @Model.Grade</h5>
             <div class="d-flex align-items-center">
                 <small class="text-muted me-3">Drag column headers below to group students</small>
-                <button class="btn btn-outline-danger btn-sm clear-grouping" onclick="StudentGrouping.clearGrouping()" style="display: none;"><i class="bi bi-x-circle"></i> Clear Grouping</button>
+                <button type="button" class="btn btn-outline-danger btn-sm clear-grouping" onclick="StudentGrouping.clearGrouping()" style="display:none;">
+                    <i class="bi bi-x-circle"></i> Clear Grouping
+                </button>
             </div>
         </div>
 
@@ -133,15 +142,15 @@
                 <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm" disabled>
                     <i class="bi bi-bullseye"></i> Create Target Group
                 </button>
-                <a class="btn btn-orenda-primary btn-sm"
+                <a class="btn-orenda-outline btn-sm"
                     asp-page="/GuidanceAlignment/ViewTargetGroups"
                     asp-route-schoolId="@Model.SchoolId">
-                    View Target Groups
+                    Target Groups
                 </a>
             </div>
             <div class="right">
                 <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
-            </div>  
+            </div>
         </div>
         <!-- Container for scrolling -->
         <div class="table-scroll-container">
@@ -270,7 +279,6 @@
         </div>
     </div>
 </div>
-
 <!-- Create Target Group Modal -->
 <div class="modal fade" id="createGroupModal" tabindex="-1" aria-labelledby="createGroupLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -305,7 +313,6 @@
     </div>
   </div>
 </div>
-
 
 <style>
     #indicatorChart {
@@ -441,13 +448,10 @@
         };
         
         // Initialize when DOM is ready
-        $(document).ready(function() {
-            // FIX: Pass both schoolId and grade to the init function
-            StudentGrouping.init({
-                schoolId: @Model.SchoolId,
-                grade: @Model.Grade
-            }); 
-            StudentCharts.init();
+        $(document).ready(function () {
+            StudentGrouping.init({ schoolId: @Model.SchoolId, grade: @Model.Grade });
+            if (window.StudentCharts?.init) StudentCharts.init();
         });
+
     </script>
 }
