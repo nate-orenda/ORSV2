@@ -16,7 +16,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             _context = context;
         }
 
-        public GAResults Student { get; set; }
+        public GAResults Student { get; set; } = default!;
         public List<IndicatorSummary> StudentIndicators { get; set; } = new();
         public int? AttendanceAbsences { get; set; }
         public double? CumulativeGPA => Student?.CumulativeGPA;
@@ -72,8 +72,9 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
-            Student = await _context.GAResults.FirstOrDefaultAsync(s => s.ResultId == id);
-            if (Student == null) return NotFound();
+           Student = await _context.GAResults
+                .FirstOrDefaultAsync(s => s.ResultId == id)
+                ?? throw new InvalidOperationException("Student not found");
 
             var school = await _context.Schools.Include(s => s.District).FirstOrDefaultAsync(s => s.Id == Student.SchoolId);
             if (school == null) return NotFound();
