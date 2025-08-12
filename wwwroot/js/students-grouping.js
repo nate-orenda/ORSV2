@@ -273,17 +273,62 @@ window.StudentGrouping = (function() {
     }
 
     function setupGroupSelectionEvents() {
-        const $table = $('#studentsTable');
-        $table.off('click.selectGroup').on('click.selectGroup', 'tr.dtrg-start, .clickable-group-header', function () {
-            const $groupRow = $(this).closest('tr.dtrg-start');
-            if (!$groupRow.length) return;
-            const $dataRows = $groupRow.nextUntil('tr.dtrg-start').filter('tr').not('.dtrg-start,.dtrg-end');
-            if (!$dataRows.length) return;
-            const dtRows = dataTable.rows($dataRows);
-            const isAllSelected = dtRows.nodes().to$().filter('.selected').length === dtRows.count();
-            isAllSelected ? dtRows.deselect() : dtRows.select();
-        });
-    }
+    const $table = $('#studentsTable');
+
+    // FIX 1: Bind the click event to the entire group row ('tr.dtrg-start').
+    // This makes the entire row, including the text, a reliable and intuitive click target.
+    $table.off('click.selectGroup').on('click.selectGroup', 'tr.dtrg-start', function () {
+        const $groupRow = $(this);
+
+        // FIX 2: Implement logic that correctly handles nested groups.
+        // We find the clicked group's level and then gather all rows until we hit another
+        // group header at the same (or a higher) level.
+
+        // Find the level of the clicked group (e.g., 'dtrg-level-0').
+        const levelMatch = $groupRow.attr('class').match(/dtrg-level-(\d+)/);
+        if (!levelMatch) return; // Exit if the group level class isn't found
+        const groupLevel = parseInt(levelMatch[1], 10);
+
+        const memberRows = [];
+        let currentRow = $groupRow.next(); // Start with the row immediately after the header
+
+        // Traverse through all subsequent rows
+        while (currentRow.length) {
+            // Check if the current row is another group header
+            if (currentRow.hasClass('dtrg-start')) {
+                const nextLevelMatch = currentRow.attr('class').match(/dtrg-level-(\d+)/);
+                if (nextLevelMatch) {
+                    const nextGroupLevel = parseInt(nextLevelMatch[1], 10);
+                    // If we find a group at the same or a higher level, it's the boundary.
+                    if (nextGroupLevel <= groupLevel) {
+                        break; // Exit the loop; we've collected all members of our group.
+                    }
+                }
+            }
+
+            // We only want to select actual data rows, not subgroup headers or group footers.
+            if (!currentRow.hasClass('dtrg-start') && !currentRow.hasClass('dtrg-end')) {
+                memberRows.push(currentRow[0]); // Add the raw DOM element to our list
+            }
+
+            currentRow = currentRow.next(); // Move to the next row
+        }
+
+        if (memberRows.length === 0) {
+            return; // Nothing to do if the group is empty.
+        }
+
+        // Use the collected rows to perform the selection/deselection.
+        const dtRows = dataTable.rows(memberRows);
+        const isAllSelected = dtRows.nodes().to$().filter('.selected').length === memberRows.length;
+
+        if (isAllSelected) {
+            dtRows.deselect();
+        } else {
+            dtRows.select();
+        }
+    });
+}
 
     function addGrouping(columnName, columnText) {
         currentGrouping.push(columnName);
