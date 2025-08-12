@@ -127,7 +127,12 @@
         </div>
         <div id="studentsToolbar" class="students-toolbar">
             <div class="left">
+                <!-- This is where the DataTables buttons like Excel export are rendered -->
                 <div id="dtButtons"></div>
+                <!-- Add our new button here -->
+                <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm" disabled>
+                    <i class="bi bi-bullseye"></i> Create Target Group
+                </button>
             </div>
             <div class="right">
                 <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
@@ -361,13 +366,12 @@
 </style>
 
 @section Scripts {
+    <!-- All your CSS and JS library includes remain the same -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css">
     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
     <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
-
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.2/css/buttons.bootstrap5.css">
     <script src="https://cdn.datatables.net/buttons/3.0.2/js/dataTables.buttons.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.bootstrap5.js"></script>
@@ -376,18 +380,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.print.min.js"></script>
-    
     <link rel="stylesheet" href="https://cdn.datatables.net/select/2.0.3/css/select.bootstrap5.css">
     <script src="https://cdn.datatables.net/select/2.0.3/js/dataTables.select.js"></script>
-    
     <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.5.0/css/rowGroup.bootstrap5.css">
     <script src="https://cdn.datatables.net/rowgroup/1.5.0/js/dataTables.rowGroup.js"></script>
-    
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-   <script src="~/js/students-grouping.js" asp-append-version="true"></script>
-   <script>
+    <script src="~/js/students-grouping.js" asp-append-version="true"></script>
+    
+    <script>
         // Initialize page with data from server
         window.studentPageData = {
             indicatorData: @Html.Raw(JsonSerializer.Serialize(Model.IndicatorSummaries)),
@@ -399,7 +401,11 @@
         
         // Initialize when DOM is ready
         $(document).ready(function() {
-            StudentGrouping.init();
+            // FIX: Pass both schoolId and grade to the init function
+            StudentGrouping.init({
+                schoolId: @Model.SchoolId,
+                grade: @Model.Grade
+            }); 
             StudentCharts.init();
         });
     </script>

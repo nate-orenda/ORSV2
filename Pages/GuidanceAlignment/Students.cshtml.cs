@@ -8,7 +8,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 {
     public class StudentsModel : GABasePageModel
     {
-        public StudentsModel(ApplicationDbContext context) : base(context) {}
+        public StudentsModel(ApplicationDbContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)] public int SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public int Grade { get; set; }
@@ -22,6 +22,13 @@ namespace ORSV2.Pages.GuidanceAlignment
             public double PercentMet { get; set; }
             public int CountMet { get; set; }
         }
+        public sealed class CreateGroupDto
+        {
+            public int SchoolId { get; set; }
+            public string GroupName { get; set; } = string.Empty;
+            public List<int> StudentResultIds { get; set; } = new();
+        }
+
         public List<IndicatorSummary> IndicatorSummaries { get; set; } = new();
         public record QuadrantSummary(int Grade, string Quadrant, int Count);
         public List<QuadrantSummary> QuadrantSummaries { get; set; } = new();
@@ -89,7 +96,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 .ToListAsync();
 
             // Quadrant breakdown for this grade level
-           var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
+            var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
             var indicatorCounts = new Dictionary<string, int>
             {
                 ["OnTrack"] = 0,
@@ -164,5 +171,54 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             return Page();
         }
+
+        public async Task<IActionResult> OnPostCreateTargetGroupAsync([FromBody] CreateGroupDto data)
+        {
+            if (!await AuthorizeAsync(data.SchoolId)) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(data.GroupName) || data.StudentResultIds is null || data.StudentResultIds.Count == 0)
+                return BadRequest("Group name and at least one ResultId are required.");
+
+            // ensure school exists
+            var schoolExists = await _context.Schools.AsNoTracking().AnyAsync(s => s.Id == data.SchoolId);
+            if (!schoolExists) return BadRequest("Invalid SchoolId.");
+
+            // validate ResultIds for this school
+            var validIds = await _context.GAResults.AsNoTracking()
+                .Where(r => r.SchoolId == data.SchoolId && data.StudentResultIds.Contains(r.ResultId))
+                .Select(r => r.ResultId)
+                .ToListAsync();
+
+            if (validIds.Count == 0) return BadRequest("No valid ResultIds for this school.");
+
+            var group = new TargetGroup
+            {
+                Name = data.GroupName.Trim(),
+                SchoolId = data.SchoolId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.TargetGroups.Add(group);
+            await _context.SaveChangesAsync(); // gets group.Id
+
+            // skip any that already exist (composite PK would reject dupes)
+            var already = await _context.TargetGroupStudents.AsNoTracking()
+                .Where(t => t.TargetGroupId == group.Id && validIds.Contains(t.GAResultId))
+                .Select(t => t.GAResultId)
+                .ToListAsync();
+
+            var toAdd = validIds.Except(already)
+                .Select(rid => new TargetGroupStudent { TargetGroupId = group.Id, GAResultId = rid })
+                .ToList();
+
+            if (toAdd.Count > 0)
+            {
+                _context.TargetGroupStudents.AddRange(toAdd);
+                await _context.SaveChangesAsync();
+            }
+
+            return new JsonResult(new { newGroupId = group.Id, added = toAdd.Count });
+        }
     }
+
 }

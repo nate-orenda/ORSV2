@@ -1,0 +1,134 @@
+@page "{id:int}"
+@model ORSV2.Pages.GuidanceAlignment.TargetGroupModel
+@{
+    // Title is set in the OnGetAsync method
+}
+
+<partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <div>
+                <h5 class="card-title mb-0">@Model.GroupName</h5>
+                <small class="text-muted">@Model.SchoolName</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2">@Model.Students.Count Students</span>
+                <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = Model.CurrentGroup?.SchoolId })" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to School Overview
+                </a>
+            </div>
+        </div>
+
+        <div class="table-scroll-container">
+            <table class="table table-sm table-hover table-striped mb-0" id="studentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-2">Name</th>
+                        <th class="py-2">ID</th>
+                        <th class="py-2">Gr</th>
+                        <th class="py-2">Counselor</th>
+                        <th class="py-2 text-center">SWD</th>
+                        <th class="py-2 text-center">SED</th>
+                        <th class="py-2 text-center">Curr GPA</th>
+                        <th class="py-2 text-center">Cum GPA</th>
+                        <th class="py-2 text-center">Credits</th>
+                        <th class="py-2 text-center">Quadrant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Students)
+                    {
+                        <tr style="font-size: 0.8rem;">
+                            <td class="py-1">
+                                <a href="#" class="fw-semibold text-decoration-none view-profile" data-bs-toggle="modal"
+                                   data-bs-target="#profileModal" data-student-id="@s.ResultId">
+                                    @s.LastName, @s.FirstName
+                                </a>
+                            </td>
+                            <td class="py-1"><span class="badge bg-secondary" style="font-size: 0.7rem;">@s.LocalStudentId</span></td>
+                            <td class="py-1">@s.Grade</td>
+                            <td class="py-1">@s.CounselorName</td>
+                            <td class="py-1 text-center">
+                                <span class="badge @(s.SWD == true ? "bg-warning" : "bg-light text-muted")" style="font-size: 0.7rem;">
+                                    @(s.SWD == true ? "Y" : "N")
+                                </span>
+                            </td>
+                            <td class="py-1 text-center">
+                                <span class="badge @(s.SED == true ? "bg-info" : "bg-light text-muted")" style="font-size: 0.7rem;">
+                                    @(s.SED == true ? "Y" : "N")
+                                </span>
+                            </td>
+                            <td class="py-1 text-center">@(s.CurrentGPA?.ToString("0.00") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.CumulativeGPA?.ToString("0.00") ?? "-")</td>
+                            <td class="py-1 text-center">@(s.CreditsCompleted?.ToString("0.#") ?? "-")</td>
+                            <td class="py-1 text-center">
+                                <span class="badge 
+                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
+                                      s.Quadrant == "Benchmark" ? "bg-success" :
+                                      s.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                                      s.Quadrant == "Intensive" ? "bg-danger" :
+                                      "bg-secondary")" style="font-size: 0.7rem; padding: 2px 6px;">
+                                    @(s.Quadrant ?? "-")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="profileContent">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* These styles are copied from Students.cshtml to ensure consistency */
+    .table-scroll-container {
+        overflow: auto; /* Handles both x and y scroll */
+        max-height: 70vh; /* Example height, adjust as needed */
+        position: relative;
+    }
+
+    #studentsTable > thead th {
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: #f8f9fa; /* Match table-light */
+        box-shadow: inset 0 -2px 0 #dee2e6; /* Clean bottom border */
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Optional: Add JavaScript for profile modal loading if it's not already global
+        // This script assumes you have a global handler for loading the profile modal content.
+        // If not, you can add it here.
+        $(document).ready(function() {
+            $('.view-profile').on('click', function(e) {
+                e.preventDefault();
+                const studentId = $(this).data('student-id');
+                const modalBody = $('#profileContent');
+                modalBody.html('Loading...'); // Show loading text
+                
+                // Example of loading content. Adjust URL as needed.
+                // This assumes you have a partial page or handler to return student profile HTML.
+                modalBody.load(`/GuidanceAlignment/Students?handler=StudentProfile&resultId=${studentId}`);
+            });
+        });
+    </script>
+}

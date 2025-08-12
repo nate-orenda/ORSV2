@@ -29,6 +29,8 @@ namespace ORSV2.Data
         public DbSet<Assessment> Assessments { get; set; }
         public DbSet<VwStudentResultsClasses> VwStudentResultsClasses { get; set; }
         public DbSet<ORSV2.Models.Standard> Standards { get; set; }
+        public DbSet<TargetGroup> TargetGroups { get; set; }
+        public DbSet<TargetGroupStudent> TargetGroupStudents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -65,6 +67,38 @@ namespace ORSV2.Data
             .WithMany()
             .HasForeignKey(r => r.DistrictId)
             .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<GAResults>(e =>
+            {
+                e.ToTable("GAResults", t => t.ExcludeFromMigrations());
+                e.HasKey(r => r.ResultId);
+            });
+
+
+            // TargetGroups
+            builder.Entity<TargetGroup>(e =>
+            {
+                e.ToTable("TargetGroups", t => t.ExcludeFromMigrations());
+                e.HasKey(x => x.Id);                  // PK = Id (IDENTITY)
+                e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            });
+
+            // TargetGroupStudents – composite key (TargetGroupId, GAResultId)
+            builder.Entity<TargetGroupStudent>(e =>
+            {
+                e.ToTable("TargetGroupStudents", t => t.ExcludeFromMigrations());
+                e.HasKey(x => new { x.TargetGroupId, x.GAResultId });
+
+                e.HasOne(x => x.TargetGroup)
+                    .WithMany(g => g.TargetGroupStudents)
+                    .HasForeignKey(x => x.TargetGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.GAResult)
+                    .WithMany()
+                    .HasForeignKey(x => x.GAResultId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // District relationships
             builder.Entity<District>()
