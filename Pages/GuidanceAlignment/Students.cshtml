@@ -133,10 +133,15 @@
                 <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm" disabled>
                     <i class="bi bi-bullseye"></i> Create Target Group
                 </button>
+                <a class="btn btn-orenda-primary btn-sm"
+                    asp-page="/GuidanceAlignment/ViewTargetGroups"
+                    asp-route-schoolId="@Model.SchoolId">
+                    View Target Groups
+                </a>
             </div>
             <div class="right">
                 <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
-            </div>
+            </div>  
         </div>
         <!-- Container for scrolling -->
         <div class="table-scroll-container">
@@ -196,7 +201,7 @@
                             data-quadrant="@(s.Quadrant ?? "")">
                             <td class="py-1">
                                 <a href="#" class="fw-semibold text-decoration-none view-profile" data-bs-toggle="modal"
-                                   data-bs-target="#profileModal" data-student-id="@s.ResultId">
+                                   data-student-id="@(Model.StuIdByLocal.TryGetValue(s.LocalStudentId ?? "", out var sid) ? sid : 0)">
                                     @s.LastName, @s.FirstName
                                 </a>
                             </td>
@@ -265,6 +270,42 @@
         </div>
     </div>
 </div>
+
+<!-- Create Target Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1" aria-labelledby="createGroupLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow-orenda">
+      <div class="modal-header bg-orenda-primary text-white">
+        <h5 class="modal-title" id="createGroupLabel">Create Target Group</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="tgName" class="form-label fw-semibold">Group name</label>
+          <input type="text" class="form-control" id="tgName" placeholder="e.g., Grade 11 – Intensive Check-In">
+        </div>
+
+        <div class="mb-3">
+          <label for="tgNote" class="form-label fw-semibold">Note (optional)</label>
+          <textarea class="form-control" id="tgNote" rows="3" placeholder="Why this group? goals, next steps, etc."></textarea>
+        </div>
+
+        <div class="small text-muted">
+          <span id="tgCount">0</span> students selected
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-orenda-ghost" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="confirmCreateGroupBtn" class="btn btn-orenda-primary">
+          <i class="bi bi-bullseye"></i> Create Group
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <style>
     #indicatorChart {

@@ -1,0 +1,189 @@
+@page "/GuidanceAlignment/ViewTargetGroups"
+@model ORSV2.Pages.GuidanceAlignment.ViewTargetGroupsModel
+@{
+    ViewData["Title"] = "Target Groups";
+}
+
+<div class="orenda-container">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            @foreach (var bc in Model.Breadcrumbs)
+            {
+                if (!string.IsNullOrEmpty(bc.Url))
+                {
+                    <li class="breadcrumb-item"><a href="@bc.Url">@bc.Title</a></li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@bc.Title</li>
+                }
+            }
+        </ol>
+    </nav>
+
+    <div class="orenda-header shadow-orenda">
+        <h2 class="mb-1">Target Groups – @Model.School?.Name</h2>
+        <p class="mb-0">Manage groups for this school. Click a field to edit name or notes.</p>
+    </div>
+
+    <div class="orenda-card shadow-orenda">
+        <div class="orenda-card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge checkpoint-badge">Groups</span>
+                    <span class="text-muted small">@Model.Groups.Count group(s)</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn-orenda-outline btn-sm"
+                       asp-page="/GuidanceAlignment/Overview"
+                       asp-route-schoolId="@Model.SchoolId">Back to Overview</a>
+                </div>
+            </div>
+
+            <div class="orenda-table-wrapper">
+                <table class="table orenda-table align-middle" id="groupsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 18rem;">Group Name</th>
+                            <th>Notes</th>
+                            <th class="text-center" style="width: 8rem;">Students</th>
+                            <th class="text-center" style="width: 9rem;">Created</th>
+                            <th class="text-center" style="width: 9rem;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in Model.Groups)
+                        {
+                            <tr data-id="@g.Id">
+                                <td>
+                                    <div class="editable" data-field="name">
+                                        <span class="view-value">@g.Name</span>
+                                        <input class="form-control form-control-sm d-none" value="@g.Name" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="editable" data-field="note">
+                                        <span class="view-value">@(!string.IsNullOrWhiteSpace(g.Note) ? g.Note : "<no notes>")</span>
+                                        <textarea class="form-control form-control-sm d-none" rows="2">@g.Note</textarea>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <a class="btn-orenda-ghost btn-sm"
+                                       asp-page="/GuidanceAlignment/TargetGroup"
+                                       asp-route-id="@g.Id"
+                                       title="Open group">
+                                        @g.StudentCount
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    @g.CreatedAt.ToString("yyyy-MM-dd")
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-orenda-soft btn-sm js-edit">Edit</button>
+                                    <button class="btn-orenda btn-sm d-none js-save">Save</button>
+                                    <button class="btn-orenda-outline btn-sm d-none js-cancel">Cancel</button>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Groups.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-muted text-center py-4">
+                                    No target groups yet. Create one from the Students page selection tool, then manage it here.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3">
+                <small class="text-muted">Tip: From the Students page, select rows and “Create Target Group”. They’ll appear here for editing.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+    const table = document.getElementById('groupsTable');
+
+    function toggleRow(row, editing){
+        row.querySelectorAll('.editable').forEach(ed => {
+            const span = ed.querySelector('.view-value');
+            const input = ed.querySelector('input,textarea');
+            if (editing){
+                span.classList.add('d-none');
+                input.classList.remove('d-none');
+                input.dataset.original = input.value;
+            } else {
+                span.classList.remove('d-none');
+                input.classList.add('d-none');
+                span.textContent = (input.value || '').trim() || (ed.dataset.field === 'note' ? '<no notes>' : '');
+            }
+        });
+        row.querySelector('.js-edit')?.classList.toggle('d-none', editing);
+        row.querySelector('.js-save')?.classList.toggle('d-none', !editing);
+        row.querySelector('.js-cancel')?.classList.toggle('d-none', !editing);
+    }
+
+    table.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        if (!row) return;
+
+        if (btn.classList.contains('js-edit')){
+            toggleRow(row, true);
+        }
+        else if (btn.classList.contains('js-cancel')){
+            // revert
+            row.querySelectorAll('.editable').forEach(ed => {
+                const span = ed.querySelector('.view-value');
+                const input = ed.querySelector('input,textarea');
+                if (input && input.dataset.original !== undefined){
+                    input.value = input.dataset.original;
+                }
+                span.classList.remove('d-none');
+                input.classList.add('d-none');
+            });
+            toggleRow(row, false);
+        }
+        else if (btn.classList.contains('js-save')){
+            const id = parseInt(row.dataset.id, 10);
+            const name = row.querySelector('[data-field="name"] input').value.trim();
+            const note = row.querySelector('[data-field="note"] textarea').value.trim();
+
+            if (!name){
+                alert('Group name is required.');
+                return;
+            }
+
+            // busy state
+            btn.setAttribute('aria-busy', 'true');
+            row.querySelectorAll('button').forEach(b => b.disabled = true);
+
+            try{
+                const res = await fetch(`@Url.Page("/GuidanceAlignment/TargetGroups", null, new { handler = "Save" }, Request.Scheme)`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id, name, note, schoolId: @Model.SchoolId })
+                });
+                if (!res.ok){
+                    const msg = await res.text();
+                    throw new Error(msg || 'Save failed');
+                }
+                toggleRow(row, false);
+            }catch(err){
+                console.error(err);
+                alert('Could not save changes.');
+            }finally{
+                btn.removeAttribute('aria-busy');
+                row.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+        }
+    });
+})();
+</script>
+}

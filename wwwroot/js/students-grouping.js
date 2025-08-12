@@ -9,6 +9,8 @@ window.StudentGrouping = (function() {
     let suppressOrderBounce = false;
     let schoolId = null;
     let grade = null; // NEW: Variable to hold the grade
+    let createGroupModal, bsCreateGroupModal;  // Bootstrap modal instance
+
 
     /**
      * Initializes the entire student grouping module.
@@ -29,6 +31,12 @@ window.StudentGrouping = (function() {
         initializeModal();
         initializeDragAndDrop();
         initializeDataTable();
+        // Bootstrap 5 modal instance
+        createGroupModal = document.getElementById('createGroupModal');
+        if (createGroupModal && window.bootstrap) {
+            bsCreateGroupModal = new bootstrap.Modal(createGroupModal);
+        }
+
         setupGroupSelectionEvents();
         loadJQueryUI();
     }
@@ -139,25 +147,27 @@ window.StudentGrouping = (function() {
         });
 
         createBtn.off('click.targetGroup').on('click.targetGroup', function () {
-            const studentResultIds = [];
-            table.rows({ selected: true }).nodes().each(function (rowNode) {
-                const resultId = parseInt($(rowNode).find('.view-profile').attr('data-student-id'), 10);
-                if (resultId) {
-                    studentResultIds.push(parseInt(resultId));
-                }
-            });
-
-            if (studentResultIds.length === 0) {
-                alert("No students selected or could not find student IDs.");
-                return;
-            }
-
-            const groupName = prompt(`Enter a name for the new target group (${studentResultIds.length} students):`);
-
-            if (groupName && groupName.trim() !== "") {
-                createGroup(groupName.trim(), studentResultIds);
-            }
+        const ids = [];
+        table.rows({ selected: true }).nodes().each(function (rowNode) {
+            const sid = parseInt($(rowNode).find('.view-profile').attr('data-student-id'), 10);
+            if (sid) ids.push(sid);
         });
+
+        if (!ids.length) {
+            alert("No students selected or could not find student IDs.");
+            return;
+        }
+
+        // Fill count and show modal
+        $('#tgCount').text(ids.length);
+        $('#tgName').val(`Target Group (${ids.length})`);
+        $('#tgNote').val('');
+        $('#confirmCreateGroupBtn').data('ids', ids);
+
+        if (bsCreateGroupModal) bsCreateGroupModal.show();
+        else $('#createGroupModal').modal('show'); // fallback if bootstrap var not global
+        });
+
     }
     
     /**
@@ -165,7 +175,7 @@ window.StudentGrouping = (function() {
      * @param {string} name - The name for the new group.
      * @param {number[]} studentIds - An array of student GAResult IDs.
      */
-    function createGroup(name, studentIds) {
+    function createGroup(name, studentIds, note) {
         const verificationToken = $('input[name="__RequestVerificationToken"]').val();
         
         // FIX: Construct the correct URL with route parameters
@@ -179,7 +189,8 @@ window.StudentGrouping = (function() {
             },
             body: JSON.stringify({
                 groupName: name,
-                studentResultIds: studentIds,
+                studentIds: studentIds,
+                note: note,
                 schoolId: schoolId
             })
         })
@@ -465,3 +476,18 @@ window.StudentCharts = (function() {
 window.clearGrouping = function() {
     StudentGrouping.clearGrouping();
 };
+
+// Submit from the Create Target Group modal
+$(document).on('click', '#confirmCreateGroupBtn', function () {
+    const ids  = $(this).data('ids') || [];
+    const name = ($('#tgName').val() || '').trim();
+    const note = ($('#tgNote').val() || '').trim();
+
+    if (!name) { $('#tgName').focus(); return; }
+    if (!ids.length) { alert('No students selected.'); return; }
+
+    createGroup(name, ids, note);
+    if (bsCreateGroupModal) bsCreateGroupModal.hide();
+    else $('#createGroupModal').modal('hide');
+});
+

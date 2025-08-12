@@ -12,21 +12,17 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         [BindProperty(SupportsGet = true)] public int SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public int Grade { get; set; }
+
         public string CurrentCheckpoint { get; set; } = "";
         public string SchoolName { get; set; } = "";
         public List<GAResults> Students { get; set; } = new();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
+
         public class IndicatorSummary
         {
             public string Name { get; set; } = string.Empty;
             public double PercentMet { get; set; }
             public int CountMet { get; set; }
-        }
-        public sealed class CreateGroupDto
-        {
-            public int SchoolId { get; set; }
-            public string GroupName { get; set; } = string.Empty;
-            public List<int> StudentResultIds { get; set; } = new();
         }
 
         public List<IndicatorSummary> IndicatorSummaries { get; set; } = new();
@@ -35,6 +31,10 @@ namespace ORSV2.Pages.GuidanceAlignment
         public int AboveTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Challenge" or "Benchmark").Sum(q => q.Count);
         public int BelowTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Strategic" or "Intensive").Sum(q => q.Count);
         public int TotalCount => AboveTheLineCount + BelowTheLineCount;
+
+        // LocalStudentId -> StuId (for UI to emit data-student-id = StuId)
+        public Dictionary<string, int> StuIdByLocal { get; set; } = new();
+
         public Dictionary<string, int> QuadrantCounts => QuadrantSummaries
             .Where(q => !string.IsNullOrEmpty(q.Quadrant))
             .GroupBy(q => q.Quadrant!)
@@ -45,8 +45,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         public async Task<IActionResult> OnGetAsync()
         {
-            if (!await AuthorizeAsync(SchoolId))
-                return Forbid();
+            if (!await AuthorizeAsync(SchoolId)) return Forbid();
 
             var today = DateTime.Today;
             var school = await _context.Schools.Include(s => s.District).FirstOrDefaultAsync(s => s.Id == SchoolId);
@@ -95,22 +94,13 @@ namespace ORSV2.Pages.GuidanceAlignment
                 })
                 .ToListAsync();
 
-            // Quadrant breakdown for this grade level
+            // Build indicator/quadrant summaries (unchanged)
             var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
             var indicatorCounts = new Dictionary<string, int>
             {
-                ["OnTrack"] = 0,
-                ["GPA"] = 0,
-                ["AGGrades"] = 0,
-                ["AGSchedule"] = 0,
-                ["Affiliation"] = 0,
-                ["FAFSA"] = 0,
-                ["CollegeApplication"] = 0,
-                ["Attendance"] = 0,
-                ["Referrals"] = 0,
-                ["Grades"] = 0,
-                ["ELA"] = 0,
-                ["Math"] = 0
+                ["OnTrack"] = 0, ["GPA"] = 0, ["AGGrades"] = 0, ["AGSchedule"] = 0,
+                ["Affiliation"] = 0, ["FAFSA"] = 0, ["CollegeApplication"] = 0,
+                ["Attendance"] = 0, ["Referrals"] = 0, ["Grades"] = 0, ["ELA"] = 0, ["Math"] = 0
             };
 
             foreach (var s in Students)
@@ -139,12 +129,11 @@ namespace ORSV2.Pages.GuidanceAlignment
                 .Select(kvp => new QuadrantSummary(kvp.Key.Grade, kvp.Key.Quadrant, kvp.Value))
                 .ToList();
 
-            // Indicator performance based on enabled indicators
             var indicators = await _context.GAQuadrantIndicators
                 .AsNoTracking()
                 .Where(i => i.Grade == Grade && i.CP == cp && i.IsEnabled == true &&
-                    (i.SchoolId == null || i.SchoolId == SchoolId) &&
-                    (i.DistrictId == null || i.DistrictId == districtId))
+                            (i.SchoolId == null || i.SchoolId == SchoolId) &&
+                            (i.DistrictId == null || i.DistrictId == districtId))
                 .GroupBy(i => i.IndicatorName)
                 .Select(g => g.OrderByDescending(i => i.SchoolId != null ? 3 : i.DistrictId != null ? 2 : 1).First())
                 .ToListAsync();
@@ -152,7 +141,6 @@ namespace ORSV2.Pages.GuidanceAlignment
             foreach (var ind in indicators)
             {
                 indicatorCounts.TryGetValue(ind.IndicatorName, out var metCount);
-
                 IndicatorSummaries.Add(new IndicatorSummary
                 {
                     Name = ind.IndicatorName,
@@ -161,6 +149,21 @@ namespace ORSV2.Pages.GuidanceAlignment
                 });
             }
 
+            // Build LocalStudentId -> StuId map for these rows
+            var locals = Students.Select(s => s.LocalStudentId)
+                                .Where(x => !string.IsNullOrWhiteSpace(x))
+                                .Distinct()
+                                .ToList();
+
+            StuIdByLocal = locals.Count == 0
+                ? new Dictionary<string, int>()
+                : await _context.STU
+                    .AsNoTracking()
+                    .Where(st => st.SchoolID == SchoolId && locals.Contains(st.LocalStudentID))
+                    .ToDictionaryAsync(st => st.LocalStudentID, st => st.StuId);
+
+
+            // Breadcrumbs BEFORE returning
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
@@ -172,43 +175,43 @@ namespace ORSV2.Pages.GuidanceAlignment
             return Page();
         }
 
+        public sealed class CreateGroupDto
+        {
+            public int SchoolId { get; set; }
+            public string GroupName { get; set; } = string.Empty;
+            public List<int> StudentIds { get; set; } = new();
+            public string? Note { get; set; }
+        }
+
         public async Task<IActionResult> OnPostCreateTargetGroupAsync([FromBody] CreateGroupDto data)
         {
             if (!await AuthorizeAsync(data.SchoolId)) return Forbid();
+            if (string.IsNullOrWhiteSpace(data.GroupName) || data.StudentIds.Count == 0)
+                return BadRequest("Group name and at least one StudentId are required.");
 
-            if (string.IsNullOrWhiteSpace(data.GroupName) || data.StudentResultIds is null || data.StudentResultIds.Count == 0)
-                return BadRequest("Group name and at least one ResultId are required.");
-
-            // ensure school exists
-            var schoolExists = await _context.Schools.AsNoTracking().AnyAsync(s => s.Id == data.SchoolId);
-            if (!schoolExists) return BadRequest("Invalid SchoolId.");
-
-            // validate ResultIds for this school
-            var validIds = await _context.GAResults.AsNoTracking()
-                .Where(r => r.SchoolId == data.SchoolId && data.StudentResultIds.Contains(r.ResultId))
-                .Select(r => r.ResultId)
-                .ToListAsync();
-
-            if (validIds.Count == 0) return BadRequest("No valid ResultIds for this school.");
-
-            var group = new TargetGroup
-            {
+            var group = new TargetGroup {
                 Name = data.GroupName.Trim(),
                 SchoolId = data.SchoolId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                Note = string.IsNullOrWhiteSpace(data.Note) ? null : data.Note.Trim()  // <— NEW
             };
-
             _context.TargetGroups.Add(group);
-            await _context.SaveChangesAsync(); // gets group.Id
+            await _context.SaveChangesAsync();
 
-            // skip any that already exist (composite PK would reject dupes)
-            var already = await _context.TargetGroupStudents.AsNoTracking()
-                .Where(t => t.TargetGroupId == group.Id && validIds.Contains(t.GAResultId))
-                .Select(t => t.GAResultId)
+            // Validate provided IDs exist in STU
+            // validate StudentIds belong to this school (use STU.SchoolID)
+            var valid = await _context.STU.AsNoTracking()
+                .Where(s => s.SchoolID == data.SchoolId && data.StudentIds.Contains(s.StuId))
+                .Select(s => s.StuId)
                 .ToListAsync();
 
-            var toAdd = validIds.Except(already)
-                .Select(rid => new TargetGroupStudent { TargetGroupId = group.Id, GAResultId = rid })
+            var existing = await _context.TargetGroupStudents.AsNoTracking()
+                .Where(t => t.TargetGroupId == group.Id && valid.Contains(t.StudentId))
+                .Select(t => t.StudentId)
+                .ToListAsync();
+
+            var toAdd = valid.Except(existing)
+                .Select(id => new TargetGroupStudent { TargetGroupId = group.Id, StudentId = id })
                 .ToList();
 
             if (toAdd.Count > 0)
@@ -219,6 +222,6 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             return new JsonResult(new { newGroupId = group.Id, added = toAdd.Count });
         }
-    }
 
+    }
 }

@@ -464,3 +464,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
     border-radius: .375rem;
     line-height: 1.1;
 }
+/* optional */
+.modal-content.shadow-orenda { border-radius: 12px; }
+.modal-header.bg-orenda-primary { border-bottom: none; }
+.modal-footer { border-top: none; }

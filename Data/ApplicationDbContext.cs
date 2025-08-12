@@ -36,67 +36,66 @@ namespace ORSV2.Data
         {
             base.OnModelCreating(builder);
 
-            // STU primary key
+            // STU (Students table)
             builder.Entity<STU>(entity =>
             {
-                entity.HasKey(s => s.StuId);      // ✅ needed to enable LINQ and sorting
-                entity.ToTable("Students", t => t.ExcludeFromMigrations());  // ✅ prevents EF from trying to create/update the table
+                entity.HasKey(s => s.StuId);
+                entity.ToTable("Students", t => t.ExcludeFromMigrations());
             });
 
-            builder.Entity<Staff>(builder =>
+            builder.Entity<Staff>(b =>
             {
-                builder.ToTable("Staff", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
-                builder.HasKey(s => s.StaffId); // Only if there's a real primary key
+                b.ToTable("Staff", t => t.ExcludeFromMigrations());
+                b.HasKey(s => s.StaffId);
             });
 
-            builder.Entity<Courses>(builder =>
+            builder.Entity<Courses>(b =>
             {
-                builder.ToTable("Courses", t => t.ExcludeFromMigrations()); // Prevent EF from generating this in migrations
-                builder.HasKey(c => c.Id); // Only if there's a real primary key
+                b.ToTable("Courses", t => t.ExcludeFromMigrations());
+                b.HasKey(c => c.Id);
             });
 
             builder.Entity<GAAGProgress>().ToTable("GAAGProgress").HasNoKey();
 
             builder.Entity<GACheckpointSchedule>()
-            .HasOne(s => s.School)
-            .WithMany() // or .WithMany(s => s.GACheckpointSchedules) if reverse nav exists
-            .HasForeignKey(s => s.SchoolId);
+                .HasOne(s => s.School)
+                .WithMany()
+                .HasForeignKey(s => s.SchoolId);
 
-            builder.Entity<GAResults>()
-            .HasOne(r => r.District)
-            .WithMany()
-            .HasForeignKey(r => r.DistrictId)
-            .OnDelete(DeleteBehavior.Restrict);
-
+            // GAResults: table name + PK + existing District FK
             builder.Entity<GAResults>(e =>
             {
                 e.ToTable("GAResults", t => t.ExcludeFromMigrations());
                 e.HasKey(r => r.ResultId);
-            });
 
+                e.HasOne(r => r.District)
+                 .WithMany()
+                 .HasForeignKey(r => r.DistrictId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
 
             // TargetGroups
             builder.Entity<TargetGroup>(e =>
             {
                 e.ToTable("TargetGroups", t => t.ExcludeFromMigrations());
-                e.HasKey(x => x.Id);                  // PK = Id (IDENTITY)
+                e.HasKey(x => x.Id);
                 e.Property(x => x.Name).HasMaxLength(100).IsRequired();
             });
 
-            // TargetGroupStudents – composite key (TargetGroupId, GAResultId)
+            // TargetGroupStudents – composite key (TargetGroupId, StudentId)
             builder.Entity<TargetGroupStudent>(e =>
             {
                 e.ToTable("TargetGroupStudents", t => t.ExcludeFromMigrations());
-                e.HasKey(x => new { x.TargetGroupId, x.GAResultId });
+                e.HasKey(x => new { x.TargetGroupId, x.StudentId });
 
                 e.HasOne(x => x.TargetGroup)
                     .WithMany(g => g.TargetGroupStudents)
                     .HasForeignKey(x => x.TargetGroupId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                e.HasOne(x => x.GAResult)
+                e.HasOne(x => x.Student)
                     .WithMany()
-                    .HasForeignKey(x => x.GAResultId)
+                    .HasForeignKey(x => x.StudentId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -111,83 +110,44 @@ namespace ORSV2.Data
                 .WithOne(u => u.District)
                 .HasForeignKey(u => u.DistrictId);
 
-            // User ↔ School (many-to-many) via UserSchools
+            // User ↔ School (many-to-many)
             builder.Entity<UserSchool>()
                 .HasKey(us => new { us.UserId, us.SchoolId });
-
             builder.Entity<UserSchool>()
-                .HasOne(us => us.User)
-                .WithMany(u => u.UserSchools)
-                .HasForeignKey(us => us.UserId);
-
+                .HasOne(us => us.User).WithMany(u => u.UserSchools).HasForeignKey(us => us.UserId);
             builder.Entity<UserSchool>()
-                .HasOne(us => us.School)
-                .WithMany()
-                .HasForeignKey(us => us.SchoolId);
+                .HasOne(us => us.School).WithMany().HasForeignKey(us => us.SchoolId);
 
-            // Defaults for District
-            builder.Entity<District>()
-                .Property(d => d.Inactive)
-                .HasDefaultValue(false);
+            // Defaults
+            builder.Entity<District>().Property(d => d.Inactive).HasDefaultValue(false);
+            builder.Entity<District>().Property(d => d.DateCreated).HasDefaultValueSql("SYSUTCDATETIME()");
+            builder.Entity<District>().Property(d => d.DateUpdated).HasDefaultValueSql("SYSUTCDATETIME()");
 
-            builder.Entity<District>()
-                .Property(d => d.DateCreated)
-                .HasDefaultValueSql("SYSUTCDATETIME()");
+            builder.Entity<School>().Property(s => s.Inactive).HasDefaultValue(false);
+            builder.Entity<School>().Property(s => s.DateCreated).HasDefaultValueSql("SYSUTCDATETIME()");
+            builder.Entity<School>().Property(s => s.DateUpdated).HasDefaultValueSql("SYSUTCDATETIME()");
 
-            builder.Entity<District>()
-                .Property(d => d.DateUpdated)
-                .HasDefaultValueSql("SYSUTCDATETIME()");
-
-            // Defaults for School
-            builder.Entity<School>()
-                .Property(s => s.Inactive)
-                .HasDefaultValue(false);
-
-            builder.Entity<School>()
-                .Property(s => s.DateCreated)
-                .HasDefaultValueSql("SYSUTCDATETIME()");
-
-            builder.Entity<School>()
-                .Property(s => s.DateUpdated)
-                .HasDefaultValueSql("SYSUTCDATETIME()");
-
+            // View
             builder.Entity<VwStudentResultsClasses>(entity =>
             {
-                entity.HasNoKey(); // Views typically don't have primary keys
-                entity.ToView("vw_student_results_classes"); // Map to the actual view name
+                entity.HasNoKey();
+                entity.ToView("vw_student_results_classes");
             });
 
+            // Assessments
             builder.Entity<Assessment>(entity =>
             {
                 entity.ToTable("assessments");
-
                 entity.HasKey(e => e.TestId);
-
-                entity.Property(e => e.TestId)
-                    .HasColumnName("test_id")
-                    .HasMaxLength(255)
-                    .IsRequired();
-
-                entity.Property(e => e.DistrictId)
-                    .HasColumnName("districtid")
-                    .IsRequired();
-
-                entity.Property(e => e.TestName)
-                    .HasColumnName("test_name");
-
-                entity.Property(e => e.Unit)
-                    .HasColumnName("unit")
-                    .IsRequired();
-
-                entity.Property(e => e.Standards)
-                    .HasColumnName("standards")
-                    .IsRequired();
-
-                // Foreign key relationship
+                entity.Property(e => e.TestId).HasColumnName("test_id").HasMaxLength(255).IsRequired();
+                entity.Property(e => e.DistrictId).HasColumnName("districtid").IsRequired();
+                entity.Property(e => e.TestName).HasColumnName("test_name");
+                entity.Property(e => e.Unit).HasColumnName("unit").IsRequired();
+                entity.Property(e => e.Standards).HasColumnName("standards").IsRequired();
                 entity.HasOne(a => a.District)
-                    .WithMany()
-                    .HasForeignKey(a => a.DistrictId)
-                    .HasConstraintName("FK_assessments_districts");
+                      .WithMany()
+                      .HasForeignKey(a => a.DistrictId)
+                      .HasConstraintName("FK_assessments_districts");
             });
         }
     }
