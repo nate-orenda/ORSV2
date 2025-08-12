@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
@@ -6,6 +7,7 @@ using ORSV2.Utilities;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
+    [IgnoreAntiforgeryToken] // AJAX JSON endpoints below
     public class ViewTargetGroupsModel : GABasePageModel
     {
         public ViewTargetGroupsModel(ApplicationDbContext context) : base(context) { }
@@ -68,6 +70,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             public int SchoolId { get; set; }
         }
 
+
         public async Task<IActionResult> OnPostSaveAsync([FromBody] SaveDto dto)
         {
             if (!await AuthorizeAsync(dto.SchoolId)) return Forbid();
@@ -83,5 +86,32 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             return new JsonResult(new { ok = true });
         }
+
+        public sealed class DeleteDto
+        {
+            public int Id { get; set; }
+            public int SchoolId { get; set; }
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync([FromBody] DeleteDto dto)
+        {
+            if (!await AuthorizeAsync(dto.SchoolId)) return Forbid();
+            if (dto.Id <= 0) return BadRequest("Invalid data.");
+
+            var group = await _context.TargetGroups
+                .Include(g => g.TargetGroupStudents)
+                .FirstOrDefaultAsync(g => g.Id == dto.Id && g.SchoolId == dto.SchoolId);
+            if (group is null) return NotFound();
+
+            if (group.TargetGroupStudents?.Any() == true)
+                _context.TargetGroupStudents.RemoveRange(group.TargetGroupStudents);
+
+            _context.TargetGroups.Remove(group);
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new { ok = true });
+        }
+
+
     }
 }

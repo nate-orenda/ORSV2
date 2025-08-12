@@ -1,3 +1,10 @@
+/* =========================================================
+   ORSV2 – Global Styles (cleaned + unified)
+   - Brand tokens + shadows
+   - Gradient buttons as default (login-button look)
+   - Header, cards, tables, students page specifics
+   ========================================================= */
+
 /* ===== Base ===== */
 html {
   font-size: 14px;
@@ -46,33 +53,42 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .ga-section.visible { opacity: 1; transform: translateY(0); }
 .d-none { display: none !important; }
 
-/* ===== CSS Vars ===== */
+/* ===== CSS Vars (unified) ===== */
 :root{
+  /* Brand colors */
   --orenda-primary:#0022C5;
   --orenda-primary-hover:#001aa0;
   --orenda-primary-light:#1a4fb8;
   --orenda-secondary:#f8f9fb;
   --orenda-border:#e9ecef;
+  --orenda-text-white:#fff;
+
+  /* Shadows */
   --orenda-shadow:rgba(0,34,197,.15);
   --orenda-shadow-hover:rgba(0,34,197,.25);
   --orenda-shadow-lg:0 1rem 3rem rgba(0,0,0,.175);
-  --orenda-text-white:#fff;
+
+  /* Gradient tokens (login look) */
+  --orenda-grad-start:#0022C5;
+  --orenda-grad-end:#1a4fb8;
+  --orenda-grad-hover-start:#001aa0;
+  --orenda-grad-hover-end:#1640a0;
+
+  /* Button tokens */
+  --btn-radius:.5rem;
+  --btn-pad-y:.5rem;
+  --btn-pad-x:1rem;
+  --btn-font:.95rem;
+  --btn-shadow:0 4px 12px var(--orenda-shadow);
+  --btn-shadow-hover:0 8px 20px var(--orenda-shadow-hover);
+  --btn-ring:0 0 0 .2rem rgba(0,34,197,.15);
 }
 
+/* =========================================================
+   Buttons – DEFAULT = Gradient (matches login page)
+   ========================================================= */
 
-
-/* ===== Orenda Buttons – unified, modern, accessible ===== */
-:root{
-  --btn-radius: .5rem;
-  --btn-pad-y: .5rem;
-  --btn-pad-x: 1rem;
-  --btn-font: .95rem;
-  --btn-shadow: 0 4px 12px var(--orenda-shadow);
-  --btn-shadow-hover: 0 8px 20px var(--orenda-shadow-hover);
-  --btn-ring: 0 0 0 .2rem rgba(0,34,197,.15);
-}
-
-/* Base */
+/* Base (shared) */
 .btn,
 .btn-orenda {
   display:inline-flex;
@@ -85,35 +101,54 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   font-weight: 600;
   font-size: var(--btn-font);
   line-height: 1.2;
-  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease, color .15s ease;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
   box-shadow: var(--btn-shadow);
   text-decoration:none;
   cursor:pointer;
   will-change: transform, box-shadow;
+  position:relative; /* for shimmer/spinner */
+  overflow:hidden;   /* for shimmer */
+  color:#fff;
 }
 
-/* Primary (brand) */
+/* Primary defaults -> Gradient (btn, btn-orenda, btn-primary) */
+.btn,
+.btn-orenda,
 .btn-primary,
-.btn-orenda-primary,
-.btn-orenda {
-  background: var(--orenda-primary);
-  color: #fff;
+.btn-orenda-primary {
+  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
+  color:#fff;
 }
+.btn:hover,
+.btn-orenda:hover,
 .btn-primary:hover,
-.btn-orenda-primary:hover,
-.btn-orenda:hover {
-  background: var(--orenda-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--btn-shadow-hover);
+.btn-orenda-primary:hover {
+  background: linear-gradient(135deg, var(--orenda-grad-hover-start) 0%, var(--orenda-grad-hover-end) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,34,197,.30);
 }
+.btn:active,
+.btn-orenda:active,
 .btn-primary:active,
-.btn-orenda-primary:active,
-.btn-orenda:active {
+.btn-orenda-primary:active {
   transform: translateY(0);
-  box-shadow: 0 3px 10px var(--orenda-shadow);
+  box-shadow: 0 3px 10px rgba(0,34,197,.25);
 }
 
-/* Outline */
+/* Optional shimmer (add .btn-shimmer) */
+.btn.btn-shimmer::before,
+.btn-orenda.btn-shimmer::before {
+  content:'';
+  position:absolute;
+  top:0; left:-100%;
+  width:100%; height:100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  transition:left .5s ease;
+}
+.btn.btn-shimmer:hover::before,
+.btn-orenda.btn-shimmer:hover::before { left:100%; }
+
+/* Outline variant */
 .btn-outline-primary,
 .btn-orenda-outline {
   background: transparent;
@@ -123,12 +158,12 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 }
 .btn-outline-primary:hover,
 .btn-orenda-outline:hover {
-  background: var(--orenda-primary);
+  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
   color: #fff;
   box-shadow: var(--btn-shadow-hover);
 }
 
-/* “Soft” (subtle filled) */
+/* Soft (subtle filled) */
 .btn-orenda-soft {
   background: rgba(0,34,197,.08);
   color: var(--orenda-primary);
@@ -137,24 +172,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .btn-orenda-soft:hover {
   background: rgba(0,34,197,.14);
   box-shadow: var(--btn-shadow);
-}
-/* Busy/disabled state for import buttons */
-.btn-orenda:disabled,
-.btn-orenda[aria-disabled="true"],
-.btn-orenda-outline:disabled,
-.btn-orenda-outline[aria-disabled="true"],
-.btn-orenda.btn-busy,
-.btn-orenda-outline.btn-busy {
-  opacity: 0.5;            /* greyed out */
-  cursor: not-allowed;      /* no clicking vibe */
-  pointer-events: none;     /* truly unclickable */
-  filter: grayscale(1);
-}
-
-/* Optional: keep shadows from implying “hoverable” */
-.btn-orenda.btn-busy.shadow-orenda-hover,
-.btn-orenda-outline.btn-busy.shadow-orenda-hover {
-  box-shadow: none !important;
 }
 
 /* Ghost (text-like) */
@@ -184,13 +201,37 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 /* Icon-only */
 .btn-icon { padding:.5rem; width:2.25rem; height:2.25rem; border-radius:.5rem; }
 
-/* Loading state */
-.btn[aria-busy="true"] { pointer-events:none; opacity:.85; }
-.btn[aria-busy="true"]::after{
-  content:"";
-  width:1em; height:1em; border-radius:50%;
-  border:.18em solid currentColor; border-right-color:transparent;
-  display:inline-block; margin-left:.5rem; animation:btnspin .6s linear infinite;
+/* Busy/Disabled */
+.btn:disabled,
+.btn[aria-disabled="true"],
+.btn.btn-busy,
+.btn-orenda:disabled,
+.btn-orenda[aria-disabled="true"],
+.btn-orenda.btn-busy,
+.btn-orenda-outline:disabled,
+.btn-orenda-outline[aria-disabled="true"],
+.btn-orenda-outline.btn-busy {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(1);
+  box-shadow:none;
+}
+
+/* Loading spinner (aria-busy) */
+.btn[aria-busy="true"],
+.btn-orenda[aria-busy="true"] { color:transparent !important; }
+.btn[aria-busy="true"]::after,
+.btn-orenda[aria-busy="true"]::after{
+  content:'';
+  position:absolute;
+  width:16px; height:16px;
+  top:50%; left:50%;
+  margin:-8px 0 0 -8px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.85);
+  border-right-color:transparent;
+  animation: btnspin 1s linear infinite;
 }
 @keyframes btnspin{ to{ transform: rotate(360deg); } }
 
@@ -204,12 +245,106 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   box-shadow: var(--btn-ring), var(--btn-shadow);
 }
 
+/* Force button text to stay white for primary/gradient buttons */
+.btn,
+.btn-orenda,
+.btn-primary,
+.btn-orenda-primary {
+  color: #fff !important;
+}
+
+.btn:hover,
+.btn-orenda:hover,
+.btn-primary:hover,
+.btn-orenda-primary:hover,
+.btn:active,
+.btn-orenda:active,
+.btn-primary:active,
+.btn-orenda-primary:active {
+  color: #fff !important;
+}
+
+/* =========================================================
+   Compact Action Set Buttons (Edit / Save / Cancel)
+   ========================================================= */
+.btn-action {
+  font-weight: 500;
+  letter-spacing: .3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  border-radius: .45rem;
+  padding: .3rem .65rem;
+  font-size: .8rem;
+  line-height: 1.1;
+  transition: all .2s ease;
+  min-width: 68px; /* keeps widths consistent */
+  white-space: nowrap;
+}
+
+/* icons scale down slightly for compact look */
+.btn-action i {
+  font-size: .85rem;
+}
+
+/* Edit = neutral/soft */
+.btn-action-edit {
+  background: rgba(0,34,197,.08);
+  color: var(--orenda-primary);
+  border: 1px solid var(--orenda-border);
+}
+.btn-action-edit:hover {
+  background: rgba(0,34,197,.14);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px var(--orenda-shadow);
+}
+
+/* Save = primary gradient */
+.btn-action-save {
+  background: linear-gradient(135deg, var(--orenda-grad-start), var(--orenda-grad-end));
+  color: #fff !important;
+  border: none;
+}
+.btn-action-save:hover {
+  background: linear-gradient(135deg, var(--orenda-grad-hover-start), var(--orenda-grad-hover-end));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,34,197,.3);
+}
+
+/* Cancel = outline */
+.btn-action-cancel {
+  background: transparent;
+  color: var(--orenda-primary);
+  border: 1px solid var(--orenda-primary);
+}
+.btn-action-cancel:hover {
+  background: var(--orenda-primary);
+  color: #fff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,34,197,.3);
+}
+/* Cancel = outline */
+.btn-action-delete {
+  background: transparent;
+  color: var(--orenda-primary);
+  border: 1px solid var(--orenda-primary);
+}
+.btn-action-delete:hover {
+  background: var(--orenda-primary);
+  color: #fff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,34,197,.3);
+}
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce){
   .btn, .btn-orenda { transition: none; }
 }
 
-/* ===== Header / Nav ===== */
+/* =========================================================
+   Header / Nav
+   ========================================================= */
 .main-header{
   background:linear-gradient(135deg,var(--orenda-primary) 0%,var(--orenda-primary-hover) 100%);
   box-shadow:var(--orenda-shadow-lg);
@@ -298,7 +433,9 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .dropdown-item{ padding:.75rem 1.25rem; font-weight:500; transition:all .2s ease; }
 .dropdown-item:hover{ background:var(--orenda-primary); color:var(--orenda-text-white); }
 
-/* ===== Containers / Cards ===== */
+/* =========================================================
+   Containers / Cards
+   ========================================================= */
 .orenda-container{ max-width:1200px; margin:0 auto; }
 .orenda-container-sm{ max-width:900px; margin:0 auto; }
 
@@ -318,7 +455,9 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 }
 .orenda-card-body{ padding:2rem; }
 
-/* ===== Tables ===== */
+/* =========================================================
+   Tables
+   ========================================================= */
 .orenda-table,
 .protocols-table { margin-bottom:0; font-size:.95rem; }
 .orenda-table th,
@@ -345,9 +484,8 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .checkpoint-badge{
   background:linear-gradient(135deg,#28a745 0%,#20c997 100%);
   color:#fff; padding:.3rem .7rem; border-radius:15px; font-size:.75rem; font-weight:500;
-  white-space: nowrap; /* keep "CP X" on one line */
+  white-space: nowrap;
 }
-
 
 /* Responsive tweaks */
 @media (max-width:768px){
@@ -371,13 +509,14 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .navbar-collapse.collapsing{ transition:height .35s ease; }
 }
 
-/* ===== Students page specific ===== */
+/* =========================================================
+   Students page specific
+   ========================================================= */
 
 /* Smaller table header text + tighter padding */
 #studentsTable thead th{
   font-size:.72rem;
   padding:.5rem .5rem;
-  /* sticky header sits under drag helper; see z-index below */
 }
 
 /* Sticky header */
@@ -414,13 +553,15 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .students-toolbar .left,
 .students-toolbar .right{ display:flex; gap:.5rem; align-items:center; }
 .students-toolbar input.form-control{ height:32px; padding:.25rem .5rem; font-size:.9rem; }
-/* Small size variant for Orenda buttons */
+
+/* Small button tweak (kept for toolbar harmony) */
 .btn-orenda.btn-sm,
 .btn-orenda-outline.btn-sm {
-    padding: .25rem .5rem;
-    font-size: .8rem;
-    border-radius: .25rem;
+  padding: .25rem .5rem;
+  font-size: .8rem;
+  border-radius: .25rem;
 }
+
 /* Collapsible district header */
 .district-header-toggle{
   background:#fff;
@@ -456,15 +597,16 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   margin-top:0 !important;
 }
 
-/* Compact badge variant for tighter info displays */
+/* Compact badge variant */
 .badge-compact {
-    font-weight: 600;
-    padding: .2rem .5rem;
-    font-size: .75rem;
-    border-radius: .375rem;
-    line-height: 1.1;
+  font-weight: 600;
+  padding: .2rem .5rem;
+  font-size: .75rem;
+  border-radius: .375rem;
+  line-height: 1.1;
 }
-/* optional */
+
+/* Modal polish */
 .modal-content.shadow-orenda { border-radius: 12px; }
 .modal-header.bg-orenda-primary { border-bottom: none; }
 .modal-footer { border-top: none; }

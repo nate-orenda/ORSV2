@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Target Groups";
 }
-
+@Html.AntiForgeryToken()
 <div class="orenda-container">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -34,7 +34,7 @@
                     <span class="text-muted small">@Model.Groups.Count group(s)</span>
                 </div>
                 <div class="d-flex gap-2">
-                    <a class="btn-orenda-outline btn-sm"
+                    <a class="btn btn-sm btn-outline-secondary"
                        asp-page="/GuidanceAlignment/Overview"
                        asp-route-schoolId="@Model.SchoolId">Back to Overview</a>
                 </div>
@@ -48,7 +48,7 @@
                             <th>Notes</th>
                             <th class="text-center" style="width: 8rem;">Students</th>
                             <th class="text-center" style="width: 9rem;">Created</th>
-                            <th class="text-center" style="width: 9rem;">Actions</th>
+                            <th class="text-center" style="width: 12rem;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -79,9 +79,21 @@
                                     @g.CreatedAt.ToString("yyyy-MM-dd")
                                 </td>
                                 <td class="text-center">
-                                    <button class="btn-orenda-soft btn-sm js-edit">Edit</button>
-                                    <button class="btn-orenda btn-sm d-none js-save">Save</button>
-                                    <button class="btn-orenda-outline btn-sm d-none js-cancel">Cancel</button>
+                                    <div class="btn-group gap-1">
+                                        <button class="btn-action btn-action-edit btn-sm js-edit">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn-action btn-action-save btn-sm d-none js-save">
+                                            <i class="bi bi-check-lg"></i> Save
+                                        </button>
+                                        <button class="btn-action btn-action-cancel btn-sm d-none js-cancel">
+                                            <i class="bi bi-x-lg"></i> Cancel
+                                        </button>
+                                        <button class="btn-action btn-action-delete btn-sm js-delete">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+
+                                        </div>
                                 </td>
                             </tr>
                         }
@@ -108,6 +120,14 @@
 <script>
 (function(){
     const table = document.getElementById('groupsTable');
+    const schoolId = @Model.SchoolId;
+
+    // Use the current page for handlers to avoid route mismatches
+    const saveUrl = '@Url.Page(null, null, new { handler = "Save" }, Request.Scheme)';
+    const deleteUrl = '@Url.Page(null, null, new { handler = "Delete" }, Request.Scheme)';
+
+    // Grab anti-forgery token rendered by @Html.AntiForgeryToken()
+    const anti = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
     function toggleRow(row, editing){
         row.querySelectorAll('.editable').forEach(ed => {
@@ -117,15 +137,20 @@
                 span.classList.add('d-none');
                 input.classList.remove('d-none');
                 input.dataset.original = input.value;
+                if (ed.dataset.field === 'name') {
+                    setTimeout(() => input.focus(), 0);
+                }
             } else {
                 span.classList.remove('d-none');
                 input.classList.add('d-none');
-                span.textContent = (input.value || '').trim() || (ed.dataset.field === 'note' ? '<no notes>' : '');
+                const v = (input.value || '').trim();
+                span.textContent = v || (ed.dataset.field === 'note' ? '<no notes>' : '');
             }
         });
         row.querySelector('.js-edit')?.classList.toggle('d-none', editing);
         row.querySelector('.js-save')?.classList.toggle('d-none', !editing);
         row.querySelector('.js-cancel')?.classList.toggle('d-none', !editing);
+        row.querySelector('.js-delete')?.classList.toggle('d-none', editing);
     }
 
     table.addEventListener('click', async (e) => {
@@ -136,8 +161,10 @@
 
         if (btn.classList.contains('js-edit')){
             toggleRow(row, true);
+            return;
         }
-        else if (btn.classList.contains('js-cancel')){
+
+        if (btn.classList.contains('js-cancel')){
             // revert
             row.querySelectorAll('.editable').forEach(ed => {
                 const span = ed.querySelector('.view-value');
@@ -149,8 +176,10 @@
                 input.classList.add('d-none');
             });
             toggleRow(row, false);
+            return;
         }
-        else if (btn.classList.contains('js-save')){
+
+        if (btn.classList.contains('js-save')){
             const id = parseInt(row.dataset.id, 10);
             const name = row.querySelector('[data-field="name"] input').value.trim();
             const note = row.querySelector('[data-field="note"] textarea').value.trim();
@@ -160,15 +189,17 @@
                 return;
             }
 
-            // busy state
             btn.setAttribute('aria-busy', 'true');
             row.querySelectorAll('button').forEach(b => b.disabled = true);
 
             try{
-                const res = await fetch(`@Url.Page("/GuidanceAlignment/TargetGroups", null, new { handler = "Save" }, Request.Scheme)`, {
+                const res = await fetch(saveUrl, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id, name, note, schoolId: @Model.SchoolId })
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": anti
+                    },
+                    body: JSON.stringify({ id, name, note, schoolId })
                 });
                 if (!res.ok){
                     const msg = await res.text();
@@ -182,8 +213,39 @@
                 btn.removeAttribute('aria-busy');
                 row.querySelectorAll('button').forEach(b => b.disabled = false);
             }
+            return;
+        }
+
+        if (btn.classList.contains('js-delete')){
+            const id = parseInt(row.dataset.id, 10);
+            if (!confirm('Delete this target group? This cannot be undone.')) return;
+
+            btn.setAttribute('aria-busy', 'true');
+            row.querySelectorAll('button').forEach(b => b.disabled = true);
+            try{
+                const res = await fetch(deleteUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": anti
+                    },
+                    body: JSON.stringify({ id, schoolId })
+                });
+                if (!res.ok){
+                    const msg = await res.text();
+                    throw new Error(msg || 'Delete failed');
+                }
+                row.remove();
+            }catch(err){
+                console.error(err);
+                alert('Could not delete group. It may be referenced by students.');
+            }finally{
+                btn.removeAttribute('aria-busy');
+                row.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
         }
     });
 })();
 </script>
 }
+

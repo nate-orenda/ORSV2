@@ -15,8 +15,8 @@
             </div>
             <div class="d-flex align-items-center">
                 <span class="badge bg-primary me-2">@Model.Students.Count Students</span>
-                <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = Model.CurrentGroup?.SchoolId })" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to School Overview
+                <a href="@Url.Page("/GuidanceAlignment/ViewTargetGroups", new { schoolId = Model.CurrentGroup?.SchoolId })" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Target Groups
                 </a>
             </div>
         </div>
