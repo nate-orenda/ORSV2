@@ -84,6 +84,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
                 new BreadcrumbItem { Title = CurrentGroup.School.District?.Name ?? "District", Url = Url.Page("/GuidanceAlignment/Schools", new { districtId = CurrentGroup.School.DistrictId }) },
                 new BreadcrumbItem { Title = SchoolName, Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = CurrentGroup.SchoolId }) },
+                new BreadcrumbItem { Title = "Target Groups", Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = CurrentGroup.SchoolId }) },
                 new BreadcrumbItem { Title = GroupName }
             };
 
