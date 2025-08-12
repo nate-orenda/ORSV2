@@ -110,7 +110,6 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .Where(m =>
                         m.Grade == Student.Grade &&
                         m.CP == cp &&
-                        m.SchoolYear == schoolYear &&
                         (m.DistrictId == null || m.DistrictId == school.DistrictId) &&
                         (m.SchoolId == null || m.SchoolId == Student.SchoolId))
                     .GroupBy(m => m.Indicator)
