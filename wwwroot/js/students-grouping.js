@@ -36,7 +36,8 @@ window.StudentGrouping = (function() {
         if (createGroupModal && window.bootstrap) {
             bsCreateGroupModal = new bootstrap.Modal(createGroupModal);
         }
-
+        
+        bindCreateModalConfirm();
         setupGroupSelectionEvents();
         loadJQueryUI();
     }
@@ -370,6 +371,27 @@ window.StudentGrouping = (function() {
         applyGrouping();
     }
 
+    function bindCreateModalConfirm() {
+        // (Re)bind safely
+        $(document).off('click.createGroup', '#confirmCreateGroupBtn')
+        .on('click.createGroup', '#confirmCreateGroupBtn', function () {
+            const ids  = $(this).data('ids') || [];
+            const name = ($('#tgName').val() || '').trim();
+            const note = ($('#tgNote').val() || '').trim();
+
+            if (!name) { $('#tgName').focus(); return; }
+            if (!ids.length) { alert('No students selected.'); return; }
+
+            // Call the module's private function
+            createGroup(name, ids, note);
+
+            // Close the modal using the module's modal instance
+            if (bsCreateGroupModal) bsCreateGroupModal.hide();
+            else $('#createGroupModal').modal('hide');
+        });
+    }
+
+
     function applyGrouping() {
         if (!currentGrouping.length) {
             initializeDataTable(null);
@@ -476,18 +498,4 @@ window.StudentCharts = (function() {
 window.clearGrouping = function() {
     StudentGrouping.clearGrouping();
 };
-
-// Submit from the Create Target Group modal
-$(document).on('click', '#confirmCreateGroupBtn', function () {
-    const ids  = $(this).data('ids') || [];
-    const name = ($('#tgName').val() || '').trim();
-    const note = ($('#tgNote').val() || '').trim();
-
-    if (!name) { $('#tgName').focus(); return; }
-    if (!ids.length) { alert('No students selected.'); return; }
-
-    createGroup(name, ids, note);
-    if (bsCreateGroupModal) bsCreateGroupModal.hide();
-    else $('#createGroupModal').modal('hide');
-});
 
