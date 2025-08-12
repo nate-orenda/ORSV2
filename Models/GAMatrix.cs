@@ -15,7 +15,7 @@ namespace ORSV2.Models
         public int DistrictKey { get; set; }
         public int SchoolKey { get; set; }
 
-        public int SchoolYear { get; set; }
+        public int? SchoolYear { get; set; }
         public int Grade { get; set; }
         public int CP { get; set; }
 
