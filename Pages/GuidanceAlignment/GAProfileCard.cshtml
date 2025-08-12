@@ -1,136 +1,306 @@
-@page
+@page "{id:int?}"
 @model ORSV2.Pages.GuidanceAlignment.GAProfileCardModel
 @{
-    Layout = null;
+    Layout = null; // render inside modal
 }
 @functions {
-    bool HasIndicator(string name) => Model.StudentIndicators.Any(i => i.Name == name);
-    string GetRequirementText(string name) =>
-        Model.IndicatorRequirements.FirstOrDefault(r => r.Name == name)?.RequirementText ?? "";
+    bool Enabled(string name) => Model.StudentIndicators.Any(i => i.Name == name);
+    string Req(string name) => Model.IndicatorRequirements.FirstOrDefault(r => r.Name == name)?.RequirementText ?? "";
+    double Pct(decimal earned, decimal target)
+    {
+        if (target == 0 && earned == 0)
+            return 100.0; // treat 0/0 as fully complete
+        if (target <= 0)
+            return 0.0;   // avoid div/0 for bad data
+        return Math.Min(130.0, (double)(earned / target * 100m));
+    }
+
 }
 
-<div class="p-3">
+@{
+    // compact green/red badges
+    var metBadge = "badge badge-compact bg-success-subtle text-success border border-success-subtle";
+    var notBadge = "badge badge-compact bg-danger-subtle text-danger border border-danger-subtle";
 
-    <!-- Mini indicator cards (Requirement text from GAMatrix.ReadableValue) -->
-    <div class="row g-3">
-        @foreach (var card in new[] {
-            new { Name = "Attendance", Met = Model.Student.Attendance == true },
-            new { Name = "GPA", Met = Model.Student.GPA == true },
-            new { Name = "Affiliation", Met = Model.Student.Affiliation == true },
-            new { Name = "OnTrack", Met = Model.Student.OnTrack == true },
-            new { Name = "AGGrades", Met = Model.Student.AGGrades == true },
-            new { Name = "AGSchedule", Met = Model.Student.AGSchedule == true },
-            new { Name = "FAFSA", Met = Model.Student.FAFSA == true },
-            new { Name = "CollegeApplication", Met = Model.Student.CollegeApplication == true }
-        })
-        {
-            var req = Model.GetRequirementText(card.Name);
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="orenda-card shadow-orenda h-100">
-                    <div class="orenda-card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h6 class="mb-2">@card.Name</h6>
-                            <span class="badge @(card.Met ? "bg-success" : "bg-danger")">
-                                @(card.Met ? "Met" : "Not Met")
-                            </span>
-                        </div>
-                        @if (!string.IsNullOrWhiteSpace(req))
-                        {
-                            <div class="small text-muted">@req</div>
-                        }
+    // A–G totals
+    decimal earnedTotal =
+        (Model.AGProgress?.CreditsEarned_HIS ?? 0) +
+        (Model.AGProgress?.CreditsEarned_ELA ?? 0) +
+        (Model.AGProgress?.CreditsEarned_MATH ?? 0) +
+        (Model.AGProgress?.CreditsEarned_SCI ?? 0) +
+        (Model.AGProgress?.CreditsEarned_FL ?? 0) +
+        (Model.AGProgress?.CreditsEarned_VA ?? 0) +
+        (Model.AGProgress?.CreditsEarned_PREP ?? 0);
+
+    decimal targetEarnedTotal =
+        (Model.AGProgress?.TargetEarned_HIS ?? 0) +
+        (Model.AGProgress?.TargetEarned_ELA ?? 0) +
+        (Model.AGProgress?.TargetEarned_MATH ?? 0) +
+        (Model.AGProgress?.TargetEarned_SCI ?? 0) +
+        (Model.AGProgress?.TargetEarned_FL ?? 0) +
+        (Model.AGProgress?.TargetEarned_VA ?? 0) +
+        (Model.AGProgress?.TargetEarned_PREP ?? 0);
+
+    decimal scheduledTotal =
+        (Model.AGProgress?.CreditsScheduled_HIS ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_ELA ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_MATH ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_SCI ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_FL ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_VA ?? 0) +
+        (Model.AGProgress?.CreditsScheduled_PREP ?? 0);
+
+    decimal targetScheduledTotal =
+        (Model.AGProgress?.TargetScheduled_HIS ?? 0) +
+        (Model.AGProgress?.TargetScheduled_ELA ?? 0) +
+        (Model.AGProgress?.TargetScheduled_MATH ?? 0) +
+        (Model.AGProgress?.TargetScheduled_SCI ?? 0) +
+        (Model.AGProgress?.TargetScheduled_FL ?? 0) +
+        (Model.AGProgress?.TargetScheduled_VA ?? 0) +
+        (Model.AGProgress?.TargetScheduled_PREP ?? 0);
+
+    // subject tuples for UI
+    var gradesSubjects = new (string code, string label, decimal earned, decimal target)[] {
+        ("A", "A. History",                 Model.AGProgress?.CreditsEarned_HIS   ?? 0m, Model.AGProgress?.TargetEarned_HIS   ?? 0m),
+        ("B", "B. English (ELA)",           Model.AGProgress?.CreditsEarned_ELA   ?? 0m, Model.AGProgress?.TargetEarned_ELA   ?? 0m),
+        ("C", "C. Math",                    Model.AGProgress?.CreditsEarned_MATH  ?? 0m, Model.AGProgress?.TargetEarned_MATH  ?? 0m),
+        ("D", "D. Science",                 Model.AGProgress?.CreditsEarned_SCI   ?? 0m, Model.AGProgress?.TargetEarned_SCI   ?? 0m),
+        ("E", "E. Language Other Than Eng", Model.AGProgress?.CreditsEarned_FL    ?? 0m, Model.AGProgress?.TargetEarned_FL    ?? 0m),
+        ("F", "F. Visual/Performing Arts",  Model.AGProgress?.CreditsEarned_VA    ?? 0m, Model.AGProgress?.TargetEarned_VA    ?? 0m),
+        ("G", "G. College-Prep Elective",   Model.AGProgress?.CreditsEarned_PREP  ?? 0m, Model.AGProgress?.TargetEarned_PREP  ?? 0m),
+    };
+
+    var schedSubjects = new (string code, string label, decimal scheduled, decimal target)[] {
+        ("A", "A. History",                 Model.AGProgress?.CreditsScheduled_HIS   ?? 0m, Model.AGProgress?.TargetScheduled_HIS   ?? 0m),
+        ("B", "B. English (ELA)",           Model.AGProgress?.CreditsScheduled_ELA   ?? 0m, Model.AGProgress?.TargetScheduled_ELA   ?? 0m),
+        ("C", "C. Math",                    Model.AGProgress?.CreditsScheduled_MATH  ?? 0m, Model.AGProgress?.TargetScheduled_MATH  ?? 0m),
+        ("D", "D. Science",                 Model.AGProgress?.CreditsScheduled_SCI   ?? 0m, Model.AGProgress?.TargetScheduled_SCI   ?? 0m),
+        ("E", "E. Language Other Than Eng", Model.AGProgress?.CreditsScheduled_FL    ?? 0m, Model.AGProgress?.TargetScheduled_FL    ?? 0m),
+        ("F", "F. Visual/Performing Arts",  Model.AGProgress?.CreditsScheduled_VA    ?? 0m, Model.AGProgress?.TargetScheduled_VA    ?? 0m),
+        ("G", "G. College-Prep Elective",   Model.AGProgress?.CreditsScheduled_PREP  ?? 0m, Model.AGProgress?.TargetScheduled_PREP  ?? 0m),
+    };
+}
+
+<div class="p-3"><!-- no extra header here; we set the modal title via script below -->
+
+    <!-- ================= INDICATOR CARDS (only enabled; excludes A–G) ================= -->
+    <div class="row row-cols-1 row-cols-md-2 g-2 mb-3">
+
+        @if (Enabled("OnTrack")) {
+            var met = Model.Student.OnTrack == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">OnTrack</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
                     </div>
+                    <div class="small">Credits Completed: <strong>@(Model.CreditsCompleted?.ToString("0.##") ?? "0")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("OnTrack")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("GPA")) {
+            var met = Model.Student.GPA == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">GPA</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small">Cumulative GPA: <strong>@(Model.CumulativeGPA?.ToString("0.00") ?? "—")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("GPA")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("Attendance")) {
+            var met = Model.Student.Attendance == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">Attendance</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small">Full‑Day Absences: <strong>@(Model.AttendanceAbsences?.ToString() ?? "0")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("Attendance")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("FAFSA")) {
+            var met = Model.Student.FAFSA == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">FAFSA</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small">Status: <strong>@(met ? "Completed" : "Not Completed")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("FAFSA")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("CollegeApplication")) {
+            var met = Model.Student.CollegeApplication == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">College Application</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small">Status: <strong>@(met ? "Submitted" : "Not Submitted")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("CollegeApplication")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("Affiliation")) {
+            var met = Model.Student.Affiliation == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">Affiliation</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small">Status: <strong>@(met ? "Yes" : "No")</strong></div>
+                    <div class="small text-muted">Requirement: <em>@Req("Affiliation")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("ELA")) {
+            var met = Model.Student.AssessmentsELA == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">ELA Assessment</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small text-muted">Requirement: <em>@Req("ELA")</em></div>
+                </div>
+            </div>
+        }
+
+        @if (Enabled("Math")) {
+            var met = Model.Student.AssessmentsMath == true;
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="small fw-semibold">Math Assessment</div>
+                        <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
+                    </div>
+                    <div class="small text-muted">Requirement: <em>@Req("Math")</em></div>
+                </div>
+            </div>
+        }
+
+        @* (Optionally add Referrals/Grades if they’re enabled)
+        @if (Enabled("Referrals")) { ... }
+        @if (Enabled("Grades")) { ... } *@
+    </div>
+
+    <!-- ================== A–G GRADES (Transcript) ================== -->
+    @{
+        var agGradesMet = Model.Student.AGGrades == true;
+    }
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <h6 class="mb-0">A–G Grades (Transcript)</h6>
+        <span class="@(agGradesMet ? metBadge : notBadge)">@((agGradesMet) ? "Met" : "Not Met")</span>
+    </div>
+
+    <div class="row row-cols-1 g-2">
+        @foreach (var (code, label, earned, target) in gradesSubjects)
+        {
+            var pct = Pct(earned, target);
+            bool metArea = earned >= target;
+            var earnedBadge = metArea ? metBadge : notBadge;
+            var group = Model.SubjectGradesByArea?.FirstOrDefault(g => g.SubjectCode == code);
+
+            <div class="col">
+                <div class="border rounded-3 p-2">
+                    <div class="small fw-semibold mb-1">@label</div>
+
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="@earnedBadge">Earned: @earned</span>
+                        <span class="badge badge-compact bg-light text-secondary border">Target: @target</span>
+                    </div>
+                    <div class="progress mb-2" style="height:6px;">
+                        <div class="progress-bar" role="progressbar" style="width:@pct%"></div>
+                    </div>
+
+                    @{
+                        var rq = Req(code);
+                        if (!string.IsNullOrWhiteSpace(rq))
+                        {
+                            <div class="small text-muted mb-1">@rq</div>
+                        }
+                    }
+
+                    <details>
+                        <summary class="small text-orenda-primary">Details</summary>
+                        @if (group != null && group.Grades.Any())
+                        {
+                            <div class="table-responsive mt-1">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr class="small">
+                                            <th>Year</th>
+                                            <th>Term</th>
+                                            <th class="text-nowrap">Course #</th>
+                                            <th>Title</th>
+                                            <th>Mark</th>
+                                            <th class="text-nowrap">Credits</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                    @foreach (var g in group.Grades)
+                                    {
+                                        <tr>
+                                            <td>@g.SchoolYear</td>
+                                            <td>@g.Term</td>
+                                            <td>@g.CourseNumber</td>
+                                            <td>@g.Title</td>
+                                            <td>@g.Mark</td>
+                                            <td>@((g.CreditsEarned ?? 0).ToString("0.##"))</td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted small mt-1">No transcripted courses found for this area.</div>
+                        }
+                    </details>
                 </div>
             </div>
         }
     </div>
 
-    <!-- A–G GRADES -->
-    <h5 class="mt-4 mb-2">A–G Grades</h5>
-
-    @foreach (var grp in Model.SubjectGradesByArea)
-    {
-        var code = grp.SubjectCode;
-        var label = Model.SubjectMap[code];
-        var collapseId = $"ag-grades-{code}";
-        var gt = Model.GetEarnedTarget(code, "Grades");
-        var pct = GAProfileCardModel.PctVal(gt.earned, gt.target);
-
-        <div class="orenda-card shadow-orenda mb-2">
-            <div class="orenda-card-body">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <strong class="me-2">@code. @label</strong>
-                    <button class="btn btn-link btn-sm text-decoration-none" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false">
-                        Show details
-                    </button>
-                </div>
-
-                <!-- Progress bar + Earned/Target line -->
-                <div class="small text-muted mb-1">
-                    Earned: <strong>@GAProfileCardModel.Fmt(gt.earned)</strong>
-                    &nbsp;/&nbsp;
-                    Target: <strong>@GAProfileCardModel.Fmt(gt.target)</strong>
-                </div>
-                <div class="progress" style="height:6px;">
-                    <div class="progress-bar" role="progressbar"
-                         style="width:@pct%"></div>
-                </div>
-
-                <div id="@collapseId" class="collapse mt-2">
-                    @if (grp.Grades?.Any() == true)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Year</th><th>Term</th><th>Course</th><th>Title</th><th>Grade Lvl</th><th>Mark</th><th>Type</th><th>CC</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                @foreach (var g in grp.Grades)
-                                {
-                                    <tr>
-                                        <td>@g.SchoolYear</td>
-                                        <td>@g.Term</td>
-                                        <td>@g.CourseNumber</td>
-                                        <td>@g.Title</td>
-                                        <td>@g.GradeLevel</td>
-                                        <td>@g.Mark</td>
-                                        <td>@g.Type</td>
-                                        <td>@g.CreditsEarned</td>
-                                    </tr>
-                                }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else { <div class="text-muted small">No transcript grades.</div> }
-                </div>
-            </div>
-        </div>
-    }
-
-    @* Non–A–G Grades inside Grades section *@
     @if (Model.NonAGGrades?.Any() == true)
     {
-        <div class="orenda-card shadow-orenda mt-3">
-            <div class="orenda-card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <strong>Non–A–G Grades</strong>
-                    <button class="btn btn-link btn-sm text-decoration-none" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#nonag-grades" aria-expanded="false">
-                        Show details
-                    </button>
-                </div>
-                <div id="nonag-grades" class="collapse mt-2">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0">
+        <div class="mt-3">
+            <div class="border rounded-3 p-2">
+                <div class="small fw-semibold">Non‑A‑G Courses (Transcript)</div>
+
+                <details class="mt-1">
+                    <summary class="small text-orenda-primary">Details</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
-                                <tr>
-                                    <th>Year</th><th>Term</th><th>Course</th><th>Title</th><th>Grade Lvl</th><th>Mark</th><th>Type</th><th>CC</th>
+                                <tr class="small">
+                                    <th>Year</th>
+                                    <th>Term</th>
+                                    <th class="text-nowrap">Course #</th>
+                                    <th>Title</th>
+                                    <th>Mark</th>
+                                    <th class="text-nowrap">Credits</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="small">
                             @foreach (var g in Model.NonAGGrades)
                             {
                                 <tr>
@@ -138,90 +308,141 @@
                                     <td>@g.Term</td>
                                     <td>@g.CourseNumber</td>
                                     <td>@g.Title</td>
-                                    <td>@g.GradeLevel</td>
                                     <td>@g.Mark</td>
-                                    <td>@g.Type</td>
-                                    <td>@g.CreditsEarned</td>
+                                    <td>@((g.CreditsEarned ?? 0).ToString("0.##"))</td>
                                 </tr>
                             }
                             </tbody>
                         </table>
                     </div>
+                </details>
+
+                <div class="text-muted small mt-1">
+                    @Model.NonAGGrades.Count course@(Model.NonAGGrades.Count == 1 ? "" : "s") not counted toward A–G.
                 </div>
             </div>
         </div>
     }
 
-    <!-- A–G SCHEDULE -->
-    <h5 class="mt-4 mb-2">A–G Schedule</h5>
 
-    @foreach (var grp in Model.AGScheduleByArea)
-    {
-        var code = grp.SubjectCode;
-        var label = Model.SubjectMap[code];
-        var collapseId = $"ag-sched-{code}";
-        var gt = Model.GetEarnedTarget(code, "Schedule");
-        var pct = GAProfileCardModel.PctVal(gt.earned, gt.target);
 
-        <div class="orenda-card shadow-orenda mb-2">
-            <div class="orenda-card-body">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <strong class="me-2">@code. @label</strong>
-                    <button class="btn btn-link btn-sm text-decoration-none" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="false">
-                        Show details
-                    </button>
-                </div>
+    <!-- ================== A–G SCHEDULE (Current + Transcript) ================== -->
+    @{
+        var agSchedMet = Model.Student.AGSchedule == true;
+    }
+    <div class="d-flex align-items-center gap-2 mb-2 mt-4">
+        <h6 class="mb-0">A–G Schedule (Current + Transcript)</h6>
+        <span class="@(agSchedMet ? metBadge : notBadge)">@((agSchedMet) ? "Met" : "Not Met")</span>
+    </div>
 
-                <!-- Progress bar + Earned/Target line -->
-                <div class="small text-muted mb-1">
-                    Scheduled: <strong>@GAProfileCardModel.Fmt(gt.earned)</strong>
-                    &nbsp;/&nbsp;
-                    Target: <strong>@GAProfileCardModel.Fmt(gt.target)</strong>
-                </div>
-                <div class="progress" style="height:6px;">
-                    <div class="progress-bar" role="progressbar"
-                         style="width:@pct%"></div>
-                </div>
+    <div class="row row-cols-1 row-cols-md-2 g-2">
+        @foreach (var (code, label, scheduled, target) in schedSubjects)
+        {
+            var pct = Pct(scheduled, target);
+            bool metArea = scheduled >= target;
+            var schedBadge = metArea ? metBadge : notBadge;
 
-                <div id="@collapseId" class="collapse mt-2">
-                    @if (grp.Grades?.Any() == true)
+            var trans = Model.SubjectGradesByArea?.FirstOrDefault(g => g.SubjectCode == code);
+            var sched = Model.AGScheduleByArea?.FirstOrDefault(g => g.SubjectCode == code);
+
+            <div class="col">
+                <div class="border rounded-3 p-2 h-100">
+                    <div class="small fw-semibold mb-1">@label</div>
+
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="@schedBadge">Scheduled: @scheduled</span>
+                        <span class="badge badge-compact bg-light text-secondary border">Target: @target</span>
+                    </div>
+
+                    <div class="progress mb-2" style="height:6px;">
+                        <div class="progress-bar" role="progressbar" style="width:@pct%"></div>
+                    </div>
+
+                    @{
+                        var rq = Req(code);
+                        if (!string.IsNullOrWhiteSpace(rq))
+                        {
+                            <div class="small text-muted mb-1">@rq</div>
+                        }
+                    }
+
+                    @if ((sched?.Grades?.Any(x => x.Type != "Transcript") ?? false) || (trans?.Grades?.Any() ?? false))
                     {
-                        <ul class="mb-0 small">
-                            @foreach (var c in grp.Grades.OrderBy(x => x.Term).ThenBy(x => x.Title))
+                        <details>
+                            <summary class="small text-orenda-primary">Details</summary>
+
+                            @if (sched?.Grades?.Any(x => x.Type != "Transcript") ?? false)
                             {
-                                <li><strong>@c.Term</strong> – @c.CourseNumber @c.Title <span class="text-muted">(@c.Type)</span></li>
+                                <div class="mt-1">
+                                    <div class="text-muted small mb-1">Current Schedule</div>
+                                    <ul class="small mb-2 ps-3">
+                                        @foreach (var s in sched.Grades.Where(x => x.Type != "Transcript"))
+                                        {
+                                            <li>@(s.Term ?? "") — @s.Title</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+
+                            @if (trans?.Grades?.Any() ?? false)
+                            {
+                                <div class="mt-1">
+                                    <div class="text-muted small mb-1">Transcript Context</div>
+                                    <ul class="small mb-0 ps-3">
+                                        @foreach (var g in trans.Grades.Take(5))
+                                        {
+                                            <li>@g.SchoolYear @g.Term — @g.Title (@g.Mark)</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </details>
+                    }
+                    else
+                    {
+                        <div class="text-muted small">No schedule/transcript details for this area.</div>
+                    }
+                </div>
+            </div>
+        }
+        </div> <!-- end A–G schedule row -->
+
+        @if (Model.NonAGSchedule?.Any() == true)
+        {
+            <div class="mt-3">
+                <div class="border rounded-3 p-2">
+                    <div class="small fw-semibold">Non‑A‑G Courses (Current Schedule)</div>
+
+                    <details class="mt-1">
+                        <summary class="small text-orenda-primary">Details</summary>
+                        <ul class="small mb-0 mt-2 ps-3">
+                            @foreach (var s in Model.NonAGSchedule)
+                            {
+                                <li>@(s.Term ?? "") — @s.Title</li>
                             }
                         </ul>
-                    }
-                    else { <div class="text-muted small">No scheduled courses.</div> }
-                </div>
-            </div>
-        </div>
-    }
+                    </details>
 
-    @* Non–A–G Schedule inside Schedule section *@
-    @if (Model.NonAGSchedule?.Any() == true)
-    {
-        <div class="orenda-card shadow-orenda mt-3">
-            <div class="orenda-card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <strong>Non–A–G Schedule</strong>
-                    <button class="btn btn-link btn-sm text-decoration-none" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#nonag-sched" aria-expanded="false">
-                        Show details
-                    </button>
-                </div>
-                <div id="nonag-sched" class="collapse mt-2">
-                    <ul class="mb-0 small">
-                        @foreach (var c in Model.NonAGSchedule)
-                        {
-                            <li><strong>@c.Term</strong> – @c.CourseNumber @c.Title</li>
-                        }
-                    </ul>
+                    <div class="text-muted small mt-1">
+                        @Model.NonAGSchedule.Count course@(Model.NonAGSchedule.Count == 1 ? "" : "s") currently scheduled outside A–G.
+                    </div>
                 </div>
             </div>
-        </div>
-    }
+        }
+
+
+    </div>
 
 </div>
+
+<!-- Put the student name + IDs + quadrant back into the modal header -->
+<script>
+(function () {
+  var el = document.getElementById('profileModalLabel');
+  if (!el) return;
+  var name = "@Model.Student.FirstName @Model.Student.LastName";
+  var ids = "ID: @Model.Student.LocalStudentId &nbsp;&nbsp;|&nbsp;&nbsp; Internal: @Model.Student.StudentId";
+  var badge = `<span class="badge @Model.QuadrantColorClass ms-2">@Model.QuadrantLevel</span>`;
+  el.innerHTML = `${name} ${badge}<div class="small text-muted mt-1">${ids}</div>`;
+})();
+</script>

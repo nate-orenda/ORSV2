@@ -15,5 +15,5 @@ public class GACheckpointSchedule
     public DateTime? Checkpoint4Date { get; set; }
     public DateTime? Checkpoint5Date { get; set; }
 
-    public School School { get; set; } // Navigation
+    public School? School { get; set; } // Navigation
 }
