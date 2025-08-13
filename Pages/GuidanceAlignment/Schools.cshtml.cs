@@ -23,6 +23,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             // Get district name
             var district = await _context.Districts
+                .AsNoTracking()
                 .Where(d => d.Id == DistrictId)
                 .FirstOrDefaultAsync();
 
@@ -36,6 +37,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             // Load schools
             Schools = await _context.Schools
+                .AsNoTracking()
                 .Where(s => !s.Inactive &&
                             s.DistrictId == DistrictId &&
                             AllowedSchoolIds.Contains(s.Id))

@@ -17,6 +17,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 return Forbid();
 
             Districts = await _context.Districts
+                .AsNoTracking()
                 .Where(d => !d.Inactive && AllowedDistrictIds.Contains(d.Id))
                 .OrderBy(d => d.Name)
                 .ToListAsync();
