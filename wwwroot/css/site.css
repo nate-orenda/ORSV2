@@ -342,6 +342,33 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .btn, .btn-orenda { transition: none; }
 }
 
+/* Buttons designed for dark/gradient backgrounds */
+.btn-inverse {
+  background: transparent;
+  color: #fff !important;
+  border: 1.5px solid rgba(255,255,255,.9);
+  box-shadow: none;
+}
+.btn-inverse:hover {
+  background: rgba(255,255,255,.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,.25);
+}
+
+/* Solid white on dark header (alt option) */
+.btn-inverse-solid {
+  background:#fff;
+  color: var(--orenda-primary) !important;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.btn-inverse-solid:hover {
+  background:#f2f5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+}
+
+
 /* =========================================================
    Header / Nav
    ========================================================= */
