@@ -64,6 +64,16 @@ namespace ORSV2.Utilities
                 .ToList();
         }
 
+        public static int GetCurrentSchoolYear(DateTime date)
+        {
+            // Aug-Dec → year + 1
+            // Jan-Jul → year
+            if (date.Month >= 8 && date.Month <= 12)
+                return date.Year + 1;
+
+            return date.Year;
+        }
+
 
     }
 }

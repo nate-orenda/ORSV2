@@ -10,7 +10,7 @@ namespace ORSV2.Pages.GuidanceAlignment
     {
         public CompareCPModel(ApplicationDbContext context) : base(context) { }
 
-        // ✨ ViewModel for charts/heatmap
+        // ===== View models =====
         public record IndicatorSummary(string Name, double PercentMet, int CountMet);
 
         public sealed class StudentIndicatorRow
@@ -19,13 +19,34 @@ namespace ORSV2.Pages.GuidanceAlignment
             public string LocalStudentId { get; set; } = "";
             public string FirstName { get; set; } = "";
             public string LastName { get; set; } = "";
-            public string? Grade { get; set; } // Stored as string in STU
+            public string? Grade { get; set; } // STU grade string
             public string? Quadrant { get; set; }
-            // dynamic indicator -> nullable bool (true=Met, false=Not Met, null=N/A)
             public Dictionary<string, bool?> Indicators { get; set; } = new();
         }
 
-        // Page state
+        public sealed class MovementRow
+        {
+            public string From { get; set; } = "";
+            public string To   { get; set; } = "";
+            public int Count   { get; set; }
+            public int Delta   { get; set; } // +up / -down by rank
+        }
+
+        // Case-insensitive tuple comparer for (From, To)
+        public class QuadrantMoveComparer : IEqualityComparer<(string From, string To)>
+        {
+            public bool Equals((string From, string To) x, (string From, string To) y) =>
+                string.Equals(x.From, y.From, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.To,   y.To,   StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((string From, string To) obj) =>
+                HashCode.Combine(
+                    obj.From?.ToLowerInvariant().GetHashCode() ?? 0,
+                    obj.To?.ToLowerInvariant().GetHashCode()   ?? 0
+                );
+        }
+
+        // ===== Page state =====
         public TargetGroup? CurrentGroup { get; set; }
         public string SchoolName { get; set; } = "";
         public string GroupName { get; set; } = "";
@@ -37,66 +58,90 @@ namespace ORSV2.Pages.GuidanceAlignment
         public Dictionary<string, int>? PreviousQuadrantCounts { get; set; }
         public int CurrentCheckpoint { get; set; }
         public int? PreviousCheckpoint { get; set; }
-        public int Grade { get; set; } // numeric Grade we use for GAQuadrantIndicators
+        public int Grade { get; set; } // numeric Grade for GAQuadrantIndicators
         public int SchoolId { get; set; }
         public bool IsGroupMode { get; set; }
-        
-        public sealed class MovementRow
-        {
-            public string From { get; set; } = "";
-            public string To   { get; set; } = "";
-            public int Count   { get; set; }
-        }
 
+        // Movement + pp metrics
         public List<MovementRow> MovementMatrix { get; set; } = new();
         public int MovementUp { get; set; }
         public int MovementDown { get; set; }
         public int MovementSame { get; set; }
 
+        public int AbovePrev { get; set; }
+        public int AboveNow  { get; set; }
+        public int TotalPrev { get; set; }
+        public int TotalNow  { get; set; }
+        public double AbovePrevPct { get; set; }   // 0–100
+        public double AboveNowPct  { get; set; }   // 0–100
+        public double AboveDeltaPp { get; set; }   // percentage points
 
-        /// <summary>
-        /// When id is provided => Target Group mode.
-        /// When id is null => School-wide by Grade mode (requires ?schoolId=&grade=).
-        /// </summary>
-        /// 
+        // ===== Helpers =====
         private static string NormalizeIndicatorName(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return name;
-
-            // canonical set used across GAResults & charts
             return name.Trim() switch
             {
                 // Friendly → Canonical
-                "A-G Grades"        => "AGGrades",
-                "A-G Schedule"      => "AGSchedule",
-                "AssessmentsELA"    => "ELA",
-                "AssessmentsMath"   => "Math",
+                "A-G Grades"      => "AGGrades",
+                "A-G Schedule"    => "AGSchedule",
+                "AssessmentsELA"  => "ELA",
+                "AssessmentsMath" => "Math",
 
-                // already canonical, preserve
-                "OnTrack"           => "OnTrack",
-                "GPA"               => "GPA",
-                "AGGrades"          => "AGGrades",
-                "AGSchedule"        => "AGSchedule",
-                "Affiliation"       => "Affiliation",
-                "FAFSA"             => "FAFSA",
-                "CollegeApplication"=> "CollegeApplication",
-                "Attendance"        => "Attendance",
-                "Referrals"         => "Referrals",
-                "Grades"            => "Grades",
-                "ELA"               => "ELA",
-                "Math"              => "Math",
-
+                // Already canonical
+                "OnTrack" => "OnTrack",
+                "GPA"     => "GPA",
+                "AGGrades"=> "AGGrades",
+                "AGSchedule" => "AGSchedule",
+                "Affiliation" => "Affiliation",
+                "FAFSA" => "FAFSA",
+                "CollegeApplication" => "CollegeApplication",
+                "Attendance" => "Attendance",
+                "Referrals" => "Referrals",
+                "Grades" => "Grades",
+                "ELA" => "ELA",
+                "Math" => "Math",
                 _ => name.Trim()
             };
         }
 
+        private static int Rank(string q) => q switch
+        {
+            "Intensive" => 0,
+            "Strategic" => 1,
+            "Benchmark" => 2,
+            "Challenge" => 3,
+            _ => 1 // Unknown ~ middle
+        };
+
+        private static bool IndicatorMet(GAResults r, string indicatorName)
+        {
+            var ind = NormalizeIndicatorName(indicatorName);
+            return ind switch
+            {
+                "OnTrack"            => r.OnTrack == true,
+                "GPA"                => r.GPA == true,
+                "AGGrades"           => r.AGGrades == true,
+                "AGSchedule"         => r.AGSchedule == true,
+                "Affiliation"        => r.Affiliation == true,
+                "FAFSA"              => r.FAFSA == true,
+                "CollegeApplication" => r.CollegeApplication == true,
+                "Attendance"         => r.Attendance == true,
+                "Referrals"          => r.Referrals == true,
+                "Grades"             => r.Grades == true,
+                "ELA"                => r.AssessmentsELA == true,
+                "Math"               => r.AssessmentsMath == true,
+                _ => false
+            };
+        }
+
+        // ===== Handler =====
         public async Task<IActionResult> OnGetAsync(int? id, int? schoolId, int? grade)
         {
             IsGroupMode = id.HasValue;
 
             if (IsGroupMode)
             {
-                // ----- Target Group mode -----
                 CurrentGroup = await _context.TargetGroups
                     .Include(tg => tg.School).ThenInclude(s => s!.District)
                     .AsNoTracking()
@@ -105,18 +150,16 @@ namespace ORSV2.Pages.GuidanceAlignment
                 if (CurrentGroup?.School is null) return NotFound();
                 if (!await AuthorizeAsync(CurrentGroup.SchoolId)) return Forbid();
 
+                SchoolId = CurrentGroup.SchoolId;
                 SchoolName = CurrentGroup.School.Name;
                 GroupName = CurrentGroup.Name;
-                SchoolId = CurrentGroup.SchoolId;
             }
             else
             {
-                // ----- School-wide by Grade mode -----
                 if (schoolId is null || grade is null)
                     return BadRequest("When no Target Group id is provided, pass ?schoolId={id}&grade={number}");
 
                 var school = await _context.Schools
-                    .Include(s => s.District)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.Id == schoolId.Value);
 
@@ -131,16 +174,17 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             ViewData["Title"] = $"Target Group - {GroupName}";
 
-            // Determine active checkpoint for this school & year (fallback via helper)
+            // Checkpoint + SchoolYear
             var schedule = await _context.GACheckpointSchedule
                                 .AsNoTracking()
                                 .FirstOrDefaultAsync(s => s.SchoolId == SchoolId);
             var today = DateTime.Today;
-            int cp = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, today);
-            CurrentCheckpoint = cp;
+            CurrentCheckpoint = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, today);
             PreviousCheckpoint = CurrentCheckpoint > 1 ? CurrentCheckpoint - 1 : null;
 
-            // Build roster of StudentIds
+            var currentSchoolYear = CurrentCheckpointHelper.GetCurrentSchoolYear(today);
+
+            // Roster
             List<int> studentIds;
             if (IsGroupMode)
             {
@@ -153,8 +197,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             }
             else
             {
-                // School-wide by grade: all students for school + selected grade
-                var gradeStr = grade!.Value.ToString();
+                var gradeStr = Grade.ToString();
                 studentIds = await _context.STU.AsNoTracking()
                     .Where(s => s.SchoolID == SchoolId && s.Grade == gradeStr)
                     .Select(s => s.StuId)
@@ -162,22 +205,15 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .ToListAsync();
             }
 
-            if (studentIds.Count == 0) return Page(); // empty set – render "no data"
+            if (studentIds.Count == 0) return Page();
 
-            // Student directory info (name, local id, grade)
+            // Directory
             var stuDirectory = await _context.STU.AsNoTracking()
                 .Where(s => s.SchoolID == SchoolId && studentIds.Contains(s.StuId))
-                .Select(s => new
-                {
-                    s.StuId,
-                    s.LocalStudentID,
-                    s.FirstName,
-                    s.LastName,
-                    s.Grade // string
-                })
+                .Select(s => new { s.StuId, s.LocalStudentID, s.FirstName, s.LastName, s.Grade })
                 .ToListAsync();
 
-            // Decide numeric Grade for indicator catalog (if not set already in school-wide mode)
+            // If group spans grades, pick max for indicator catalog
             if (IsGroupMode)
             {
                 Grade = stuDirectory
@@ -185,14 +221,18 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .DefaultIfEmpty(0)
                     .Max();
             }
-            // else Grade already provided from querystring
 
-            // Indicators for this Grade + CP (scoped to School/District as available)
+            // Indicators (scope by district/school)
+            int? districtId = await _context.Schools
+                .Where(s => s.Id == SchoolId)
+                .Select(s => (int?)s.DistrictId)
+                .FirstOrDefaultAsync();
+
             var rawIndicators = await _context.GAQuadrantIndicators.AsNoTracking()
-                .Where(i => i.Grade == Grade && i.CP == CurrentCheckpoint
-                    && (i.SchoolId == null || i.SchoolId == SchoolId)
-                    && (i.DistrictId == null || i.DistrictId ==
-                        _context.Schools.Where(s => s.Id == SchoolId).Select(s => s.DistrictId).FirstOrDefault()))
+                .Where(i => i.Grade == Grade
+                        && i.CP == CurrentCheckpoint
+                        && (i.SchoolId == null || i.SchoolId == SchoolId)
+                        && (i.DistrictId == null || i.DistrictId == districtId))
                 .GroupBy(i => i.IndicatorName)
                 .Select(g => g.OrderByDescending(i => i.SchoolId != null ? 3 : i.DistrictId != null ? 2 : 1).First())
                 .ToListAsync();
@@ -203,10 +243,11 @@ namespace ORSV2.Pages.GuidanceAlignment
                 .OrderBy(n => n)
                 .ToList();
 
-            // GAResults for current and (optional) previous checkpoint
+            // GAResults (filter by SchoolId, CP, SchoolYear, roster)
             var resultsCurrent = await _context.GAResults.AsNoTracking()
                 .Where(r => r.SchoolId == SchoolId
                             && r.CP == CurrentCheckpoint
+                            && r.SchoolYear == currentSchoolYear
                             && studentIds.Contains(r.StudentId))
                 .ToListAsync();
 
@@ -216,11 +257,18 @@ namespace ORSV2.Pages.GuidanceAlignment
                 resultsPrev = await _context.GAResults.AsNoTracking()
                     .Where(r => r.SchoolId == SchoolId
                                 && r.CP == PreviousCheckpoint
+                                && r.SchoolYear == currentSchoolYear
                                 && studentIds.Contains(r.StudentId))
                     .ToListAsync();
             }
 
-            var byStuIdCur = resultsCurrent.ToDictionary(r => r.StudentId, r => r);
+            // Deduplicate by StudentId (in case multiple rows slip through)
+            var byStuIdCur = resultsCurrent
+                .GroupBy(r => r.StudentId)
+                .ToDictionary(g => g.Key, g => g.First());
+            var byStuIdPrev = resultsPrev?
+                .GroupBy(r => r.StudentId)
+                .ToDictionary(g => g.Key, g => g.First());
 
             // Build student rows
             foreach (var s in stuDirectory.OrderBy(s => s.LastName).ThenBy(s => s.FirstName))
@@ -232,69 +280,51 @@ namespace ORSV2.Pages.GuidanceAlignment
                     LocalStudentId = s.LocalStudentID ?? "",
                     FirstName = s.FirstName ?? "",
                     LastName = s.LastName ?? "",
-                    Grade = s.Grade, // keep as string for display
+                    Grade = s.Grade,
                     Quadrant = cur?.Quadrant
                 };
 
                 foreach (var raw in IndicatorNames)
                 {
                     var ind = NormalizeIndicatorName(raw);
-
                     bool? val = ind switch
                     {
-                        // Newly added so they show up:
-                        "OnTrack"           => cur?.OnTrack,
-                        "GPA"               => cur?.GPA,
-                        "AGGrades"          => cur?.AGGrades,
-
-                        // Existing:
-                        "AGSchedule"        => cur?.AGSchedule,
-                        "Affiliation"       => cur?.Affiliation,
-                        "FAFSA"             => cur?.FAFSA,
-                        "CollegeApplication"=> cur?.CollegeApplication,
-                        "Attendance"        => cur?.Attendance,
-                        "Referrals"         => cur?.Referrals,
-                        "Grades"            => cur?.Grades,
-                        "ELA"               => cur?.AssessmentsELA,
-                        "Math"              => cur?.AssessmentsMath,
-
+                        "OnTrack"            => cur?.OnTrack,
+                        "GPA"                => cur?.GPA,
+                        "AGGrades"           => cur?.AGGrades,
+                        "AGSchedule"         => cur?.AGSchedule,
+                        "Affiliation"        => cur?.Affiliation,
+                        "FAFSA"              => cur?.FAFSA,
+                        "CollegeApplication" => cur?.CollegeApplication,
+                        "Attendance"         => cur?.Attendance,
+                        "Referrals"          => cur?.Referrals,
+                        "Grades"             => cur?.Grades,
+                        "ELA"                => cur?.AssessmentsELA,
+                        "Math"               => cur?.AssessmentsMath,
                         _ => null
                     };
-
                     row.Indicators[ind] = val;
                 }
-
-
                 Students.Add(row);
             }
 
+            // Movement (only if we have previous CP)
             MovementMatrix = new();
             MovementUp = MovementDown = MovementSame = 0;
 
-            if (resultsPrev is not null && resultsPrev.Count > 0)
+            if (byStuIdPrev is not null && byStuIdPrev.Count > 0)
             {
                 string Norm(string? q) => string.IsNullOrWhiteSpace(q) ? "Unknown" : q;
-                int Rank(string q) => q switch
+
+                var prevByStuQ = byStuIdPrev.ToDictionary(k => k.Key, v => Norm(v.Value.Quadrant));
+                var curByStuQ  = byStuIdCur .ToDictionary(k => k.Key, v => Norm(v.Value.Quadrant));
+
+                var agg = new Dictionary<(string From, string To), int>(new QuadrantMoveComparer());
+
+                foreach (var kv in curByStuQ)
                 {
-                    "Intensive" => 0,
-                    "Strategic" => 1,
-                    "Benchmark" => 2,
-                    "Challenge" => 3,
-                    _ => 1 // Unknown ~ middle
-                };
-
-                var prevByStu = resultsPrev.ToDictionary(r => r.StudentId, r => Norm(r.Quadrant));
-                var curByStu  = resultsCurrent.ToDictionary(r => r.StudentId, r => Norm(r.Quadrant));
-
-                // Aggregate movements
-                var agg = new Dictionary<(string From, string To), int>();
-
-
-                foreach (var kv in curByStu)
-                {
-                    var stuId = kv.Key;
-                    var to    = kv.Value;
-                    if (!prevByStu.TryGetValue(stuId, out var from)) continue;
+                    if (!prevByStuQ.TryGetValue(kv.Key, out var from)) continue;
+                    var to = kv.Value;
 
                     var key = (from, to);
                     agg[key] = agg.TryGetValue(key, out var c) ? c + 1 : 1;
@@ -311,17 +341,17 @@ namespace ORSV2.Pages.GuidanceAlignment
                     {
                         From  = kvp.Key.From,
                         To    = kvp.Key.To,
-                        Count = kvp.Value
+                        Count = kvp.Value,
+                        Delta = Rank(kvp.Key.To) - Rank(kvp.Key.From)
                     })
                     .OrderByDescending(m => m.Count)
                     .ToList();
-
             }
 
-            // Summaries: % met by indicator (current & previous)
+            // Indicator summaries
             CurrentIndicatorSummaries = IndicatorNames.Select(ind =>
             {
-                var met = Students.Count(s => s.Indicators[ind] == true);
+                var met = Students.Count(s => s.Indicators.TryGetValue(ind, out var v) && v == true);
                 return new IndicatorSummary(ind, Students.Count > 0 ? (met * 100.0 / Students.Count) : 0, met);
             }).ToList();
 
@@ -330,12 +360,12 @@ namespace ORSV2.Pages.GuidanceAlignment
                 PreviousIndicatorSummaries = IndicatorNames.Select(ind =>
                 {
                     var prevMet = resultsPrev.Count(r => IndicatorMet(r, ind));
-                    var denom = resultsPrev.Count;
+                    var denom   = resultsPrev.Count;
                     return new IndicatorSummary(ind, denom > 0 ? (prevMet * 100.0 / denom) : 0, prevMet);
                 }).ToList();
             }
 
-            // Quadrant counts (current & previous)
+            // Quadrant counts
             CurrentQuadrantCounts = resultsCurrent
                 .GroupBy(r => r.Quadrant ?? "Unknown")
                 .ToDictionary(g => g.Key, g => g.Count());
@@ -347,29 +377,26 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .ToDictionary(g => g.Key, g => g.Count());
             }
 
+            // Above-the-line (pp) metrics
+            int get(Dictionary<string,int> dict, string key) => dict.TryGetValue(key, out var v) ? v : 0;
+
+            TotalNow  = CurrentQuadrantCounts.Values.Sum();
+            AboveNow  = get(CurrentQuadrantCounts, "Challenge") + get(CurrentQuadrantCounts, "Benchmark");
+            AboveNowPct = TotalNow > 0 ? (AboveNow * 100.0 / TotalNow) : 0.0;
+
+            if (PreviousQuadrantCounts is not null)
+            {
+                TotalPrev = PreviousQuadrantCounts.Values.Sum();
+                AbovePrev = get(PreviousQuadrantCounts, "Challenge") + get(PreviousQuadrantCounts, "Benchmark");
+                AbovePrevPct = TotalPrev > 0 ? (AbovePrev * 100.0 / TotalPrev) : 0.0;
+                AboveDeltaPp = Math.Round(AboveNowPct - AbovePrevPct, 1);
+            }
+            else
+            {
+                TotalPrev = 0; AbovePrev = 0; AbovePrevPct = 0; AboveDeltaPp = 0;
+            }
+
             return Page();
         }
-
-        private static bool IndicatorMet(GAResults r, string indicatorName)
-        {
-            var ind = NormalizeIndicatorName(indicatorName);
-            return ind switch
-            {
-                "OnTrack"           => r.OnTrack == true,
-                "GPA"               => r.GPA == true,
-                "AGGrades"          => r.AGGrades == true,
-                "AGSchedule"        => r.AGSchedule == true,
-                "Affiliation"       => r.Affiliation == true,
-                "FAFSA"             => r.FAFSA == true,
-                "CollegeApplication"=> r.CollegeApplication == true,
-                "Attendance"        => r.Attendance == true,
-                "Referrals"         => r.Referrals == true,
-                "Grades"            => r.Grades == true,
-                "ELA"               => r.AssessmentsELA == true,
-                "Math"              => r.AssessmentsMath == true,
-                _ => false
-            };
-        }
-
     }
 }

@@ -52,77 +52,67 @@ else
         <canvas id="quadrantCompare" height="180"></canvas>
       </div>
       <div class="small mt-1">
-            @if (Model.PreviousQuadrantCounts is not null)
-            {
-                    // Above-the-line = Challenge + Benchmark
-                    int aboveNow  = (Model.CurrentQuadrantCounts.TryGetValue("Challenge", out var chNow) ? chNow : 0)
-                                + (Model.CurrentQuadrantCounts.TryGetValue("Benchmark", out var bmNow) ? bmNow : 0);
-                    int abovePrev = (Model.PreviousQuadrantCounts.TryGetValue("Challenge", out var chPrev) ? chPrev : 0)
-                                + (Model.PreviousQuadrantCounts.TryGetValue("Benchmark", out var bmPrev) ? bmPrev : 0);
+    @if (Model.PreviousQuadrantCounts is not null)
+    {
+            var signCls   = Model.AboveDeltaPp >= 0 ? "text-success" : "text-danger";
+            var deltaText = ((Model.AboveNow - Model.AbovePrev) >= 0 ? "+" : "") + (Model.AboveNow - Model.AbovePrev).ToString();
 
-                    int diffStudents = aboveNow - abovePrev;
-                    double pctChange = abovePrev > 0 ? (diffStudents * 100.0 / abovePrev) : 0.0;
+            // If you ever want to limit how many moves you show, do it here:
+            var moves = Model.MovementMatrix ?? new List<ORSV2.Pages.GuidanceAlignment.CompareCPModel.MovementRow>();
+            // Only show actual movers (Model.MovementMatrix was already filtered to From != To in the model)
 
-                    string SignedPct(double v) => v switch
-                    {
-                        > 0 => "+" + Math.Round(v).ToString("0"),
-                        < 0 => Math.Round(v).ToString("0"),
-                        _   => "0"
-                    };
-                    string SignedInt(int v) => (v >= 0 ? "+" : "") + v.ToString();
-
-                    // Movers only (exclude same→same) for the “Top moves” list
-                    var moversOnly = (Model.MovementMatrix ?? new List<ORSV2.Pages.GuidanceAlignment.CompareCPModel.MovementRow>())
-                        .Where(m => !string.Equals(m.From, m.To, StringComparison.OrdinalIgnoreCase))
-                        .OrderByDescending(m => m.Count)
-                        .ToList();
-
-                    bool anyMovers = (Model.MovementUp + Model.MovementDown) > 0 && moversOnly.Count > 0;
-
-                <div class="text-muted">
-                    From checkpoint @Model.PreviousCheckpoint to @Model.CurrentCheckpoint,
-                    students <strong>above the line</strong> changed by
-                    <strong class="@(diffStudents >= 0 ? "text-success" : "text-danger")">
-                        @SignedPct(pctChange)% (@SignedInt(diffStudents))
-                    </strong>.
-                </div>
-
-                <div class="mt-1">
-                    <span class="me-3"><strong class="text-success">@Model.MovementUp</strong> moved up</span>
-                    <span class="me-3"><strong class="text-danger">@Model.MovementDown</strong> moved down</span>
-                    <span><strong class="text-muted">@Model.MovementSame</strong> stayed the same</span>
-                </div>
-
-                @if (anyMovers)
-                {
-                    <div class="mt-1 text-muted">
-                        Top moves:
-                        @foreach (var move in moversOnly.Take(3))
-                        {
-                            var cls =
-                                (string.Equals(move.From, "Intensive", StringComparison.OrdinalIgnoreCase) && !string.Equals(move.To, "Intensive", StringComparison.OrdinalIgnoreCase)) ||
-                                (string.Equals(move.From, "Strategic", StringComparison.OrdinalIgnoreCase) && (string.Equals(move.To, "Benchmark", StringComparison.OrdinalIgnoreCase) || string.Equals(move.To, "Challenge", StringComparison.OrdinalIgnoreCase))) ||
-                                (string.Equals(move.From, "Benchmark", StringComparison.OrdinalIgnoreCase) && string.Equals(move.To, "Challenge", StringComparison.OrdinalIgnoreCase))
-                                ? "text-success"
-                                : "text-danger";
-
-                            <span class="ms-2 me-2 @cls"><strong>@move.Count</strong> from @move.From → @move.To</span>
-                        }
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="text-muted">
-                    No previous checkpoint yet. Current distribution:
-                    @foreach (var kv in Model.CurrentQuadrantCounts)
-                    {
-                        <span class="ms-2"><span class="badge rounded-pill">@kv.Key</span> @kv.Value</span>
-                    }
-                </div>
-            }
+        <div class="text-muted">
+            From checkpoint @Model.PreviousCheckpoint to @Model.CurrentCheckpoint,
+            students <strong>above the line</strong> changed by
+            <strong class="@signCls">@Model.AboveDeltaPp.ToString("+#0.0;-#0.0;0.0") pp</strong>
+            (<strong class="@signCls">@deltaText</strong> students).
         </div>
 
+        <div class="mt-1">
+            <span class="me-3"><strong class="text-success">@Model.MovementUp</strong> moved up</span>
+            <span class="me-3"><strong class="text-danger">@Model.MovementDown</strong> moved down</span>
+            <span><strong class="text-muted">@Model.MovementSame</strong> stayed the same</span>
+        </div>
+
+        @if (moves.Count > 0)
+        {
+            <div class="mt-1">
+                <div class="text-muted">All moves:</div>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mt-1">
+                    @foreach (var move in moves)
+{
+    string ColorForQuadrant(string q) => q switch
+    {
+        "Intensive" => "text-danger",    // red
+        "Strategic" => "text-warning",   // orange/yellow
+        "Benchmark" => "text-success",   // green
+        "Challenge" => "text-primary",   // blue
+        _ => "text-muted"
+    };
+
+    <span>
+        <strong>@move.Count</strong>
+        <span class="@ColorForQuadrant(move.From)">@move.From</span>
+        →
+        <span class="@ColorForQuadrant(move.To)">@move.To</span>
+    </span>
+}
+
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-muted">
+            No previous checkpoint yet. Current distribution:
+            @foreach (var kv in Model.CurrentQuadrantCounts)
+            {
+                <span class="ms-2"><span class="badge rounded-pill">@kv.Key</span> @kv.Value</span>
+            }
+        </div>
+    }
+</div>
 
 
     </div>
