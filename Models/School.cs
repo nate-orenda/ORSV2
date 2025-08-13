@@ -30,6 +30,12 @@ namespace ORSV2.Models
         public DateTime DateUpdated { get; set; }
         public short? LowGrade { get; set; }
         public short? HighGrade { get; set; }
+
+        [Display(Name = "Guidance Alignment")]
+        public bool GA { get; set; } = false;
+
+        [Display(Name = "Curriculum Alignment")]
+        public bool CA { get; set; } = false;
         public District? District { get; set; }
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
     }

@@ -40,6 +40,8 @@ namespace ORSV2.Pages
             public int Enrollment { get; set; }
             public int? CurrentCP { get; set; }
             public DateTime? GAResultsLastUpdated { get; set; }
+            public bool GA { get; set; }
+            public bool CA { get; set; }
         }
 
         public async Task<IActionResult> OnGetAsync()
@@ -134,7 +136,9 @@ namespace ORSV2.Pages
                         SchoolName = s.Name,
                         Enrollment = enrollBySchool.TryGetValue(s.Id, out var cnt) ? cnt : 0,
                         CurrentCP = gaAgg.TryGetValue(s.Id, out var agg) ? agg.CurrentCP : null,
-                        GAResultsLastUpdated = gaAgg.TryGetValue(s.Id, out var agg2) ? agg2.LastUpdated : null
+                        GAResultsLastUpdated = gaAgg.TryGetValue(s.Id, out var agg2) ? agg2.LastUpdated : null,
+                        GA = s.GA,   // ← from Schools table
+                        CA = s.CA
                     }).ToList()
                 })
                 .OrderBy(b => b.DistrictName)

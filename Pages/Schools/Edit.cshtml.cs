@@ -35,13 +35,13 @@ namespace ORSV2.Pages.Schools
             var schoolToUpdate = await _context.Schools.FindAsync(School.Id);
             if (schoolToUpdate == null)
                 return NotFound();
-
-            schoolToUpdate.Name = School.Name;
-            schoolToUpdate.LocalSchoolId = School.LocalSchoolId;
+                
             schoolToUpdate.SchoolType = School.SchoolType;
             schoolToUpdate.CDSCode = School.CDSCode;
             schoolToUpdate.Notes = School.Notes;
             schoolToUpdate.enabled = School.enabled;
+            schoolToUpdate.GA = School.GA;
+            schoolToUpdate.CA = School.CA;
 
             await _context.SaveChangesAsync();
             return RedirectToPage("Index", new { districtId = School.DistrictId });

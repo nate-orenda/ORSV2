@@ -45,37 +45,64 @@
                         {
                             <div class="col-12 col-sm-6 col-lg-4">
                                 <div class="orenda-card shadow-orenda-hover smooth-transition h-100">
-                                    <div class="orenda-card-body py-3" style="min-width:0;">
-                                        <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap mb-2">
-                                            <h5 class="mb-0 text-orenda-primary text-truncate me-2"
-                                                title="@s.SchoolName"
-                                                style="font-weight:600; max-width:100%;">
-                                                @s.SchoolName
-                                            </h5>
-                                            <span class="checkpoint-badge flex-shrink-0">
-                                                CP @(s.CurrentCP.HasValue && s.CurrentCP.Value > 0 
-                                                    ? s.CurrentCP!.Value.ToString() 
-                                                    : "—")
-                                            </span>
+                                    <div class="orenda-card-body py-3 position-relative" style="min-width:0;">
+
+                                    @{
+                                        var cpText = (s.CurrentCP.HasValue && s.CurrentCP.Value > 0)
+                                            ? s.CurrentCP.Value.ToString()
+                                            : "—";
+
+                                        var gaUpdatedText = s.GAResultsLastUpdated.HasValue
+                                            ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy")
+                                            : "—";
+                                    }
+
+                                    <!-- Title -->
+                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap mb-2">
+                                        <h5 class="mb-0 text-orenda-primary text-truncate me-2"
+                                            title="@s.SchoolName"
+                                            style="font-weight:600; max-width:100%;">
+                                        @s.SchoolName
+                                        </h5>
+                                    </div>
+
+                                    <!-- Data box -->
+                                    <div class="d-flex flex-column gap-1 small text-muted">
+
+                                        <!-- Enrollment inline -->
+                                        <div class="orenda-summary-item">
+                                        <span class="orenda-summary-label">Enrollment:</span>
+                                        <span class="fw-semibold ms-1">@s.Enrollment</span>
                                         </div>
 
-                                        <div class="d-flex flex-column gap-1 small text-muted">
-                                            <div class="d-flex justify-content-between orenda-summary-item">
-                                                <span class="orenda-summary-label">Enrollment</span>
-                                                <span class="fw-semibold">@s.Enrollment</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between orenda-summary-item">
-                                                <span class="orenda-summary-label">GAResults Updated</span>
-                                                <span class="fw-semibold">
-                                                    @(s.GAResultsLastUpdated.HasValue
-                                                        ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy h:mm tt")
-                                                        : "—")
-                                                </span>
-                                            </div>
+                                        <!-- GA row: checkbox next to words -->
+                                        <div class="orenda-summary-item">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="orenda-summary-label">Guidance Alignment</span>
+                                            <input class="form-check-input check-mini" type="checkbox" @(s.GA ? "checked" : "") disabled />
                                         </div>
+                                        </div>
+                                        <!-- CP line -->
+                                        <div class="small text-muted" style="margin-top:-.2rem;">
+                                        Checkpoint: @cpText
+                                        </div>
+                                        <!-- Date line -->
+                                        <div class="small text-muted" style="margin-top:-.2rem;">
+                                        Last Updated: @gaUpdatedText
+                                        </div>
+
+                                        <!-- CA row: checkbox next to words -->
+                                        <div class="orenda-summary-item">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="orenda-summary-label">Curriculum Alignment</span>
+                                            <input class="form-check-input check-mini" type="checkbox" @(s.CA ? "checked" : "") disabled />   
+                                        </div>
+                                        </div>
+
+                                    </div>
                                     </div>
                                 </div>
-                            </div>
+                                </div>
                         }
                     </div>
                 </div>

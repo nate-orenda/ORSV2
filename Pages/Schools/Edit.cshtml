@@ -12,27 +12,53 @@
 
     <div class="form-group">
         <label asp-for="School.Name"></label>
-        <input asp-for="School.Name" class="form-control" />
+        <input asp-for="School.Name" class="form-control" readonly/>
     </div>
 
     <div class="form-group">
         <label asp-for="School.LocalSchoolId"></label>
-        <input asp-for="School.LocalSchoolId" class="form-control" />
+        <input asp-for="School.LocalSchoolId" class="form-control" readonly/>
     </div>
 
-    <div class="form-group">
-        <label asp-for="School.SchoolType"></label>
-        <input asp-for="School.SchoolType" class="form-control" />
-    </div>
-
-    <div class="form-group">
+    <div class="form-group"></div>
         <label asp-for="School.CDSCode"></label>
         <input asp-for="School.CDSCode" class="form-control" />
     </div>
 
+    <div class="form-group">
+        <label asp-for="School.SchoolType"></label>
+        <select asp-for="School.SchoolType" class="form-select">
+            <option value="">-- Select School Type --</option>
+            <option value="HS">High School</option>
+            <option value="MS">Middle School</option>
+            <option value="ES">Elementary School</option>
+        </select>
+        <small class="form-text text-muted">Saves as HS/MS/ES.</small>
+    </div>
+
+    <div class="form-group"></div>
+        <label>Low Grade</label>
+        <input class="form-control" value="@Model.School.LowGrade?.ToString()" readonly />
+    </div>
+
+    <div class="form-group">
+        <label>High Grade</label>
+        <input class="form-control" value="@Model.School.HighGrade?.ToString()" readonly />
+    </div>
+
     <div class="form-group form-check">
         <input asp-for="School.enabled" class="form-check-input" />
-        <label class="form-check-label" asp-for="School.enabled"></label>
+        <label class="form-check-label" asp-for="School.enabled">Enable Data Sync</label>
+    </div>
+
+    <div class="form-group form-check">
+        <input asp-for="School.GA" class="form-check-input" />
+        <label class="form-check-label" asp-for="School.GA">Guidance Alignment (GA)</label>
+    </div>
+
+    <div class="form-group form-check">
+        <input asp-for="School.CA" class="form-check-input" />
+        <label class="form-check-label" asp-for="School.CA">Curriculum Alignment (CA)</label>
     </div>
 
     <div class="form-group">

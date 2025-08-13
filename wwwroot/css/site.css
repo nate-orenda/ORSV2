@@ -637,3 +637,5 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .modal-content.shadow-orenda { border-radius: 12px; }
 .modal-header.bg-orenda-primary { border-bottom: none; }
 .modal-footer { border-top: none; }
+
+.check-mini { transform: scale(0.85); pointer-events: none; }

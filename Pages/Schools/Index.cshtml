@@ -19,9 +19,12 @@
     <thead>
         <tr>
             <th>Name</th>
+            <th>SystemID</th>
             <th>Local ID</th>
             <th>Type</th>
             <th>Sync Enabled</th>
+            <th>GA</th>
+            <th>CA</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -30,9 +33,12 @@
         {
             <tr>
                 <td>@school.Name</td>
+                <td>@school.Id</td>
                 <td>@school.LocalSchoolId</td>
                 <td>@school.SchoolType</td>
                 <td>@school.enabled</td>
+                <td>@school.GA</td>
+                <td>@school.CA</td>
                 <td>
                     @if (canEdit)
                     {
