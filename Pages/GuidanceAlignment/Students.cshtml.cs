@@ -220,7 +220,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             }
 
             // Go to the new group page after success
-            return RedirectToPage("/GuidanceAlignment/TargetGroup", new { id = group.Id });
+            return RedirectToPage("/GuidanceAlignment/CompareCP", new { id = group.Id });
         }
 
 
