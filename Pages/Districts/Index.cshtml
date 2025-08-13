@@ -44,19 +44,19 @@
                     <div class="d-flex flex-wrap gap-2">
                         <a asp-page="/Schools/Index"
                            asp-route-districtId="@district.Id"
-                           class="btn btn-outline-primary btn-sm">
+                           class="btn btn-sm btn-outline-secondary">
                             View Schools
                         </a>
 
                         <a asp-page="/Courses/Index"
                            asp-route-districtId="@district.Id"
-                           class="btn btn-outline-primary btn-sm">
+                           class="btn btn-sm btn-outline-secondary">
                             View Courses
                         </a>
 
                         <a asp-page="/Districts/CheckpointSchedules"
                            asp-route-DistrictId="@district.Id"
-                           class="btn btn-outline-primary btn-sm">
+                           class="btn btn-sm btn-outline-secondary">
                             Edit Checkpoint Dates
                         </a>
 
@@ -64,13 +64,13 @@
                         {
                             <a asp-page="/Districts/RunImports"
                                asp-route-districtId="@district.Id"
-                               class="btn btn-outline-primary btn-sm">
+                               class="btn btn-sm btn-outline-secondary">
                                 Run Imports
                             </a>
 
                             <a asp-page="Edit"
                                asp-route-id="@district.Id"
-                               class="btn btn-outline-primary btn-sm">
+                               class="btn btn-sm btn-outline-secondary">
                                 Edit
                             </a>
 
