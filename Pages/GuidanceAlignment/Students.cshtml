@@ -217,7 +217,7 @@
                                     data-bs-toggle="modal"
                                     data-bs-target="#profileModal"
                                     data-result-id="@s.ResultId"
-                                    data-student-id="@(Model.StuIdByLocal.TryGetValue(s.LocalStudentId ?? "", out var sid) ? sid : 0)">
+                                    data-student-id="@(Model.StuIdByLocal.TryGetValue(s.LocalStudentId, out var stu) ? stu : 0)">
                                     @s.LastName, @s.FirstName
                                 </a>
                             </td>

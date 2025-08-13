@@ -88,7 +88,7 @@ window.StudentGrouping = (function () {
         if (!modal) return; // prevent errors if the modal is absent
         modal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
-            const studentId = button.getAttribute('data-student-id');
+            const studentId = button.getAttribute('data-result-id');
             fetch(`/GuidanceAlignment/GAProfileCard?id=${studentId}`)
                 .then(response => response.text())
                 .then(html => {
@@ -160,7 +160,8 @@ window.StudentGrouping = (function () {
         createBtn.off('click.targetGroup').on('click.targetGroup', function () {
             const ids = [];
             table.rows({ selected: true }).nodes().each(function (rowNode) {
-                const sid = parseInt($(rowNode).find('.view-profile').attr('data-student-id'), 10);
+                const el = $(rowNode).find('.view-profile')[0] || rowNode;
+                const sid = parseInt($(el).attr('data-student-id'), 10);
                 if (sid) ids.push(sid);
             });
 
