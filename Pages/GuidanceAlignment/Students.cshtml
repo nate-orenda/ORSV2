@@ -216,11 +216,11 @@
                                     class="fw-semibold text-decoration-none view-profile"
                                     data-bs-toggle="modal"
                                     data-bs-target="#profileModal"
+                                    data-result-id="@s.ResultId"
                                     data-student-id="@(Model.StuIdByLocal.TryGetValue(s.LocalStudentId ?? "", out var sid) ? sid : 0)">
                                     @s.LastName, @s.FirstName
                                 </a>
                             </td>
-
                             <td class="py-1"><span class="badge bg-secondary" style="font-size: 0.7rem;">@s.LocalStudentId</span></td>
                             <td class="py-1">@s.Grade</td>
                             <td class="py-1">@((!string.IsNullOrEmpty(s.CounselorName) && s.CounselorName.Length > 15) ? s.CounselorName.Substring(0, 15) + "..." : s.CounselorName ?? "-")</td>
