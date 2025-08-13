@@ -75,34 +75,58 @@
                                         <span class="fw-semibold ms-1">@s.Enrollment</span>
                                         </div>
 
-                                        <!-- GA row: checkbox next to words -->
+                                        <!-- GA row: green ✓ or red ✕ next to words -->
                                         <div class="orenda-summary-item">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="orenda-summary-label">Guidance Alignment</span>
-                                            <input class="form-check-input check-mini" type="checkbox" @(s.GA ? "checked" : "") disabled />
+                                            @if (s.GA)
+                                            {
+                                            <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
+                                            <span class="visually-hidden">Enabled</span>
+                                            }
+                                            else
+                                            {
+                                            <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
+                                            <span class="visually-hidden">Not enabled</span>
+                                            }
+                                            
                                         </div>
-                                        </div>
-                                        <!-- CP line -->
-                                        <div class="small text-muted" style="margin-top:-.2rem;">
-                                        Checkpoint: @cpText
-                                        </div>
-                                        <!-- Date line -->
-                                        <div class="small text-muted" style="margin-top:-.2rem;">
-                                        Last Updated: @gaUpdatedText
                                         </div>
 
-                                        <!-- CA row: checkbox next to words -->
+                                        <!-- CP line -->
+                                        <div class="small text-muted" style="margin-top:-.2rem;">
+                                        Checkpoint: @(s.CurrentCP.HasValue && s.CurrentCP.Value > 0 ? s.CurrentCP.Value.ToString() : "—")
+                                        </div>
+
+                                        <!-- Date line -->
+                                        <div class="small text-muted" style="margin-top:-.2rem;">
+                                        Last Updated: @(s.GAResultsLastUpdated.HasValue ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy") : "—")
+                                        </div>
+
+                                        <!-- CA row: green ✓ or red ✕ next to words -->
                                         <div class="orenda-summary-item">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="orenda-summary-label">Curriculum Alignment</span>
-                                            <input class="form-check-input check-mini" type="checkbox" @(s.CA ? "checked" : "") disabled />   
+                                            @if (s.CA)
+                                            {
+                                            <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
+                                            <span class="visually-hidden">Enabled</span>
+                                            }
+                                            else
+                                            {
+                                            <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
+                                            <span class="visually-hidden">Not enabled</span>
+                                            }
+                                            
                                         </div>
                                         </div>
+
 
                                     </div>
                                     </div>
                                 </div>
                                 </div>
+
                         }
                     </div>
                 </div>

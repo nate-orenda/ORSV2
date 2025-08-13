@@ -24,7 +24,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             CurrentUser = await _context.Users
                 .Include(u => u.UserSchools)
-                .FirstOrDefaultAsync(u => u.UserName == User.Identity.Name);
+                .FirstOrDefaultAsync(u => u.UserName == User.Identity!.Name);
 
             if (CurrentUser == null)
                 return false;

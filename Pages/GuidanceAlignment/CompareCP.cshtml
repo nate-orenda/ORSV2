@@ -1,0 +1,358 @@
+@page "{id?}"
+@model ORSV2.Pages.GuidanceAlignment.CompareCPModel
+@{
+    ViewData["Title"] = Model.GroupName;
+}
+
+<div class="orenda-page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h2 class="mb-0">@Model.GroupName</h2>
+    <div class="text-muted">
+      School: @Model.SchoolName
+      @if (!Model.IsGroupMode)
+      {
+        <span> · Grade @Model.Grade</span>
+      }
+    </div>
+  </div>
+  <div>
+    <a class="btn-orenda-outline btn-sm" asp-page="/GuidanceAlignment/Overview" asp-route-schoolId="@Model.SchoolId">Back to Overview</a>
+  </div>
+</div>
+
+
+@if (Model.Students.Count == 0)
+{
+    <div class="orenda-card mt-3">
+        <div class="orenda-card-body text-muted">This target group has no students yet.</div>
+    </div>
+}
+else
+{
+    <!-- KPI / Summary -->
+    <div class="orenda-card mt-3">
+      <div class="orenda-card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge checkpoint-badge">Checkpoint</span>
+            <span class="text-muted small">CP @Model.CurrentCheckpoint</span>
+            @if (Model.PreviousCheckpoint is not null)
+            {
+              <span class="text-muted small">· vs CP @Model.PreviousCheckpoint</span>
+            }
+          </div>
+          <div class="text-muted small">@Model.Students.Count student(s)</div>
+        </div>
+
+        <div class="row g-3">
+  <!-- Quadrants column -->
+  <div class="col-md-4 quadrant-col">
+    <div class="orenda-kpi">
+      <div class="position-relative" style="min-height: 180px;">
+        <canvas id="quadrantCompare" height="180"></canvas>
+      </div>
+      <div class="small mt-1">
+            @if (Model.PreviousQuadrantCounts is not null)
+            {
+                    // Above-the-line = Challenge + Benchmark
+                    int aboveNow  = (Model.CurrentQuadrantCounts.TryGetValue("Challenge", out var chNow) ? chNow : 0)
+                                + (Model.CurrentQuadrantCounts.TryGetValue("Benchmark", out var bmNow) ? bmNow : 0);
+                    int abovePrev = (Model.PreviousQuadrantCounts.TryGetValue("Challenge", out var chPrev) ? chPrev : 0)
+                                + (Model.PreviousQuadrantCounts.TryGetValue("Benchmark", out var bmPrev) ? bmPrev : 0);
+
+                    int diffStudents = aboveNow - abovePrev;
+                    double pctChange = abovePrev > 0 ? (diffStudents * 100.0 / abovePrev) : 0.0;
+
+                    string SignedPct(double v) => v switch
+                    {
+                        > 0 => "+" + Math.Round(v).ToString("0"),
+                        < 0 => Math.Round(v).ToString("0"),
+                        _   => "0"
+                    };
+                    string SignedInt(int v) => (v >= 0 ? "+" : "") + v.ToString();
+
+                    // Movers only (exclude same→same) for the “Top moves” list
+                    var moversOnly = (Model.MovementMatrix ?? new List<ORSV2.Pages.GuidanceAlignment.CompareCPModel.MovementRow>())
+                        .Where(m => !string.Equals(m.From, m.To, StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(m => m.Count)
+                        .ToList();
+
+                    bool anyMovers = (Model.MovementUp + Model.MovementDown) > 0 && moversOnly.Count > 0;
+
+                <div class="text-muted">
+                    From checkpoint @Model.PreviousCheckpoint to @Model.CurrentCheckpoint,
+                    students <strong>above the line</strong> changed by
+                    <strong class="@(diffStudents >= 0 ? "text-success" : "text-danger")">
+                        @SignedPct(pctChange)% (@SignedInt(diffStudents))
+                    </strong>.
+                </div>
+
+                <div class="mt-1">
+                    <span class="me-3"><strong class="text-success">@Model.MovementUp</strong> moved up</span>
+                    <span class="me-3"><strong class="text-danger">@Model.MovementDown</strong> moved down</span>
+                    <span><strong class="text-muted">@Model.MovementSame</strong> stayed the same</span>
+                </div>
+
+                @if (anyMovers)
+                {
+                    <div class="mt-1 text-muted">
+                        Top moves:
+                        @foreach (var move in moversOnly.Take(3))
+                        {
+                            var cls =
+                                (string.Equals(move.From, "Intensive", StringComparison.OrdinalIgnoreCase) && !string.Equals(move.To, "Intensive", StringComparison.OrdinalIgnoreCase)) ||
+                                (string.Equals(move.From, "Strategic", StringComparison.OrdinalIgnoreCase) && (string.Equals(move.To, "Benchmark", StringComparison.OrdinalIgnoreCase) || string.Equals(move.To, "Challenge", StringComparison.OrdinalIgnoreCase))) ||
+                                (string.Equals(move.From, "Benchmark", StringComparison.OrdinalIgnoreCase) && string.Equals(move.To, "Challenge", StringComparison.OrdinalIgnoreCase))
+                                ? "text-success"
+                                : "text-danger";
+
+                            <span class="ms-2 me-2 @cls"><strong>@move.Count</strong> from @move.From → @move.To</span>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-muted">
+                    No previous checkpoint yet. Current distribution:
+                    @foreach (var kv in Model.CurrentQuadrantCounts)
+                    {
+                        <span class="ms-2"><span class="badge rounded-pill">@kv.Key</span> @kv.Value</span>
+                    }
+                </div>
+            }
+        </div>
+
+
+
+    </div>
+  </div>
+
+  <!-- Indicators % met + trend -->
+  <div class="col-md-8">
+    <div class="orenda-kpi">
+      <div class="d-flex flex-wrap gap-2">
+        @foreach (var ind in Model.CurrentIndicatorSummaries)
+        {
+          <div class="orenda-chip" data-ind="@ind.Name">
+            <strong>@ind.Name</strong>
+            <span class="ms-2">@ind.PercentMet.ToString("0")% <span class="text-muted">(@ind.CountMet)</span></span>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (Model.PreviousIndicatorSummaries is not null)
+    {
+      <div class="mt-2">
+        <canvas id="indicatorTrend" height="140"></canvas>
+      </div>
+    }
+  </div>
+</div>
+
+      </div>
+    </div>
+
+    <!-- Indicator Heatmap -->
+    <div class="orenda-card mt-3">
+      <div class="orenda-card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="orenda-kpi-title mb-0">Indicator status by student (CP @Model.CurrentCheckpoint)</div>
+          <div class="text-muted small">✓ Met · ✗ Not Met · – N/A</div>
+        </div>
+        <div class="orenda-table-wrapper">
+          <table class="table orenda-table table-sm align-middle" id="heatmapTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Gr</th>
+                @foreach (var ind in Model.IndicatorNames)
+                {
+                  <th class="text-center">@ind</th>
+                }
+                <th class="text-center">Quadrant</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var s in Model.Students)
+              {
+                <tr>
+                  <td>@s.LastName, @s.FirstName</td>
+                  <td><span class="badge bg-secondary">@s.LocalStudentId</span></td>
+                  <td>@s.Grade</td>
+                  @foreach (var ind in Model.IndicatorNames)
+                  {
+                    var v = s.Indicators[ind];
+                    <td class="text-center">
+                      @if (v == true) { <span class="badge bg-success">✓</span> }
+                      else if (v == false) { <span class="badge bg-danger">✗</span> }
+                      else { <span class="badge bg-light text-muted">–</span> }
+                    </td>
+                  }
+                  <td class="text-center">
+                      @if (!string.IsNullOrEmpty(s.Quadrant))
+                      {
+                          <span class="badge 
+                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
+                                    s.Quadrant == "Benchmark" ? "bg-success" :
+                                    s.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                                    s.Quadrant == "Intensive" ? "bg-danger" :
+                                    "bg-secondary")" style="font-size: 0.7rem; padding: 2px 6px;">
+                                    @(s.Quadrant ?? "-")
+                            </span>
+                      }
+                      else
+                      {
+                          <span class="text-muted">–</span>
+                      }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+}
+
+@section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+  (function(){
+    const indicatorNames      = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
+    const currentSummaries    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
+    const previousSummaries   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousIndicatorSummaries));
+    const currentQuadrants    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentQuadrantCounts));
+    const previousQuadrants   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousQuadrantCounts));
+    const cpNow               = @Model.CurrentCheckpoint;
+    const cpPrev              = @(Model.PreviousCheckpoint?.ToString() ?? "null");
+
+    function ensureSingleChart(el){
+      const ctx = el.getContext('2d');
+      if (el._chart) { el._chart.destroy(); el._chart = null; }
+      return ctx;
+    }
+
+    // Quadrant comparison chart
+    (function(){
+      const el = document.getElementById('quadrantCompare');
+      if (!el) return;
+
+      const palette = {
+        Challenge: '#0d6efd',
+        Benchmark: '#198754',
+        Strategic: '#ffc107',
+        Intensive: '#dc3545',
+        Unknown: '#adb5bd'
+      };
+      const normalize = (obj) => ({
+        Challenge: obj?.Challenge || 0,
+        Benchmark: obj?.Benchmark || 0,
+        Strategic: obj?.Strategic || 0,
+        Intensive: obj?.Intensive || 0,
+        Unknown: obj?.Unknown || 0
+      });
+
+      const cur = normalize(currentQuadrants || {});
+      const hasPrev = !!previousQuadrants;
+      const prev = hasPrev ? normalize(previousQuadrants || {}) : null;
+
+      const labels = hasPrev ? ['CP ' + cpPrev, 'CP ' + cpNow] : ['CP ' + cpNow];
+      const quadrants = ['Challenge', 'Benchmark', 'Strategic', 'Intensive'];
+      const datasets = quadrants.map(q => ({
+        label: q,
+        backgroundColor: palette[q],
+        data: hasPrev ? [prev[q], cur[q]] : [cur[q]],
+        stack: 'q'
+      }));
+
+      const totals = hasPrev
+        ? [Object.values(prev).reduce((a,b)=>a+b,0), Object.values(cur).reduce((a,b)=>a+b,0)]
+        : [Object.values(cur).reduce((a,b)=>a+b,0)];
+
+      const ctx = ensureSingleChart(el);
+      el._chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: {
+              display: true,
+              text: 'Quadrant Comparison',
+              align: 'center',
+              font: { weight: 'bold', size: 14 }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.parsed.y;
+                  const total = totals[ctx.dataIndex] || 1;
+                  const pct = Math.round((val * 100) / total);
+                  return `${ctx.dataset.label}: ${val} (${pct}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { stacked: true, ticks: { precision: 0 } },
+            y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    })();
+
+    // Indicator trend chart
+    (function(){
+      if (!previousSummaries) return;
+      const labels = indicatorNames;
+      const findPct = (arr, key) => {
+        const item = arr.find(x => x.name === key) || arr.find(x => x.Name === key);
+        return item ? item.PercentMet : 0;
+      };
+      const cur  = labels.map(n => findPct(currentSummaries, n));
+      const prev = labels.map(n => findPct(previousSummaries, n));
+      const el = document.getElementById('indicatorTrend');
+      if (!el) return;
+
+      const ctx = ensureSingleChart(el);
+      el._chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'CP ' + cpPrev, data: prev },
+            { label: 'CP ' + cpNow, data: cur }
+          ]
+        },
+        options: {
+          responsive: true,
+          animation: false,
+          plugins: {
+            legend: { display: true },
+            title: {
+              display: true,
+              text: 'Indicator Trend',
+              align: 'center',
+              font: { weight: 'bold', size: 14 }
+            },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: 100,
+              ticks: { callback: v => v + '%' }
+            }
+          }
+        }
+      });
+    })();
+  })();
+  </script>
+}

@@ -150,6 +150,13 @@
                     asp-route-schoolId="@Model.SchoolId">
                     View Target Groups
                 </a>
+                <a class="btn btn-orenda-primary btn-sm"
+                    asp-page="/GuidanceAlignment/CompareCP"
+                    asp-route-schoolId="@Model.SchoolId"
+                    asp-route-grade="@Model.Grade">
+                    Compare Checkpoints
+                </a>
+
             </div>
             <div class="right">
                 <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
