@@ -123,9 +123,18 @@ namespace ORSV2.Data
             builder.Entity<District>().Property(d => d.DateCreated).HasDefaultValueSql("SYSUTCDATETIME()");
             builder.Entity<District>().Property(d => d.DateUpdated).HasDefaultValueSql("SYSUTCDATETIME()");
 
-            builder.Entity<School>().Property(s => s.Inactive).HasDefaultValue(false);
-            builder.Entity<School>().Property(s => s.DateCreated).HasDefaultValueSql("SYSUTCDATETIME()");
-            builder.Entity<School>().Property(s => s.DateUpdated).HasDefaultValueSql("SYSUTCDATETIME()");
+            // --- replace your existing School property config with this block ---
+            builder.Entity<School>(entity =>
+            {
+                // Map to the existing table and declare the trigger name
+                entity.ToTable("Schools", tb => tb.HasTrigger("trg_Schools_GACheckpointSchedule"));
+
+                // Your defaults (kept)
+                entity.Property(s => s.Inactive).HasDefaultValue(false);
+                entity.Property(s => s.DateCreated).HasDefaultValueSql("SYSUTCDATETIME()");
+                entity.Property(s => s.DateUpdated).HasDefaultValueSql("SYSUTCDATETIME()");
+            });
+
 
             // View
             builder.Entity<VwStudentResultsClasses>(entity =>
