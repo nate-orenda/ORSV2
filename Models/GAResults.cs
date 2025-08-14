@@ -92,7 +92,7 @@ namespace ORSV2.Models
         public decimal? CreditsCompleted { get; set; }
 
         // Navigation
-        public School School { get; set; }
-        public District District { get; set; }
+        public School? School { get; set; }
+        public District? District { get; set; }
     }
 }

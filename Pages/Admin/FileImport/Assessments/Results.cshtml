@@ -1,0 +1,107 @@
+@page
+@model ORSV2.Pages.Admin.FileImport.Assessments.ResultsModel
+@{
+    ViewData["Title"] = "Assessment Results";
+}
+
+<div class="container my-4">
+    <h2>Assessment Results</h2>
+
+    <form method="get" class="row g-3 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Batch Id (GUID)</label>
+            <input type="text" name="batchId" value="@Model.BatchId" class="form-control" placeholder="e.g. 5e63..."/>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Test Id</label>
+            <input type="text" name="testId" value="@Model.TestId" class="form-control" placeholder="2425-G4-ELA-C1"/>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Student Id</label>
+            <input type="text" name="studentId" value="@Model.StudentId" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-secondary">Search</button>
+            @if (!string.IsNullOrEmpty(Model.BatchId))
+            {
+                <a class="btn btn-outline-primary ms-2"
+                   href="@Url.Page("/Admin/FileImport/Assessments/Results", new { batchId = Model.BatchId, view="summary" })">
+                    Summary
+                </a>
+            }
+        </div>
+    </form>
+
+    @if (Model.ViewMode == "summary")
+    {
+        <div class="card">
+            <div class="card-header">Batch Summary</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>HumanCodingScheme</th>
+                                <th># Students</th>
+                                <th>Avg Points</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Matched Standard?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.SummaryRows)
+                            {
+                                <tr>
+                                    <td>@r.HumanCodingScheme</td>
+                                    <td>@r.StudentCount</td>
+                                    <td>@r.AvgPoints</td>
+                                    <td>@r.MinPoints</td>
+                                    <td>@r.MaxPoints</td>
+                                    <td>@(r.HasStandard ? "Yes" : "No")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">Rows</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Batch</th>
+                                <th>Student (Orenda)</th>
+                                <th>Local ID</th>
+                                <th>Test</th>
+                                <th>HumanCodingScheme</th>
+                                <th>Points</th>
+                                <th>Matched Standard?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.Rows)
+                            {
+                                <tr>
+                                    <td class="text-truncate" style="max-width:220px">@r.BatchId</td>
+                                    <td>@r.StudentId</td>
+                                    <td>@r.LocalStudentId</td>
+                                    <td>@r.TestId</td>
+                                    <td>@r.HumanCodingScheme</td>
+                                    <td>@r.Points</td>
+                                    <td>@(r.HasStandard ? "Yes" : "No")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

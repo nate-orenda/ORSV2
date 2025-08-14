@@ -653,3 +653,16 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 .status-true { color:#198754; } /* green */
 .status-false { color:#dc3545; } /* red */
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+.ga-link {
+  color: var(--orenda-primary);
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.ga-link:hover {
+  color: var(--orenda-primary-hover);
+  border-bottom-color: var(--orenda-primary-hover);
+  text-decoration: none;
+}

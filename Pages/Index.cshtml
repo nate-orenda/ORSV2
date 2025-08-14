@@ -7,7 +7,7 @@
 <div class="orenda-container">
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Welcome, @Model.UserName</h2>
-        <p class="mb-0">Choose a school to dive into Guidance Alignment.</p>
+        <p class="mb-0">Choose a school to dive into!</p>
     </div>
 
     @if (Model.DistrictBlocks == null || !Model.DistrictBlocks.Any())
@@ -77,21 +77,26 @@
 
                                         <!-- GA row: green ✓ or red ✕ next to words -->
                                         <div class="orenda-summary-item">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="orenda-summary-label">Guidance Alignment</span>
-                                            @if (s.GA)
-                                            {
-                                            <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
-                                            <span class="visually-hidden">Enabled</span>
-                                            }
-                                            else
-                                            {
-                                            <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
-                                            <span class="visually-hidden">Not enabled</span>
-                                            }
-                                            
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if (s.GA)
+                                                {
+                                                    <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
+                                                    class="orenda-summary-label ga-link"
+                                                    style="text-decoration:none;">
+                                                        Guidance Alignment
+                                                    </a>
+                                                    <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
+                                                    <span class="visually-hidden">Enabled</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="orenda-summary-label">Guidance Alignment</span>
+                                                    <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
+                                                    <span class="visually-hidden">Not enabled</span>
+                                                }
+                                            </div>
                                         </div>
-                                        </div>
+
 
                                         <!-- CP line -->
                                         <div class="small text-muted" style="margin-top:-.2rem;">

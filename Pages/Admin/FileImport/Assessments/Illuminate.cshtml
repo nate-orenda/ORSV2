@@ -1,0 +1,175 @@
+@page
+@model ORSV2.Pages.Admin.FileImport.Assessments.IlluminateModel
+@{
+    ViewData["Title"] = "Assessments Import (Illuminate)";
+}
+
+<div class="container my-4">
+    <h2>Import Assessment Results (Illuminate)</h2>
+    <p class="text-muted">
+        Upload the TSV/CSV export. We’ll extract <strong>HumanCodingScheme</strong> from headers like
+        <code>… CCSS.ELA-Literacy.L.4.1.f Points</code> and validate them against your <code>Standards</code> table.
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="mb-4">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">File (TSV/CSV)</label>
+                <input asp-for="Upload" type="file" class="form-control" accept=".csv,.tsv,.txt" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Delimiter</label>
+                <select asp-for="Delimiter" class="form-select">
+                    <option value="tab">Tab (TSV)</option>
+                    <option value="comma">Comma (CSV)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">District</label>
+                <select asp-for="DistrictId" asp-items="Model.DistrictOptions" class="form-select">
+                    <option value="">-- Select District --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Subject</label>
+                <select asp-for="Subject" class="form-select">
+                    <option>ELA</option>
+                    <option>Math</option>
+                    <option>Science</option>
+                    <option>Social Science</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Unit / Cycle</label>
+                <select asp-for="UnitCycle" class="form-select">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Test Id</label>
+                <input asp-for="TestId" class="form-control" />
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary" asp-page-handler="Preview">
+                Preview
+            </button>
+        </div>
+    </form>
+
+    @if (ViewData["PreviewRan"] as bool? == true)
+    {
+        <div class="alert alert-info">
+            Preview executed. Headers: <strong>@Model.TotalHeaders</strong>,
+            Matched: <strong>@Model.MatchedHeaders</strong>.
+        </div>
+
+        @* Optional student-localID validation summary *@
+        @if (ViewData["StudentValidationSummary"] is string valSummary && !string.IsNullOrWhiteSpace(valSummary))
+        {
+            <div class="alert alert-info">
+                @valSummary
+            </div>
+        }
+    }
+
+    @* Detected standards mapping *@
+    @if (Model.HasPreview)
+    {
+        <div class="card mb-3">
+            <div class="card-header">Detected Standards (from headers)</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr><th>Header</th><th>HumanCodingScheme</th><th>Exists in Standards?</th></tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in Model.PreviewRows)
+                        {
+                            <tr>
+                                <td>@row.Header</td>
+                                <td>@row.Code</td>
+                                <td>
+                                    @if (row.ExistsInStandards) { <span class="text-success">Yes</span> }
+                                    else { <span class="text-danger fw-bold">No</span> }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.MissingCodes.Any())
+        {
+            <div class="alert alert-warning">
+                <strong>Validation:</strong> The following codes were not found in <code>Standards</code>:
+                <div class="small mt-2">
+                    @string.Join(", ", Model.MissingCodes.OrderBy(x => x))
+                </div>
+                <div class="mt-2">You can still import; unmatched rows will have <code>standard_id = NULL</code>. (You can reconcile later.)</div>
+            </div>
+        }
+
+        <form method="post" class="mb-5">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="TempPath" value="@Model.TempPath" />
+            <input type="hidden" name="Delimiter" value="@Model.Delimiter" />
+            <input type="hidden" name="DistrictId" value="@Model.DistrictId" />
+            <input type="hidden" name="TestId" value="@Model.TestId" />
+            <input type="hidden" name="Subject" value="@Model.Subject" />
+            <input type="hidden" name="UnitCycle" value="@Model.UnitCycle" />
+
+            <button type="submit" class="btn btn-success" asp-page-handler="Import">
+                Import to Database
+            </button>
+        </form>
+    }
+
+    @* Debug: show every header and whether it matched the regex *@
+    @if (Model.DebugHeaders?.Count > 0)
+    {
+        <details class="mb-3">
+            <summary>Debug: header scan &amp; regex matches</summary>
+            <div class="table-responsive mt-2">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Header</th>
+                            <th>Matched?</th>
+                            <th>Extracted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var h in Model.DebugHeaders)
+                    {
+                        <tr>
+                            <td>@h.Header</td>
+                            <td>@(h.Matched ? "Yes" : "No")</td>
+                            <td>@(h.Code ?? "-")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ImportBatchId))
+    {
+        <div class="alert alert-success">
+            Import complete. Batch: <code>@Model.ImportBatchId</code>.
+            <a class="ms-2" href="@Url.Page("/Admin/FileImport/Assessments/Results", new { batchId = Model.ImportBatchId })">View results</a>
+        </div>
+    }
+</div>
