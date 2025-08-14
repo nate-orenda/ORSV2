@@ -7,10 +7,12 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace ORSV2.Pages.Admin.FileImport.Assessments
 {
+    [Authorize(Roles = "OrendaAdmin,DistrictAdmin")]
     public class IlluminateModel : PageModel
     {
         public record PreviewItem(string Header, string Code, bool ExistsInStandards);
@@ -45,7 +47,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public async Task OnGet()
-        { 
+        {
             await LoadDistrictOptionsAsync();
         }
 
@@ -328,7 +330,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             var missing = localIds.Where(x => !found.Contains(x)).Take(20).ToList();
             return (found.Count, missing);
         }
-        
+
         private async Task LoadDistrictOptionsAsync()
         {
             DistrictOptions.Clear();
