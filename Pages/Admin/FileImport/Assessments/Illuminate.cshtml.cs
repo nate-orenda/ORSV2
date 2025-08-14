@@ -1,14 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Authorization;
-
 
 namespace ORSV2.Pages.Admin.FileImport.Assessments
 {
@@ -18,13 +17,12 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public record PreviewItem(string Header, string Code, bool ExistsInStandards);
 
         [BindProperty, Required] public int DistrictId { get; set; }
-        [BindProperty, Required] public string TestId { get; set; } = "";
+        [BindProperty] public string TestId { get; set; } = "";               // optional now
         [BindProperty] public string Delimiter { get; set; } = "tab";
         [BindProperty] public IFormFile? Upload { get; set; }
         [BindProperty] public string? TempPath { get; set; }
         [BindProperty, Required] public string Subject { get; set; } = "";
         [BindProperty, Range(1, 5)] public int UnitCycle { get; set; } = 1;
-
 
         public bool HasPreview => PreviewRows.Count > 0;
         public List<PreviewItem> PreviewRows { get; private set; } = new();
@@ -41,10 +39,13 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public int TotalHeaders { get; private set; }
         public int MatchedHeaders { get; private set; }
 
-        // CCSS.ELA-Literacy.<CODE> Points -> capture <CODE>
-        private static readonly Regex CcssRe = new(
-            @"CCSS\.ELA-Literacy\.([A-Z]{1,4}\.\d+(?:\.\d+)*(?:\.[a-z])?)\s+Points?$",
+        // Group 1 = Test Name (everything before the code)
+        // Group 2 = Standard code (dot-separated), then "Points"
+        private static readonly Regex StandardLineRe = new(
+            @"^(.*?)\s+([A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*)\s+Points\s*$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly string[] ClusterLetters = { "A", "B", "C", "D", "E", "F" };
 
         public async Task OnGet()
         {
@@ -54,9 +55,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public async Task<IActionResult> OnPostPreview()
         {
             await LoadDistrictOptionsAsync();
-
-            if (!ModelState.IsValid)
-                return Page();
 
             if (!ModelState.IsValid)
                 return Page();
@@ -87,36 +85,93 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
 
-            // Build full debug scan so you can see what matched
+            // Extract (TestName, RawCode) from headers that match "... <code> Points"
+            var headerMap = headers
+                .Select(h => new { Header = h, M = StandardLineRe.Match(h) })
+                .Where(x => x.M.Success)
+                .Select(x => new
+                {
+                    x.Header,
+                    TestName = x.M.Groups[1].Value.Trim(),
+                    CodeRaw = StripElaPrefix(x.M.Groups[2].Value.Trim())   // strip ELA prefix here
+                })
+                .ToList();
+
+            // Auto-fill TestId if blank
+            if (string.IsNullOrWhiteSpace(TestId) && headerMap.Count > 0)
+            {
+                TestId = headerMap[0].TestName;
+                ModelState.Remove(nameof(TestId));              // let the input show the new value
+                ViewData["AutoTestId"] = true;                 // optional UI hint
+            }
+
+            // Build a candidate set: raw codes + math cluster candidates (A..F)
+            var codesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in headerMap)
+            {
+                codesToCheck.Add(m.CodeRaw);
+                AddClusterCandidates(m.CodeRaw, codesToCheck);
+            }
+
+            // Fetch existing codes in one roundtrip
+            var existing = await LoadExistingStandards(codesToCheck);
+
+            // Debug table: show transformation chain original -> stripped -> normalized
             DebugHeaders = headers.Select(h =>
             {
-                var m = CcssRe.Match(h);
-                return new HeaderDebug(h, m.Success, m.Success ? m.Groups[1].Value : null);
+                var m = StandardLineRe.Match(h);
+                if (!m.Success) return new HeaderDebug(h, false, null);
+
+                var original = m.Groups[2].Value.Trim();
+                var stripped = StripElaPrefix(original);
+                var normalized = NormalizeCode(stripped, existing);
+
+                string display;
+                if (!original.Equals(stripped, StringComparison.OrdinalIgnoreCase) &&
+                    !stripped.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    display = $"{original} → {stripped} → {normalized}";
+                }
+                else if (!original.Equals(stripped, StringComparison.OrdinalIgnoreCase))
+                {
+                    display = $"{original} → {stripped}";
+                }
+                else if (!stripped.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    display = $"{stripped} → {normalized}";
+                }
+                else
+                {
+                    display = stripped;
+                }
+
+                return new HeaderDebug(h, true, display);
             }).ToList();
+
             TotalHeaders = DebugHeaders.Count;
             MatchedHeaders = DebugHeaders.Count(h => h.Matched);
 
-            // Extract the standards from headers that match
-            var headerMap = DebugHeaders
-                .Where(h => h.Matched && !string.IsNullOrWhiteSpace(h.Code))
-                .Select(h => new { Header = h.Header, Code = h.Code! })
-                .ToList();
-
-            // Load existing standards (no TVP required; parameterized IN)
-            var codes = headerMap.Select(m => m.Code).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            var existing = await LoadExistingStandards(codes);
-
+            // Preview table: normalized codes + existence flag
             PreviewRows = headerMap
-                .Select(m => new PreviewItem(m.Header, m.Code, existing.Contains(m.Code)))
+                .Select(m =>
+                {
+                    var codeNorm = NormalizeCode(m.CodeRaw, existing);
+                    return new PreviewItem(m.Header, codeNorm, existing.Contains(codeNorm));
+                })
                 .ToList();
 
-            MissingCodes = new HashSet<string>(codes.Where(c => !existing.Contains(c)), StringComparer.OrdinalIgnoreCase);
+            MissingCodes = new HashSet<string>(
+                PreviewRows.Where(r => !r.ExistsInStandards).Select(r => r.Code),
+                StringComparer.OrdinalIgnoreCase);
 
             if (MatchedHeaders == 0)
             {
                 ModelState.AddModelError("",
-                    "No standards were detected in the headers. " +
-                    "Check the delimiter (TSV vs CSV) and confirm columns end with 'CCSS.ELA-Literacy.<code> Points'.");
+                    "No standards were detected in the headers. Check the delimiter (TSV vs CSV) and that standard columns end with 'Points'.");
+            }
+            if (string.IsNullOrWhiteSpace(TestId))
+            {
+                ModelState.AddModelError("", "Couldn’t infer Test ID from headers. Please enter a Test ID.");
             }
 
             // Optional: quick student-localID validation on the first ~2000 rows
@@ -146,7 +201,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         {
             await LoadDistrictOptionsAsync();
 
-
             if (string.IsNullOrWhiteSpace(TempPath) || !System.IO.File.Exists(TempPath))
             {
                 ModelState.AddModelError("", "Temp file not found. Please re-run preview.");
@@ -169,11 +223,47 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 var header = await sr.ReadLineAsync() ?? "";
                 var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
 
-                var standardCols = headers
-                    .Select((h, i) => new { Header = h, Index = i, M = CcssRe.Match(h) })
+                var standardColsRaw = headers
+                    .Select((h, i) => new { Header = h, Index = i, M = StandardLineRe.Match(h) })
                     .Where(x => x.M.Success)
-                    .Select(x => new { x.Header, x.Index, Code = x.M.Groups[1].Value })
+                    .Select(x => new
+                    {
+                        x.Header,
+                        x.Index,
+                        TestName = x.M.Groups[1].Value.Trim(),
+                        CodeRaw = StripElaPrefix(x.M.Groups[2].Value.Trim())  // strip ELA prefix here
+                    })
                     .ToList();
+
+                // Auto-fill TestId if still blank
+                if (string.IsNullOrWhiteSpace(TestId) && standardColsRaw.Count > 0)
+                {
+                    TestId = standardColsRaw[0].TestName;
+                    ModelState.Remove(nameof(TestId));              // keep model + view in sync
+                }
+
+                // Build candidate set and fetch existing once
+                var codesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var s in standardColsRaw)
+                {
+                    codesToCheck.Add(s.CodeRaw);
+                    AddClusterCandidates(s.CodeRaw, codesToCheck);
+                }
+                var existingImport = await LoadExistingStandards(codesToCheck);
+
+                // Final list used for rows: with normalized codes
+                var standardCols = standardColsRaw.Select(s => new
+                {
+                    s.Header,
+                    s.Index,
+                    Code = NormalizeCode(s.CodeRaw, existingImport)
+                }).ToList();
+
+                if (string.IsNullOrWhiteSpace(TestId))
+                {
+                    ModelState.AddModelError("", "Couldn’t infer Test ID from headers. Please enter a Test ID and re-run Preview.");
+                    return Page();
+                }
 
                 string? line;
                 while ((line = await sr.ReadLineAsync()) != null)
@@ -198,16 +288,16 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                             var r = tvp.NewRow();
                             r["local_student_id"] = localStudentId;
                             r["test_id"] = TestId;
-                            r["human_coding_scheme"] = sc.Code;
+                            r["human_coding_scheme"] = sc.Code; // normalized code
                             r["points"] = pts;
                             r["max_points"] = DBNull.Value;
                             tvp.Rows.Add(r);
                         }
                     }
                 }
-            } // <— StreamReader disposed here; file no longer locked
+            } // reader disposed here
 
-            // Execute proc (unchanged)
+            // Execute proc
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
@@ -219,35 +309,75 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
             cmd.Parameters.AddWithValue("@TestId", TestId);
             cmd.Parameters.AddWithValue("@SourceFile", Path.GetFileName(TempPath));
-            cmd.Parameters.AddWithValue("@Subject", Subject);        // NEW
-            cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);     // NEW
+            cmd.Parameters.AddWithValue("@Subject", Subject);
+            cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);
 
             var p = cmd.Parameters.AddWithValue("@Rows", tvp);
             p.SqlDbType = SqlDbType.Structured;
             p.TypeName = "dbo.AssessmentResultImportType";
 
-
             var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
             ImportBatchId = batchId;
 
-            // Try to delete the temp file now that the handle is closed
             TryDelete(TempPath);
             TempPath = null;
 
             return Page();
         }
 
-        // Helper: best-effort delete to avoid crashing on a stale lock
+        // --- Helpers --------------------------------------------------------------------------
+
         private static void TryDelete(string? path)
         {
             if (string.IsNullOrWhiteSpace(path)) return;
             try { System.IO.File.Delete(path); }
-            catch (IOException) { /* log if you like; safe to ignore */ }
-            catch (UnauthorizedAccessException) { /* log if you like; safe to ignore */ }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
+        // Strip CCSS ELA prefix so "CCSS.ELA-Literacy.L.7.4.a" -> "L.7.4.a"
+        private static string StripElaPrefix(string code)
+        {
+            const string prefix = "CCSS.ELA-Literacy.";
+            return code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                ? code.Substring(prefix.Length).Trim()
+                : code.Trim();
+        }
 
-        // ---- Helpers -------------------------------------------------------------------------
+        // Add math cluster candidates (A..F) for codes like 7.NS.1.a
+        private static void AddClusterCandidates(string codeRaw, HashSet<string> dest)
+        {
+            var mm = Regex.Match(codeRaw, @"^(?<g>\d+)\.(?<dom>[A-Z]{1,3})\.(?<num>\d+)(?<sub>\.[a-z])?$", RegexOptions.IgnoreCase);
+            if (!mm.Success) return;
+            var g = mm.Groups["g"].Value;
+            var dom = mm.Groups["dom"].Value.ToUpperInvariant();
+            var num = mm.Groups["num"].Value;
+            var sub = mm.Groups["sub"].Success ? mm.Groups["sub"].Value.ToLowerInvariant() : "";
+            foreach (var cl in ClusterLetters)
+                dest.Add($"{g}.{dom}.{cl}.{num}{sub}");
+        }
+
+        // Returns normalized code if a candidate exists in 'existing' set; otherwise returns original.
+        private string NormalizeCode(string code, HashSet<string> existing)
+        {
+            if (existing.Contains(code)) return code;
+
+            // pattern: grade.DOMAIN.NUM[.sub]  — missing cluster letter (A/B/...)
+            var m = Regex.Match(code, @"^(?<g>\d+)\.(?<dom>[A-Z]{1,3})\.(?<num>\d+)(?<sub>\.[a-z])?$", RegexOptions.IgnoreCase);
+            if (!m.Success) return code;
+
+            var g = m.Groups["g"].Value;
+            var dom = m.Groups["dom"].Value.ToUpperInvariant();
+            var num = m.Groups["num"].Value;
+            var sub = m.Groups["sub"].Success ? m.Groups["sub"].Value.ToLowerInvariant() : "";
+
+            foreach (var cl in ClusterLetters)
+            {
+                var candidate = $"{g}.{dom}.{cl}.{num}{sub}";
+                if (existing.Contains(candidate)) return candidate;
+            }
+            return code;
+        }
 
         // Parameterized IN (no user-defined TVP required)
         private async Task<HashSet<string>> LoadExistingStandards(IEnumerable<string> codes)
@@ -339,7 +469,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
-            // If your table uses a different display column (e.g., Name), change [districtname] below.
+            // Adjust if your districts schema differs
             var sql = @"SELECT Id, Name FROM dbo.districts ORDER BY Name;";
             using var cmd = new SqlCommand(sql, conn);
             using var rdr = await cmd.ExecuteReaderAsync();
@@ -351,12 +481,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 DistrictOptions.Add(new SelectListItem { Value = id.ToString(), Text = name });
             }
 
-            // If nothing loaded, at least offer the current DistrictId (if provided)
             if (DistrictOptions.Count == 0 && DistrictId > 0)
             {
                 DistrictOptions.Add(new SelectListItem { Value = DistrictId.ToString(), Text = $"District {DistrictId}" });
             }
         }
-
     }
 }

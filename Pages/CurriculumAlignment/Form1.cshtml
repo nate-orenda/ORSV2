@@ -5,62 +5,101 @@
 }
 
 <div class="container my-4">
-    <h2>Assessment Matrix</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Assessment Matrix</h2>
+    </div>
 
-    <form method="get" class="row g-3 align-items-end mb-3">
-        <div class="col-md-6">
-            <label class="form-label">Batch Id (GUID)</label>
-            <input asp-for="BatchId" class="form-control" placeholder="e.g. 5e63..."/>
+    <!-- Main Filter Form -->
+    <div class="orenda-card mb-4">
+        <div class="orenda-card-body">
+            <h5 class="mb-3">Filters</h5>
+            <form id="filterForm" method="get" class="row g-3 align-items-end">
+                <!-- DistrictId is the entry point, passed in the URL, so we keep it hidden -->
+                <input type="hidden" asp-for="DistrictId" />
+
+                <!-- School Filter -->
+                @if (Model.AvailableSchools.Any())
+                {
+                    <div class="col-md-3">
+                        <label asp-for="SchoolId" class="form-label fw-semibold">School</label>
+                        <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select" onchange="this.form.submit()"></select>
+                    </div>
+                }
+
+                <!-- Unit Cycle Filter -->
+                @if (Model.AvailableUnitCycles.Any())
+                {
+                    <div class="col-md-3">
+                        <label asp-for="UnitCycle" class="form-label fw-semibold">Unit / Cycle</label>
+                        <select asp-for="UnitCycle" asp-items="Model.AvailableUnitCycles" class="form-select" onchange="this.form.submit()"></select>
+                    </div>
+                }
+
+                <!-- Assessment (Batch) Filter -->
+                @if (Model.AvailableBatches.Any())
+                {
+                    <div class="col-md-4">
+                        <label asp-for="BatchId" class="form-label fw-semibold">Assessment</label>
+                        <select asp-for="BatchId" asp-items="Model.AvailableBatches" class="form-select"></select>
+                    </div>
+                }
+                
+                <div class="col-md-2">
+                    <!-- The Load button now just submits the final selection -->
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-orenda w-100">
+                        <i class="fas fa-search"></i> Load
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary">Load</button>
-        </div>
-    </form>
+    </div>
+
 
     @if (Model.Columns.Count > 0)
     {
-        <div class="card">
-            <div class="card-header">Batch @Model.BatchId</div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 70vh; overflow: auto;">
-                    <table class="table table-sm table-bordered align-middle mb-0 matrix-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="sticky-col" rowspan="2" style="min-width: 220px;">Student Name</th>
-                                <th class="sticky-col-2" rowspan="2" style="min-width: 140px;">Student Local ID</th>
-                                @foreach (var col in Model.Columns)
-                                {
-                                    <th class="text-center">@col.Code</th>
-                                }
-                                <th rowspan="2" class="text-center" style="min-width: 120px;">Total Passed</th>
-                            </tr>
-                            <tr>
-                                @* second header row: short statements *@
-                                @foreach (var col in Model.Columns)
-                                {
-                                    <th class="small fw-normal text-muted">
-                                        @col.ShortStatement
-                                    </th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var row in Model.Rows)
-                        {
-                            <tr>
-                                <td class="sticky-col">@row.StudentName</td>
-                                <td class="sticky-col-2">@row.LocalId</td>
-                                @for (int i = 0; i < Model.Columns.Count; i++)
-                                {
-                                    var val = row.Points[i];
-                                    <td class="text-center">@((val.HasValue) ? val.Value.ToString("0.##") : "")</td>
-                                }
-                                <td class="text-center fw-semibold">@row.TotalPassed</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
+        <div class="orenda-card">
+            <div class="p-3 border-bottom" style="background-color: #f8f9fb;">
+                <h5 class="mb-0 fw-semibold">Batch: <span class="fw-normal text-muted">@Model.BatchId</span></h5>
+            </div>
+            <div class="matrix-table-wrapper">
+                <table class="orenda-table matrix-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="sticky-col" rowspan="2" style="min-width: 220px;">Student Name</th>
+                            <th class="sticky-col-2" rowspan="2" style="min-width: 140px;">Student Local ID</th>
+                            @foreach (var col in Model.Columns)
+                            {
+                                <th class="text-center">@col.Code</th>
+                            }
+                            <th rowspan="2" class="text-center" style="min-width: 120px;">Total Passed</th>
+                        </tr>
+                        <tr>
+                            @* second header row: short statements *@
+                            @foreach (var col in Model.Columns)
+                            {
+                                <th class="fw-normal text-muted">
+                                    @col.ShortStatement
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td class="sticky-col fw-medium">@row.StudentName</td>
+                            <td class="sticky-col-2">@row.LocalId</td>
+                            @for (int i = 0; i < Model.Columns.Count; i++)
+                            {
+                                var val = row.Points[i];
+                                <td class="text-center">@((val.HasValue) ? val.Value.ToString("0.##") : "")</td>
+                            }
+                            <td class="text-center fw-bold text-orenda-primary">@row.TotalPassed</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
         </div>
     }
@@ -72,11 +111,72 @@
     }
 </div>
 
+<!-- Add Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 <style>
-/* Pretty + scrollable + sticky first two columns */
-.matrix-table thead th { position: sticky; top: 0; z-index: 2; }
-.matrix-table .sticky-col     { position: sticky; left: 0; background: #fff; z-index: 3; }
-.matrix-table .sticky-col-2   { position: sticky; left: 220px; background: #fff; z-index: 3; }
-.matrix-table tbody td, .matrix-table thead th { white-space: nowrap; }
-.matrix-table thead tr:nth-child(2) th { white-space: normal; max-width: 320px; }
+/* Modernized styles for the Assessment Matrix
+  - Integrates with orenda-table theme
+  - Ensures sticky columns have correct backgrounds on hover
+  - Adds a subtle border to the scrollable container
+*/
+
+.matrix-table {
+    font-size: 0.875rem; /* Smaller font for better density */
+}
+
+.matrix-table-wrapper {
+    max-height: 70vh;
+    overflow: auto;
+}
+
+/* Freeze the first header row */
+.matrix-table thead tr:first-child th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Freeze the second header row below the first and make its font smaller */
+.matrix-table thead tr:nth-child(2) th {
+    position: sticky;
+    top: 48px; /* This value is based on the calculated height of the first header row. */
+    z-index: 2;
+    white-space: normal;
+    max-width: 320px;
+    vertical-align: top;
+    font-size: 0.7rem; /* Smaller font for the detailed statements */
+    line-height: 1.3; /* Adjust line-height for readability */
+}
+
+/* Base styles for the two sticky columns */
+.matrix-table .sticky-col,
+.matrix-table .sticky-col-2 {
+    position: sticky;
+    left: 0;
+    background-color: #fff; /* Default background for cells */
+    z-index: 1;
+}
+
+.matrix-table .sticky-col-2 {
+    left: 220px;
+}
+
+/* Ensure the sticky header cells (top-left corner) are layered above everything else */
+.matrix-table thead .sticky-col,
+.matrix-table thead .sticky-col-2 {
+    z-index: 3;
+}
+
+/* CRITICAL: Match the row hover background for the sticky columns */
+.matrix-table tbody tr:hover .sticky-col,
+.matrix-table tbody tr:hover .sticky-col-2 {
+    background-color: #f8f9ff; /* This color is defined for row hover in .orenda-table */
+}
+
+/* Retain original whitespace setting for cells */
+.matrix-table tbody td,
+.matrix-table thead th {
+    white-space: nowrap;
+}
 </style>

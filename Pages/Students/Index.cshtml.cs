@@ -41,7 +41,7 @@ namespace ORSV2.Pages.Students
         public async Task<IActionResult> OnGetAsync(int districtId, int schoolId)
         {
             var user = await _userManager.GetUserAsync(User);
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await _userManager.GetRolesAsync(user!);
 
             // ✅ Fetch district and school names from the DB
             var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId && !d.Inactive);

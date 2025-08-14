@@ -52,9 +52,13 @@
                     <option value="5">5</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Test Id</label>
-                <input asp-for="TestId" class="form-control" />
+            <div class="col-md-3">
+                <label class="form-label">Test Id / Name</label>
+                <input asp-for="TestId" class="form-control" placeholder="Auto-detected from headers" />
+                @if (ViewData["AutoTestId"] as bool? == true)
+                {
+                    <div class="form-text">Auto-detected from the first standard header.</div>
+                }
             </div>
         </div>
 
