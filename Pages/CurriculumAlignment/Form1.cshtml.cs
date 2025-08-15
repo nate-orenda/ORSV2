@@ -5,28 +5,33 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
-
 namespace ORSV2.Pages.CurriculumAlignment
 {
     [Authorize]
     public class Form1Model : PageModel
     {
-        // View Model Classes
         public class ColDef { public string Code { get; set; } = ""; public string ShortStatement { get; set; } = ""; }
-        public class RowVm { public string StudentName { get; set; } = ""; public string LocalId { get; set; } = ""; public List<decimal?> Points { get; set; } = new(); public int TotalPassed { get; set; } }
+        public class RowVm 
+        { 
+            public string StudentName { get; set; } = ""; 
+            public string LocalId { get; set; } = ""; 
+            public string TeacherName { get; set; } = "";
+            public string Period { get; set; } = "";
+            public List<decimal?> Points { get; set; } = new(); 
+            public int TotalPassed { get; set; } 
+        }
 
-        // Bound Properties for Filters
         [BindProperty(SupportsGet = true)] public int? DistrictId { get; set; }
-        [BindProperty(SupportsGet = true)] public int? SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public string? UnitCycle { get; set; }
         [BindProperty(SupportsGet = true)] public string? BatchId { get; set; }
+        [BindProperty(SupportsGet = true)] public int? SchoolId { get; set; }
+        [BindProperty(SupportsGet = true)] public int? TeacherId { get; set; }
 
-        // Properties for Dropdown Lists
-        public List<SelectListItem> AvailableSchools { get; private set; } = new();
         public List<SelectListItem> AvailableUnitCycles { get; private set; } = new();
         public List<SelectListItem> AvailableBatches { get; private set; } = new();
-
-        // Properties for Matrix Data
+        public List<SelectListItem> AvailableSchools { get; private set; } = new();
+        public List<SelectListItem> AvailableTeachers { get; private set; } = new();
+        
         public List<ColDef> Columns { get; private set; } = new();
         public List<RowVm> Rows { get; private set; } = new();
 
@@ -39,22 +44,25 @@ namespace ORSV2.Pages.CurriculumAlignment
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
-            // --- Step 1: Populate Cascading Dropdowns ---
             if (DistrictId.HasValue)
             {
-                AvailableSchools = await GetSchoolsAsync(conn, DistrictId.Value);
+                AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
             }
-            if (DistrictId.HasValue && SchoolId.HasValue)
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
             {
-                AvailableUnitCycles = await GetUnitCyclesAsync(conn, DistrictId.Value, SchoolId.Value);
+                AvailableBatches = await GetAssessmentsByUnitCycleAsync(conn, DistrictId.Value, UnitCycle);
             }
-            if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
             {
-                AvailableBatches = await GetAssessmentsAsync(conn, DistrictId.Value, SchoolId.Value, UnitCycle);
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId));
+            }
+            if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+            {
+                AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId));
             }
 
-            // --- Step 2: Fetch Matrix Data if an Assessment is selected ---
-            if (!string.IsNullOrWhiteSpace(BatchId) && Guid.TryParse(BatchId, out var bid))
+            // UPDATED: Reverted to load as soon as a school is selected.
+            if (SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId) && Guid.TryParse(BatchId, out var bid))
             {
                 await LoadMatrixData(conn, bid);
             }
@@ -62,26 +70,11 @@ namespace ORSV2.Pages.CurriculumAlignment
 
         // --- Data Fetching Helper Methods ---
 
-        private async Task<List<SelectListItem>> GetSchoolsAsync(SqlConnection conn, int districtId)
-        {
-            var list = new List<SelectListItem> { new SelectListItem("Select a school...", "") };
-            using var cmd = new SqlCommand("dbo.GetSchoolsByDistrict", conn) { CommandType = CommandType.StoredProcedure };
-            cmd.Parameters.AddWithValue("@DistrictId", districtId);
-            using var rdr = await cmd.ExecuteReaderAsync();
-            while (await rdr.ReadAsync())
-            {
-                // UPDATED column names to match the new stored procedure
-                list.Add(new SelectListItem { Value = rdr["Id"].ToString(), Text = rdr["Name"].ToString() });
-            }
-            return list;
-        }
-
-        private async Task<List<SelectListItem>> GetUnitCyclesAsync(SqlConnection conn, int districtId, int schoolId)
+        private async Task<List<SelectListItem>> GetUnitCyclesByDistrictAsync(SqlConnection conn, int districtId)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select a unit/cycle...", "") };
-            using var cmd = new SqlCommand("dbo.GetUnitCyclesBySchool", conn) { CommandType = CommandType.StoredProcedure };
+            using var cmd = new SqlCommand("dbo.GetUnitCyclesByDistrict", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@DistrictId", districtId);
-            cmd.Parameters.AddWithValue("@SchoolId", schoolId);
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
@@ -89,19 +82,46 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
             return list;
         }
-
-        private async Task<List<SelectListItem>> GetAssessmentsAsync(SqlConnection conn, int districtId, int schoolId, string unitCycle)
+        
+        private async Task<List<SelectListItem>> GetAssessmentsByUnitCycleAsync(SqlConnection conn, int districtId, string unitCycle)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select an assessment...", "") };
-            using var cmd = new SqlCommand("dbo.GetAssessmentsByFilter", conn) { CommandType = CommandType.StoredProcedure };
+            using var cmd = new SqlCommand("dbo.GetAssessmentsByUnitCycle", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@DistrictId", districtId);
-            cmd.Parameters.AddWithValue("@SchoolId", schoolId);
             cmd.Parameters.AddWithValue("@UnitCycle", unitCycle);
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
-                // UPDATED column names to match the new stored procedure
                 list.Add(new SelectListItem { Value = rdr["batch_id"].ToString(), Text = rdr["test_id"].ToString() });
+            }
+            return list;
+        }
+
+        private async Task<List<SelectListItem>> GetSchoolsByAssessmentAsync(SqlConnection conn, int districtId, Guid batchId)
+        {
+            var list = new List<SelectListItem> { new SelectListItem("Select a school...", "") };
+            using var cmd = new SqlCommand("dbo.GetSchoolsByAssessment", conn) { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@DistrictId", districtId);
+            cmd.Parameters.AddWithValue("@BatchId", batchId);
+            using var rdr = await cmd.ExecuteReaderAsync();
+            while (await rdr.ReadAsync())
+            {
+                list.Add(new SelectListItem { Value = rdr["Id"].ToString(), Text = rdr["Name"].ToString() });
+            }
+            return list;
+        }
+
+        private async Task<List<SelectListItem>> GetTeachersByAssessmentAsync(SqlConnection conn, int districtId, int schoolId, Guid batchId)
+        {
+            var list = new List<SelectListItem> { new SelectListItem("All Teachers", "") };
+            using var cmd = new SqlCommand("dbo.GetTeachersByAssessment", conn) { CommandType = CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("@DistrictId", districtId);
+            cmd.Parameters.AddWithValue("@SchoolId", schoolId);
+            cmd.Parameters.AddWithValue("@BatchId", batchId);
+            using var rdr = await cmd.ExecuteReaderAsync();
+            while (await rdr.ReadAsync())
+            {
+                list.Add(new SelectListItem { Value = rdr["StaffID"].ToString(), Text = rdr["TeacherName"].ToString() });
             }
             return list;
         }
@@ -112,6 +132,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             cmd.Parameters.AddWithValue("@BatchId", batchId);
             if (DistrictId.HasValue) cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
             if (SchoolId.HasValue) cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
+            if (TeacherId.HasValue) cmd.Parameters.AddWithValue("@TeacherId", TeacherId.Value);
 
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
@@ -122,14 +143,20 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 while (await rdr.ReadAsync())
                 {
-                    var row = new RowVm { StudentName = rdr.IsDBNull(0) ? "" : rdr.GetString(0), LocalId = rdr.IsDBNull(1) ? "" : rdr.GetString(1) };
+                    var row = new RowVm 
+                    { 
+                        StudentName = rdr.GetString("StudentName"), 
+                        LocalId = rdr.GetString("LocalId"),
+                        TeacherName = rdr.GetString("TeacherName"),
+                        Period = rdr.GetString("Period")
+                    };
                     for (int i = 0; i < Columns.Count; i++)
                     {
-                        var ord = 2 + i;
-                        row.Points.Add(rdr.IsDBNull(ord) ? null : (decimal?)Convert.ChangeType(rdr.GetValue(ord), typeof(decimal)));
+                        var colName = Columns[i].Code;
+                        var ord = rdr.GetOrdinal(colName);
+                        row.Points.Add(rdr.IsDBNull(ord) ? null : (decimal?)rdr.GetValue(ord));
                     }
-                    var totalPassedOrdinal = 2 + Columns.Count;
-                    row.TotalPassed = rdr.IsDBNull(totalPassedOrdinal) ? 0 : Convert.ToInt32(rdr.GetValue(totalPassedOrdinal));
+                    row.TotalPassed = rdr.GetInt32("TotalPassed");
                     Rows.Add(row);
                 }
             }
