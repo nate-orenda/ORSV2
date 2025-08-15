@@ -81,7 +81,7 @@
                                                 @if (s.GA)
                                                 {
                                                     <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
-                                                    class="orenda-summary-label ga-link"
+                                                    class="orenda-link"
                                                     style="text-decoration:none;">
                                                         Guidance Alignment
                                                     </a>
@@ -108,25 +108,26 @@
                                         Last Updated: @(s.GAResultsLastUpdated.HasValue ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy") : "—")
                                         </div>
 
-                                        <!-- CA row: green ✓ or red ✕ next to words -->
                                         <div class="orenda-summary-item">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="orenda-summary-label">Curriculum Alignment</span>
-                                            @if (s.CA)
-                                            {
-                                            <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
-                                            <span class="visually-hidden">Enabled</span>
-                                            }
-                                            else
-                                            {
-                                            <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
-                                            <span class="visually-hidden">Not enabled</span>
-                                            }
-                                            
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if (s.CA)
+                                                {
+                                                    <a href="@Url.Page("/CurriculumAlignment/Form1", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
+                                                    class="orenda-link"
+                                                    style="text-decoration:none;">
+                                                        Curriculum Alignment
+                                                    </a>
+                                                    <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
+                                                    <span class="visually-hidden">Enabled</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="orenda-summary-label">Curriculum Alignment</span>
+                                                    <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
+                                                    <span class="visually-hidden">Not enabled</span>
+                                                }
+                                            </div>
                                         </div>
-                                        </div>
-
-
                                     </div>
                                     </div>
                                 </div>
