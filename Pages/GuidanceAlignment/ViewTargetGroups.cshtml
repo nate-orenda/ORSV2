@@ -5,21 +5,8 @@
 }
 @Html.AntiForgeryToken()
 <div class="orenda-container">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            @foreach (var bc in Model.Breadcrumbs)
-            {
-                if (!string.IsNullOrEmpty(bc.Url))
-                {
-                    <li class="breadcrumb-item"><a href="@bc.Url">@bc.Title</a></li>
-                }
-                else
-                {
-                    <li class="breadcrumb-item active" aria-current="page">@bc.Title</li>
-                }
-            }
-        </ol>
-    </nav>
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
 
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Target Groups – @Model.School?.Name</h2>

@@ -39,7 +39,6 @@ a { color: #0077cc; }
 a.navbar-brand { white-space: normal; text-align: center; word-break: break-all; }
 
 .breadcrumb a { color: #0022C5; text-decoration: none; }
-.breadcrumb a:hover { text-decoration: underline; }
 
 .border-top { border-top: 1px solid #e5e5e5; }
 .border-bottom { border-bottom: 1px solid #e5e5e5; }
