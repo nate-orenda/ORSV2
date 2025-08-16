@@ -1,0 +1,111 @@
+@page
+@model ORSV2.Pages.Admin.FileImport.Assessments.LennectionsModel
+@{
+    ViewData["Title"] = "Lennections Import";
+}
+
+<h2 class="mb-3">Lennections Import</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">District</label>
+            <select asp-for="DistrictId" class="form-select" asp-items="Model.DistrictOptions"></select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Subject</label>
+            <input asp-for="Subject" class="form-control" placeholder="ELA / Math / Science / Social Science" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Unit Cycle (1–5)</label>
+            <input asp-for="UnitCycle" type="number" class="form-control" min="1" max="5" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Test Id</label>
+            <input asp-for="TestId" class="form-control" placeholder="Auto-detected if present in file" />
+            @if (!string.IsNullOrWhiteSpace(Model.AutoDetectedTestId))
+            {
+                <div class="form-text">Auto-detected: <strong>@Model.AutoDetectedTestId</strong></div>
+            }
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Upload Lennections CSV</label>
+            <input asp-for="Upload" type="file" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Delimiter</label>
+            <select asp-for="Delimiter" class="form-select">
+                <option value="comma">Comma (,)</option>
+                <option value="tab">Tab (\t)</option>
+            </select>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary" asp-page-handler="Preview">Preview</button>
+            @if (Model.HasPreview)
+            {
+                <button class="btn btn-success" asp-page-handler="Import">Import</button>
+            }
+        </div>
+    </div>
+</form>
+
+@if (Model.HasPreview)
+{
+    <hr />
+    <h4>Detected Question Mappings</h4>
+    <table class="table table-sm table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Score Column</th>
+                <th>Standard Column</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var m in Model.MappedQuestions)
+        {
+            <tr>
+                <td>@m.Q</td>
+                <td><code>@m.ScoreHeader</code></td>
+                <td><code>@m.StdHeader</code></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <h4>Standards Preview (first ~500 rows)</h4>
+    <table class="table table-sm table-bordered align-middle">
+        <thead>
+            <tr>
+                <th>Code (raw)</th>
+                <th>Normalized</th>
+                <th>Exists in Standards</th>
+                <th># Questions Mapped</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var p in Model.Preview)
+        {
+            <tr class="@(p.ExistsInStandards ? "" : "table-warning")">
+                <td><code>@p.Code</code></td>
+                <td><code>@p.Normalized</code></td>
+                <td>@(p.ExistsInStandards ? "Yes" : "No")</td>
+                <td>@p.QuestionsMapped</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StudentValidationSummary))
+    {
+        <div class="alert alert-info">@Model.StudentValidationSummary</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ImportBatchId))
+    {
+        <div class="alert alert-success">
+            Imported! Batch Id: <code>@Model.ImportBatchId</code> —
+            <a asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@Model.ImportBatchId">View results</a>
+        </div>
+    }
+}
