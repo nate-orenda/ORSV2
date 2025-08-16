@@ -1,4 +1,3 @@
-// File: Pages/Admin/FileImport/Assessments/Lennections.cshtml.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -17,11 +16,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
     {
         // --- UI state ---
         [BindProperty, Required] public int DistrictId { get; set; }
-        [BindProperty] public string TestId { get; set; } = "";            // auto-detected when possible
-        [BindProperty] public string Delimiter { get; set; } = "comma";     // lennections export is usually CSV
+        [BindProperty] public string TestId { get; set; } = "";               // auto-detected when possible
+        [BindProperty] public string Delimiter { get; set; } = "comma";        // lennections export is usually CSV
         [BindProperty] public IFormFile? Upload { get; set; }
         [BindProperty] public string? TempPath { get; set; }
-        [BindProperty, Required] public string Subject { get; set; } = "";  // ELA/Math/Science/Social Science
+        [BindProperty, Required] public string Subject { get; set; } = "";     // ELA/Math/Science/Social Science
         [BindProperty, Range(1, 5)] public int UnitCycle { get; set; } = 1;
 
         public bool HasPreview => Preview.Count > 0;
@@ -32,7 +31,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public record QuestionMap(int Q, string ScoreHeader, int ScoreCol, string StdHeader, int StdCol, string RawStandard);
         public record StandardPreview(string Code, string Normalized, bool ExistsInStandards, int QuestionsMapped);
         public List<QuestionMap> MappedQuestions { get; private set; } = new();
-        
         public List<StandardPreview> Preview { get; private set; } = new();
         public string? AutoDetectedTestId { get; private set; }
         public string? StudentValidationSummary { get; private set; }
@@ -40,23 +38,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         private readonly IConfiguration _config;
         public LennectionsModel(IConfiguration config) => _config = config;
 
-        // Patterns we observe in Lennections exports (examples, kept flexible):
-        //  - Q1 Points / Q1 StandardID   (or Standard Id / Standard)
-        //  - Question 1 Score / Question 1 Standard
-        //  - Q01_Score / Q01_Standard
-        private static readonly Regex ScoreHeaderRe = new(
-            @"^(?:Question\s*)?(?<q>\d{1,2})\s*(?:_|\s|-)?\s*(?:Score|Points|Correct|Raw)$",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex StandardHeaderRe = new(
-            @"^(?:Question\s*)?(?<q>\d{1,2})\s*(?:_|\s|-)?\s*(?:Standard(?:ID)?|Std(?:Id)?)$",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         // For auto-detecting TestId/Subject/Unit from header meta if present
         private static readonly string[] PossibleTestHeaders = { "Assessment Name", "Assessment", "Test Name", "Test" };
         private static readonly string[] PossibleSubjectHeaders = { "Subject" };
         private static readonly string[] PossibleUnitHeaders = { "Unit", "Unit Cycle" };
-        private static readonly string[] PossibleLocalIdHeaders = { "Local Student ID", "LocalID", "StudentLocalId", "Student Local Id", "Local Id" };
 
         private static readonly string[] ClusterLetters = { "A", "B", "C", "D", "E", "F" };
 
@@ -69,6 +54,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public async Task<IActionResult> OnPostPreview()
         {
             await LoadDistrictOptionsAsync();
+
+            // Let Preview run with just a file; require District/Subject on Import.
+            ModelState.Remove(nameof(Subject));
+            ModelState.Remove(nameof(DistrictId));
+
             if (!ModelState.IsValid) return Page();
             if (Upload == null || Upload.Length == 0)
             {
@@ -83,6 +73,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             TempPath = temp;
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
+
+            // BOM-safe read (Lennections often emits BOM)
             using var sr = new StreamReader(System.IO.File.OpenRead(temp), Encoding.UTF8, true);
             var header = await sr.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(header))
@@ -91,10 +83,18 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 return Page();
             }
 
-            var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-            int colLocalId = FindFirst(headers, PossibleLocalIdHeaders) ?? 0; // fallback to first col
+            var headers = header.Split(delimiterChar);
 
-            // Auto-detect metadata
+            // Student local id is "StudentId"
+            int colLocalId;
+            try { colLocalId = FindStudentIdColumnOrThrow(headers); }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                return Page();
+            }
+
+            // Auto-detect metadata if present
             if (string.IsNullOrWhiteSpace(TestId))
             {
                 var ti = FindFirst(headers, PossibleTestHeaders);
@@ -109,50 +109,24 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     UnitCycle = u;
             }
 
-            // Build question -> (scoreCol, standardCol)
-            var scoreCols = new Dictionary<int, (string header, int idx)>();
-            var stdCols = new Dictionary<int, (string header, int idx)>();
-
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var h = headers[i];
-                var ms = ScoreHeaderRe.Match(h);
-                if (ms.Success && int.TryParse(ms.Groups["q"].Value, out var qn))
-                {
-                    scoreCols[qn] = (h, i);
-                    continue;
-                }
-                var mstd = StandardHeaderRe.Match(h);
-                if (mstd.Success && int.TryParse(mstd.Groups["q"].Value, out var qn2))
-                {
-                    stdCols[qn2] = (h, i);
-                    continue;
-                }
-            }
-
-            // Pair up to 25 questions (but allow fewer/more defensively)
-            var maxQ = Math.Max(scoreCols.Keys.DefaultIfEmpty(0).Max(), stdCols.Keys.DefaultIfEmpty(0).Max());
-            for (int q = 1; q <= Math.Max(25, maxQ); q++)
-            {
-                if (scoreCols.TryGetValue(q, out var sc) && stdCols.TryGetValue(q, out var st))
-                    MappedQuestions.Add(new QuestionMap(q, sc.header, sc.idx, st.header, st.idx, ""));
-            }
+            // Map Lennections item blocks: [Item ... Score ... ItemStandard ...] x N
+            MappedQuestions = BuildLennectionsItemBlocks(headers);
+            if (MappedQuestions.Count > 25) MappedQuestions = MappedQuestions.Take(25).ToList();
 
             if (MappedQuestions.Count == 0)
             {
-                ModelState.AddModelError("", "Couldn’t find any Question score/standard column pairs. Make sure headers look like ‘Q1 Points’ and ‘Q1 StandardID’ (or similar).");
+                ModelState.AddModelError("", "Couldn’t find any Lennections item blocks. I look for repeating groups containing 'Item', 'Score', and 'ItemStandard'.");
                 return Page();
             }
 
-            // Scan a sample of rows to build the set of standards we need to validate
-            var seenStandards = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase); // code -> #questions mapped
-            var delimiter = delimiterChar;
+            // Scan a sample of rows to preview standards
+            var seenStandards = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             string? line;
             int scanned = 0;
             while ((line = await sr.ReadLineAsync()) != null && scanned < 500)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                var cells = line.Split(delimiter);
+                var cells = line.Split(delimiterChar);
                 foreach (var qm in MappedQuestions)
                 {
                     if (qm.StdCol >= cells.Length) continue;
@@ -163,7 +137,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 scanned++;
             }
 
-            // Pull existing standards once
+            // Pull existing standards once (helps flag missing codes; GUIDs will just pass through)
             var candidates = new HashSet<string>(seenStandards.Keys, StringComparer.OrdinalIgnoreCase);
             foreach (var c in seenStandards.Keys) AddClusterCandidates(c, candidates);
             var existing = await LoadExistingStandards(candidates);
@@ -177,16 +151,17 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 .OrderBy(p => p.Normalized)
                 .ToList();
 
-            // Quick student-localID validation on first ~2k rows
+            // Quick StudentId validation on first ~2k rows
             sr.BaseStream.Seek(0, SeekOrigin.Begin);
             sr.DiscardBufferedData();
             await sr.ReadLineAsync(); // skip header
+
             var localIds = new HashSet<int>();
             int scanned2 = 0;
             while ((line = await sr.ReadLineAsync()) != null && scanned2 < 2000)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                var cells = line.Split(delimiter);
+                var cells = line.Split(delimiterChar);
                 if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
                     localIds.Add(lid);
                 scanned2++;
@@ -194,8 +169,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             if (localIds.Count > 0)
             {
                 var (found, sampleMissing) = await ValidateLocalStudents(DistrictId, localIds);
-                StudentValidationSummary = $"{found}/{localIds.Count} local IDs match students in district {DistrictId}" +
-                    (sampleMissing.Count > 0 ? $". Missing sample: {string.Join(", ", sampleMissing)}" : "");
+                StudentValidationSummary = $"{found}/{localIds.Count} StudentId values match students in district {DistrictId}"
+                    + (sampleMissing.Count > 0 ? $". Missing sample: {string.Join(", ", sampleMissing)}" : "");
             }
 
             return Page();
@@ -224,9 +199,18 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, true))
             {
                 var header = await sr.ReadLineAsync() ?? string.Empty;
-                var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
+                var headers = header.Split(delimiterChar);
 
-                int colLocalId = FindFirst(headers, PossibleLocalIdHeaders) ?? 0;
+                // StudentId is required
+                int colLocalId;
+                try { colLocalId = FindStudentIdColumnOrThrow(headers); }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", ex.Message);
+                    return Page();
+                }
+
+                // Auto-detect TestId again if needed
                 int? testMetaIdx = FindFirst(headers, PossibleTestHeaders);
                 if (string.IsNullOrWhiteSpace(TestId) && testMetaIdx.HasValue)
                 {
@@ -234,30 +218,18 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     ModelState.Remove(nameof(TestId));
                 }
 
-                // Map question columns again (import step may be reached directly)
-                var scoreCols = new Dictionary<int, int>();
-                var stdCols = new Dictionary<int, int>();
-                for (int i = 0; i < headers.Length; i++)
+                // Map Lennections blocks
+                var maps = BuildLennectionsItemBlocks(headers);
+                if (maps.Count > 25) maps = maps.Take(25).ToList();
+                if (maps.Count == 0)
                 {
-                    var h = headers[i];
-                    var ms = ScoreHeaderRe.Match(h);
-                    if (ms.Success && int.TryParse(ms.Groups["q"].Value, out var qn)) scoreCols[qn] = i;
-                    var mstd = StandardHeaderRe.Match(h);
-                    if (mstd.Success && int.TryParse(mstd.Groups["q"].Value, out var qn2)) stdCols[qn2] = i;
+                    ModelState.AddModelError("", "Couldn’t find any Lennections item blocks (Item/Score/ItemStandard).");
+                    return Page();
                 }
-
-                // Build standard code candidate set (from header only)
-                var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var q in scoreCols.Keys.Intersect(stdCols.Keys))
-                {
-                    // We’ll also read rows to accumulate actual codes shortly
-                }
-                var existing = await LoadExistingStandards(candidates); // may be empty now; we’ll normalize per-row too
 
                 // Read all rows, aggregate per-student per-standard
                 string? line;
-                var agg = new Dictionary<(int localId, string code), (decimal points, int count)>(
-                    new KeyComparer());
+                var agg = new Dictionary<(int localId, string code), (decimal points, int count)>(new KeyComparer());
 
                 while ((line = await sr.ReadLineAsync()) != null)
                 {
@@ -266,24 +238,24 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     if (colLocalId >= cells.Length) continue;
                     if (!int.TryParse(cells[colLocalId].Trim(), out var localId)) continue;
 
-                    foreach (var q in scoreCols.Keys.Intersect(stdCols.Keys))
+                    foreach (var m in maps)
                     {
-                        var sCol = scoreCols[q];
-                        var cCol = stdCols[q];
-                        if (sCol >= cells.Length || cCol >= cells.Length) continue;
-                        var rawPts = (cells[sCol] ?? "").Trim();
-                        var rawCode = StripElaPrefix((cells[cCol] ?? "").Trim());
+                        if (m.ScoreCol >= cells.Length || m.StdCol >= cells.Length) continue;
+
+                        var rawPts = (cells[m.ScoreCol] ?? "").Trim();
+                        var rawCode = StripElaPrefix((cells[m.StdCol] ?? "").Trim());
                         if (string.IsNullOrEmpty(rawCode) || string.IsNullOrEmpty(rawPts)) continue;
 
                         if (!decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out var pts))
                         {
-                            // allow common 0/1/"Correct"/"Incorrect"
                             if (string.Equals(rawPts, "Correct", StringComparison.OrdinalIgnoreCase)) pts = 1m;
                             else if (string.Equals(rawPts, "Incorrect", StringComparison.OrdinalIgnoreCase)) pts = 0m;
                             else continue;
                         }
 
-                        var norm = NormalizeCode(rawCode, existing);
+                        // For Lennections, ItemStandard appears to be a GUID; normalization is a no-op.
+                        var norm = rawCode;
+
                         var key = (localId, norm);
                         if (agg.TryGetValue(key, out var cur)) agg[key] = (cur.points + pts, cur.count + 1);
                         else agg[key] = (pts, 1);
@@ -294,11 +266,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 foreach (var kvp in agg)
                 {
                     var r = tvp.NewRow();
-                    r["local_student_id"] = kvp.Key.localId;
+                    r["local_student_id"] = kvp.Key.localId;            // from StudentId column
                     r["test_id"] = TestId;
-                    r["human_coding_scheme"] = kvp.Key.code;
-                    r["points"] = kvp.Value.points;                 // e.g., 0..5
-                    r["max_points"] = (decimal)kvp.Value.count;      // e.g., usually 5
+                    r["human_coding_scheme"] = kvp.Key.code;            // keep code as-is (GUID or raw)
+                    r["points"] = kvp.Value.points;                     // e.g., 0..5
+                    r["max_points"] = (decimal)kvp.Value.count;         // e.g., usually 5
                     tvp.Rows.Add(r);
                 }
             }
@@ -329,18 +301,55 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             return Page();
         }
 
-        // ---------- Helpers (largely mirrored from Illuminate importer for consistency) ----------
+        // ---------- Helpers ----------
         private static int? FindFirst(string[] headers, string[] candidates)
         {
             for (int i = 0; i < headers.Length; i++)
-            {
                 foreach (var c in candidates)
-                {
-                    if (headers[i].Equals(c, StringComparison.OrdinalIgnoreCase))
+                    if (headers[i].Trim().Equals(c, StringComparison.OrdinalIgnoreCase))
                         return i;
+            return null;
+        }
+
+        // Student local id MUST be "StudentId"
+        private static int FindStudentIdColumnOrThrow(string[] headers)
+        {
+            for (int i = 0; i < headers.Length; i++)
+                if (headers[i].Trim().Equals("StudentId", StringComparison.OrdinalIgnoreCase))
+                    return i;
+            throw new InvalidOperationException("Required column 'StudentId' was not found in the file header.");
+        }
+
+        // Detect Lennections item blocks: Item … Score … ItemStandard … (repeat)
+        private List<QuestionMap> BuildLennectionsItemBlocks(string[] headers)
+        {
+            var itemStarts = new List<int>();
+            for (int i = 0; i < headers.Length; i++)
+                if (headers[i].Trim().Equals("Item", StringComparison.OrdinalIgnoreCase))
+                    itemStarts.Add(i);
+
+            var maps = new List<QuestionMap>();
+            if (itemStarts.Count == 0) return maps;
+
+            for (int b = 0; b < itemStarts.Count; b++)
+            {
+                int start = itemStarts[b];
+                int end = (b + 1 < itemStarts.Count) ? itemStarts[b + 1] - 1 : headers.Length - 1;
+
+                int scoreCol = -1, stdCol = -1;
+                for (int j = start; j <= end; j++)
+                {
+                    if (headers[j].Trim().Equals("Score", StringComparison.OrdinalIgnoreCase)) scoreCol = j;
+                    else if (headers[j].Trim().Equals("ItemStandard", StringComparison.OrdinalIgnoreCase)) stdCol = j;
+                }
+
+                if (scoreCol >= 0 && stdCol >= 0)
+                {
+                    int q = maps.Count + 1;
+                    maps.Add(new QuestionMap(q, headers[scoreCol], scoreCol, headers[stdCol], stdCol, ""));
                 }
             }
-            return null;
+            return maps;
         }
 
         private static void TryDelete(string? path)
@@ -358,7 +367,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 : code.Trim();
         }
 
-        // Add math cluster candidates (A..F) for codes like 7.NS.1.a  (so we can normalize to e.g., 7.NS.A.1.a)
+        // Add math cluster candidates (A..F) for codes like 7.NS.1.a -> 7.NS.A.1.a
         private static void AddClusterCandidates(string codeRaw, HashSet<string> dest)
         {
             var mm = Regex.Match(codeRaw, @"^(?<g>\d+)\.(?<dom>[A-Z]{1,3})\.(?<num>\d+)(?<sub>\.[a-z])?$", RegexOptions.IgnoreCase);
@@ -481,8 +490,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
         private sealed class KeyComparer : IEqualityComparer<(int localId, string code)>
         {
-            public bool Equals((int localId, string code) x, (int localId, string code) y) => x.localId == y.localId && string.Equals(x.code, y.code, StringComparison.OrdinalIgnoreCase);
-            public int GetHashCode((int localId, string code) obj) => HashCode.Combine(obj.localId, StringComparer.OrdinalIgnoreCase.GetHashCode(obj.code ?? string.Empty));
+            public bool Equals((int localId, string code) x, (int localId, string code) y) =>
+                x.localId == y.localId && string.Equals(x.code, y.code, StringComparison.OrdinalIgnoreCase);
+            public int GetHashCode((int localId, string code) obj) =>
+                HashCode.Combine(obj.localId, StringComparer.OrdinalIgnoreCase.GetHashCode(obj.code ?? string.Empty));
         }
     }
 }

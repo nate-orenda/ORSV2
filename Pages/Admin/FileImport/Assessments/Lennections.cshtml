@@ -7,18 +7,22 @@
 <h2 class="mb-3">Lennections Import</h2>
 
 <form method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label">District</label>
             <select asp-for="DistrictId" class="form-select" asp-items="Model.DistrictOptions"></select>
+            <span class="text-danger" asp-validation-for="DistrictId"></span>
         </div>
         <div class="col-md-3">
             <label class="form-label">Subject</label>
             <input asp-for="Subject" class="form-control" placeholder="ELA / Math / Science / Social Science" />
+            <span class="text-danger" asp-validation-for="Subject"></span>
         </div>
         <div class="col-md-2">
             <label class="form-label">Unit Cycle (1–5)</label>
             <input asp-for="UnitCycle" type="number" class="form-control" min="1" max="5" />
+            <span class="text-danger" asp-validation-for="UnitCycle"></span>
         </div>
         <div class="col-md-4">
             <label class="form-label">Test Id</label>
@@ -31,6 +35,8 @@
         <div class="col-md-5">
             <label class="form-label">Upload Lennections CSV</label>
             <input asp-for="Upload" type="file" class="form-control" />
+            <span class="text-danger" asp-validation-for="Upload"></span>
+            <div class="form-text">Student local id must be in a column named <code>StudentId</code>.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label">Delimiter</label>
@@ -40,10 +46,10 @@
             </select>
         </div>
         <div class="col-12">
-            <button class="btn btn-primary" asp-page-handler="Preview">Preview</button>
+            <button type="submit" class="btn btn-primary" asp-page-handler="Preview">Preview</button>
             @if (Model.HasPreview)
             {
-                <button class="btn btn-success" asp-page-handler="Import">Import</button>
+                <button type="submit" class="btn btn-success" asp-page-handler="Import">Import</button>
             }
         </div>
     </div>
@@ -66,8 +72,8 @@
         {
             <tr>
                 <td>@m.Q</td>
-                <td><code>@m.ScoreHeader</code></td>
-                <td><code>@m.StdHeader</code></td>
+                <td><code>@m.ScoreHeader</code> (@m.ScoreCol)</td>
+                <td><code>@m.StdHeader</code> (@m.StdCol)</td>
             </tr>
         }
         </tbody>
@@ -108,4 +114,8 @@
             <a asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@Model.ImportBatchId">View results</a>
         </div>
     }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }
