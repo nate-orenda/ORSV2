@@ -7,6 +7,7 @@
 <h2 class="mb-3">Lennections Import</h2>
 
 <form method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="row g-3">
         <div class="col-md-3">
@@ -26,7 +27,7 @@
         </div>
         <div class="col-md-4">
             <label class="form-label">Test Id</label>
-            <input asp-for="TestId" class="form-control" placeholder="Auto-detected if present in file" />
+            <input asp-for="TestId" class="form-control" placeholder="Auto-detected from first data row" />
             @if (!string.IsNullOrWhiteSpace(Model.AutoDetectedTestId))
             {
                 <div class="form-text">Auto-detected: <strong>@Model.AutoDetectedTestId</strong></div>
@@ -58,62 +59,75 @@
 @if (Model.HasPreview)
 {
     <hr />
-    <h4>Detected Question Mappings</h4>
-    <table class="table table-sm table-bordered align-middle">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Score Column</th>
-                <th>Standard Column</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var m in Model.MappedQuestions)
-        {
-            <tr>
-                <td>@m.Q</td>
-                <td><code>@m.ScoreHeader</code> (@m.ScoreCol)</td>
-                <td><code>@m.StdHeader</code> (@m.StdCol)</td>
-            </tr>
-        }
-        </tbody>
-    </table>
 
-    <h4>Standards Preview (first ~500 rows)</h4>
-    <table class="table table-sm table-bordered align-middle">
-        <thead>
-            <tr>
-                <th>Code (raw)</th>
-                <th>Normalized</th>
-                <th>Exists in Standards</th>
-                <th># Questions Mapped</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var p in Model.Preview)
-        {
-            <tr class="@(p.ExistsInStandards ? "" : "table-warning")">
-                <td><code>@p.Code</code></td>
-                <td><code>@p.Normalized</code></td>
-                <td>@(p.ExistsInStandards ? "Yes" : "No")</td>
-                <td>@p.QuestionsMapped</td>
-            </tr>
-        }
-        </tbody>
-    </table>
+    <div class="card mb-3">
+        <div class="card-header">Detected Standards</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Standard ID (from file)</th>
+                            <th>HumanCodingScheme (from DB)</th>
+                            <th>Exists in Standards?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Preview)
+                        {
+                            <tr>
+                                <td>@p.StandardId</td>
+                                <td>@p.HumanCodingScheme</td>
+                                <td>
+                                    @if (p.ExistsInStandards) { <span class="text-success">Yes</span> }
+                                    else { <span class="text-danger fw-bold">No</span> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.MissingIds.Any())
+    {
+        <div class="alert alert-warning">
+            <strong>Validation:</strong> The following Standard IDs from the file were not found in the <code>Standards</code> table:
+            <div class="small mt-2">
+                @string.Join(", ", Model.MissingIds.OrderBy(x => x))
+            </div>
+            <div class="mt-2">You can still import; rows with these Standard IDs will be skipped.</div>
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(Model.StudentValidationSummary))
     {
         <div class="alert alert-info">@Model.StudentValidationSummary</div>
     }
 
-    @if (!string.IsNullOrWhiteSpace(Model.ImportBatchId))
-    {
-        <div class="alert alert-success">
-            Imported! Batch Id: <code>@Model.ImportBatchId</code> —
-            <a asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@Model.ImportBatchId">View results</a>
-        </div>
-    }
+    <form method="post" class="mb-5">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="TempPath" value="@Model.TempPath" />
+        <input type="hidden" name="Delimiter" value="@Model.Delimiter" />
+        <input type="hidden" name="DistrictId" value="@Model.DistrictId" />
+        <input type="hidden" name="TestId" value="@Model.TestId" />
+        <input type="hidden" name="Subject" value="@Model.Subject" />
+        <input type="hidden" name="UnitCycle" value="@Model.UnitCycle" />
+        <button type="submit" class="btn btn-success" asp-page-handler="Import">Import to Database</button>
+    </form>
+}
+
+@* ***FIXED***: This now correctly displays the detailed success message after an import. *@
+@if (TempData["ImportSuccessMessage"] is string msg)
+{
+    <div class="alert alert-success">
+        @msg
+        @if (TempData["ImportBatchId"] is string batchId && !string.IsNullOrEmpty(batchId))
+        {
+            <a class="ms-2" asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@batchId">View results</a>
+        }
+    </div>
 }
 
 @section Scripts {
