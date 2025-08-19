@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Linq;
+using System;
+
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
@@ -11,14 +14,53 @@ namespace ORSV2.Pages.CurriculumAlignment
     public class Form1Model : PageModel
     {
         public class ColDef { public string Code { get; set; } = ""; public string ShortStatement { get; set; } = ""; }
-        public class RowVm 
-        { 
-            public string StudentName { get; set; } = ""; 
-            public string LocalId { get; set; } = ""; 
+        public record GroupKey(string TeacherName, string Period);
+
+        
+        public class GroupSummary
+        {
+            public GroupKey Key { get; init; } = new("", "");
+            public int StudentCount { get; init; }
+            public int[] PassedPerStd { get; init; } = Array.Empty<int>();
+            public int[] NotPassedPerStd { get; init; } = Array.Empty<int>();
+            public int[] DenomPerStd { get; init; } = Array.Empty<int>(); // denominator per standard
+            // Totals based on the 'Total Passed' column (>=3 vs <3)
+            public int PassedByTotal { get; init; }
+            public int NotPassedByTotal { get; init; }
+        }
+
+        public class GrandSummary
+        {
+            public int StudentCount { get; init; }
+            public int[] PassedPerStd { get; init; } = Array.Empty<int>();
+            public int[] NotPassedPerStd { get; init; } = Array.Empty<int>();
+            public int[] DenomPerStd { get; init; } = Array.Empty<int>();
+            // Totals based on the 'Total Passed' column (>=3 vs <3)
+            public int PassedByTotal { get; init; }
+            public int NotPassedByTotal { get; init; }
+        }
+
+        public class QuadrantSummary
+        {
+            public int TotalTested { get; init; }
+            public int Challenge { get; init; } // 4-5 standards passed
+            public int Benchmark { get; init; } // 3
+            public int Strategic { get; init; } // 2
+            public int Intensive { get; init; } // 0-1
+        }
+
+
+        public List<GroupSummary> GroupSummaries { get; private set; } = new();
+        public GrandSummary? GrandTotals { get; private set; }
+        public QuadrantSummary? Quadrants { get; private set; }
+        public class RowVm
+        {
+            public string StudentName { get; set; } = "";
+            public string LocalId { get; set; } = "";
             public string TeacherName { get; set; } = "";
             public string Period { get; set; } = "";
-            public List<decimal?> Points { get; set; } = new(); 
-            public int TotalPassed { get; set; } 
+            public List<decimal?> Points { get; set; } = new();
+            public int TotalPassed { get; set; }
         }
 
         [BindProperty(SupportsGet = true)] public int? DistrictId { get; set; }
@@ -65,6 +107,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             if (SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId) && Guid.TryParse(BatchId, out var bid))
             {
                 await LoadMatrixData(conn, bid);
+                BuildSummaries();
             }
         }
 
@@ -161,5 +204,89 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
             }
         }
+        private void BuildSummaries()
+        {
+            int m = Columns.Count;
+            const decimal PASS_CUTOFF = 4m; // Passed is >= 4
+
+            // Group summaries by Teacher + Period
+            GroupSummaries = Rows
+                .GroupBy(r => new GroupKey(r.TeacherName, r.Period))
+                .Select(g =>
+                {
+                    var passed = new int[m];
+                    var notPassed = new int[m];
+                    var denom = new int[m];
+
+                    foreach (var r in g)
+                    {
+                        for (int i = 0; i < m; i++)
+                        {
+                            var score = r.Points[i];
+                            if (!score.HasValue) continue;
+                            denom[i]++;
+                            if (score.Value >= PASS_CUTOFF) passed[i]++; else notPassed[i]++;
+                        }
+                    }
+
+                    return new GroupSummary
+                    {
+                        Key = g.Key,
+                        StudentCount = g.Count(),
+                        PassedPerStd = passed,
+                        NotPassedPerStd = notPassed,
+                        DenomPerStd = denom,
+                        PassedByTotal = g.Count(r => r.TotalPassed >= 3),
+                        NotPassedByTotal = g.Count(r => r.TotalPassed < 3)
+                    };
+                })
+                .OrderBy(gs => gs.Key.TeacherName)
+                .ThenBy(gs => gs.Key.Period)
+                .ToList();
+
+            // Grand totals
+            {
+                var passed = new int[m];
+                var notPassed = new int[m];
+                var denom = new int[m];
+                foreach (var r in Rows)
+                {
+                    for (int i = 0; i < m; i++)
+                    {
+                        var score = r.Points[i];
+                        if (!score.HasValue) continue;
+                        denom[i]++;
+                        if (score.Value >= PASS_CUTOFF) passed[i]++; else notPassed[i]++;
+                    }
+                }
+                GrandTotals = new GrandSummary
+                {
+                    StudentCount = Rows.Count,
+                    PassedPerStd = passed,
+                    NotPassedPerStd = notPassed,
+                    DenomPerStd = denom,
+                    PassedByTotal = Rows.Count(r => r.TotalPassed >= 3),
+                    NotPassedByTotal = Rows.Count(r => r.TotalPassed < 3)
+                };
+            }
+
+            // Quadrant distribution based on TotalPassed
+            {
+                int challenge = Rows.Count(r => r.TotalPassed >= 4);
+                int benchmark = Rows.Count(r => r.TotalPassed == 3);
+                int strategic = Rows.Count(r => r.TotalPassed == 2);
+                int intensive = Rows.Count(r => r.TotalPassed <= 1);
+                Quadrants = new QuadrantSummary
+                {
+                    TotalTested = Rows.Count,
+                    Challenge = challenge,
+                    Benchmark = benchmark,
+                    Strategic = strategic,
+                    Intensive = intensive
+                };
+            }
+        }
+
+
     }
 }

@@ -81,6 +81,18 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   --btn-shadow:0 4px 12px var(--orenda-shadow);
   --btn-shadow-hover:0 8px 20px var(--orenda-shadow-hover);
   --btn-ring:0 0 0 .2rem rgba(0,34,197,.15);
+
+  --quad-challenge-bg: #ecfdf5;  /* light green */
+  --quad-challenge-fg: #065f46;
+
+  --quad-benchmark-bg: #eff6ff;  /* light blue */
+  --quad-benchmark-fg: #1e40af;
+
+  --quad-strategic-bg: #fffbeb;  /* light yellow */
+  --quad-strategic-fg: #92400e;
+
+  --quad-intensive-bg: #fef2f2;  /* light red */
+  --quad-intensive-fg: #991b1b;
 }
 
 /* =========================================================

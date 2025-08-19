@@ -1,5 +1,9 @@
 @page
 @model ORSV2.Pages.CurriculumAlignment.Form1Model
+
+                            <tr class="group-divider">
+                                <td class="sticky-col" colspan="@(Model.Columns.Count + 3)"></td>
+                            </tr>
 @{
     ViewData["Title"] = "DRS Form 1";
     // Group the rows by Teacher and then by Period for display
@@ -19,8 +23,18 @@
         <h2 class="mb-0">DRS Form 1</h2>
     </div>
 
+    <!-- Print controls (hidden in print/PDF) -->
+    <div class="d-print-none mb-3">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+            <i class="fas fa-print"></i> Print
+        </button>
+        @* Optional PDF link if you add a server-side route later
+        <a class="btn btn-outline-primary" href="?pdf=1"><i class="fas fa-file-pdf"></i> Export PDF</a>
+        *@
+    </div>
+
     <!-- Main Filter Form -->
-    <div class="orenda-card mb-4">
+    <div class="orenda-card mb-4 d-print-none">
         <div class="orenda-card-body">
             <h5 class="mb-3">Filters</h5>
             <form id="filterForm" method="get" class="row g-3 align-items-end">
@@ -65,29 +79,36 @@
 
     @if (Model.Rows.Any())
     {
-        <div class="orenda-card">
+        <div class="orenda-card orenda-matrix-wrap">
             <div class="p-3 border-bottom" style="background-color: #f8f9fb;">
                 <h5 class="mb-0 fw-semibold">Assessment: <span class="fw-normal text-muted">@Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text</span></h5>
             </div>
             <div class="table-responsive">
-                <table class="orenda-table matrix-table mb-0">
+                <table class="orenda-table matrix-table mb-0" style="table-layout:fixed; width:100%;">
+                    
                     <thead>
-                        <tr>
-                            <th class="sticky-col" rowspan="2" style="min-width: 220px;">Student Name</th>
-                            <th class="sticky-col-2" rowspan="2" style="min-width: 140px;">Student Local ID</th>
-                            @foreach (var col in Model.Columns)
-                            {
-                                <th class="text-center">@col.Code</th>
-                            }
-                            <th rowspan="2" class="text-center" style="min-width: 120px;">Total Passed</th>
-                        </tr>
-                        <tr>
-                            @foreach (var col in Model.Columns)
-                            {
-                                <th class="fw-normal text-muted">@col.ShortStatement</th>
-                            }
-                        </tr>
-                    </thead>
+    <!-- Repeating title row (hidden on screen, shown in print) -->
+    <tr class="print-title-row">
+        <th class="print-table-title" colspan="@(Model.Columns.Count + 3)">
+            @(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment")
+        </th>
+    </tr>
+
+    <tr>
+        <th class="sticky-col"   style="width: 220px;">Student Name</th>
+        <th class="sticky-col-2" style="width: 140px;">Student Local ID</th>
+        @foreach (var col in Model.Columns)
+        {
+            <th class="std-head">
+                <div class="std-code">@col.Code</div>
+                <div class="std-statement">@col.ShortStatement</div>
+            </th>
+        }
+        <th class="text-center" style="min-width: 120px;">Total Passed</th>
+    </tr>
+</thead>
+
+
                     <tbody>
                     @foreach (var teacherGroup in groupedRows)
                     {
@@ -103,6 +124,8 @@
                                     <strong>Period:</strong> @periodGroup.Period
                                 </td>
                             </tr>
+
+                            @* Student rows *@
                             @foreach (var row in periodGroup.Students)
                             {
                                 <tr>
@@ -111,14 +134,113 @@
                                     @for (int i = 0; i < Model.Columns.Count; i++)
                                     {
                                         var val = row.Points[i];
-                                        <td class="text-center">@((val.HasValue) ? val.Value.ToString("0.##") : "")</td>
+                                        <td class="text-center std-cell">@((val.HasValue) ? val.Value.ToString("0.##") : "")</td>
                                     }
                                     <td class="text-center fw-bold text-orenda-primary">@row.TotalPassed</td>
                                 </tr>
                             }
+
+                            @* Group summary for this Teacher×Period *@
+                            var gs = Model.GroupSummaries.FirstOrDefault(
+                                x => x.Key.TeacherName == teacherGroup.TeacherName && x.Key.Period == periodGroup.Period
+                            );
+                            if (gs != null)
+                            {
+                                <tr class="bg-gray-50 fw-semibold summary-row group-passed">
+                                    <td class="sticky-col" colspan="2">Passed</td>
+                                    @for (int i = 0; i < Model.Columns.Count; i++)
+                                    {
+                                        var c = gs.PassedPerStd[i];
+                                        var d = Math.Max(1, gs.DenomPerStd[i]);
+                                        <td class="text-center">@c (@String.Format("{0:P2}", (double)c / d))</td>
+                                    }
+                                    <td class="text-center fw-semibold">
+                                        @gs.PassedByTotal (@String.Format("{0:P2}", (double)gs.PassedByTotal / Math.Max(1, gs.PassedByTotal + gs.NotPassedByTotal)))
+                                    </td>
+                                </tr>
+                                <tr class="bg-gray-50 summary-row group-notpassed">
+                                    <td class="sticky-col" colspan="2">Not Passed</td>
+                                    @for (int i = 0; i < Model.Columns.Count; i++)
+                                    {
+                                        var c = gs.NotPassedPerStd[i];
+                                        var d = Math.Max(1, gs.DenomPerStd[i]);
+                                        <td class="text-center">@c (@String.Format("{0:P2}", (double)c / d))</td>
+                                    }
+                                    <td class="text-center">
+                                        @gs.NotPassedByTotal (@String.Format("{0:P2}", (double)gs.NotPassedByTotal / Math.Max(1, gs.PassedByTotal + gs.NotPassedByTotal)))
+                                    </td>
+                                </tr>
+
+                                <!-- Spacer that forces a page break for print/PDF after each Period -->
+                                <tr class="period-page-break d-none"><td colspan="@(Model.Columns.Count + 3)"></td></tr>
+                            }
                         }
                     }
-                    </tbody>
+                    
+                    @if (Model.GrandTotals is not null)
+                    {
+                        <tr class="bg-slate-100 fw-bold grand-row grand-passed">
+                            <td class="sticky-col" colspan="2">Grand Total – Passed</td>
+                            @for (int i = 0; i < Model.Columns.Count; i++)
+                            {
+                                var c = Model.GrandTotals.PassedPerStd[i];
+                                var d = Math.Max(1, Model.GrandTotals.DenomPerStd[i]);
+                                <td class="text-center">@c (@String.Format("{0:P2}", (double)c / d))</td>
+                            }
+                            <td class="text-center fw-bold">
+                                @Model.GrandTotals.PassedByTotal (@String.Format("{0:P2}", (double)Model.GrandTotals.PassedByTotal / Math.Max(1, Model.GrandTotals.PassedByTotal + Model.GrandTotals.NotPassedByTotal)))
+                            </td>
+                        </tr>
+                        <tr class="bg-slate-100 grand-row grand-notpassed">
+                            <td class="sticky-col" colspan="2">Grand Total – Not Passed</td>
+                            @for (int i = 0; i < Model.Columns.Count; i++)
+                            {
+                                var c = Model.GrandTotals.NotPassedPerStd[i];
+                                var d = Math.Max(1, Model.GrandTotals.DenomPerStd[i]);
+                                <td class="text-center">@c (@String.Format("{0:P2}", (double)c / d))</td>
+                            }
+                            <td class="text-center">
+                                @Model.GrandTotals.NotPassedByTotal (@String.Format("{0:P2}", (double)Model.GrandTotals.NotPassedByTotal / Math.Max(1, Model.GrandTotals.PassedByTotal + Model.GrandTotals.NotPassedByTotal)))
+                            </td>
+                        </tr>
+                    }
+                    
+                    @if (Model.Quadrants is not null)
+                    {
+                        var qt = Model.Quadrants;
+                        int totalCols = Model.Columns.Count + 3; // 2 sticky + standards + Total Passed column
+                        int span = Math.Max(1, totalCols / 4);
+                        int remainder = Math.Max(0, totalCols - (span * 4));
+                        <tr class="quad-row">
+                            <td class="quad-cell quadrant-challenge" colspan="@span">
+                                <div class="quad-title quadrant-challenge">Challenge</div>
+                                <div class="quad-metric">@String.Format("{0:P2}", (double)qt.Challenge / Math.Max(1, qt.TotalTested))</div>
+                                <div class="quad-detail">@qt.Challenge students</div>
+                            </td>
+                            <td class="quad-cell quadrant-benchmark" colspan="@span">
+                                <div class="quad-title quadrant-benchmark">Benchmark</div>
+                                <div class="quad-metric">@String.Format("{0:P2}", (double)qt.Benchmark / Math.Max(1, qt.TotalTested))</div>
+                                <div class="quad-detail">@qt.Benchmark students</div>
+                            </td>
+                            <td class="quad-cell quadrant-strategic" colspan="@span">
+                                <div class="quad-title quadrant-strategic">Strategic</div>
+                                <div class="quad-metric">@String.Format("{0:P2}", (double)qt.Strategic / Math.Max(1, qt.TotalTested))</div>
+                                <div class="quad-detail">@qt.Strategic students</div>
+                            </td>
+                            <td class="quad-cell quadrant-intensive" colspan="@(span + remainder)">
+                                <div class="quad-title quadrant-intensive">Intensive</div>
+                                <div class="quad-metric">@String.Format("{0:P2}", (double)qt.Intensive / Math.Max(1, qt.TotalTested))</div>
+                                <div class="quad-detail">@qt.Intensive students</div>
+                            </td>
+                        </tr>
+                        <tr class="quad-total-row">
+                            <td colspan="@(totalCols)">
+                                <span class="quad-total-label">Total Tested:</span> <span class="quad-total-value">@qt.TotalTested</span>
+                            </td>
+                        </tr>
+                    }
+    
+        </tbody>
                 </table>
             </div>
         </div>
@@ -134,16 +256,227 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <style>
-.matrix-table { font-size: 0.875rem; }
-.table-responsive { overflow-x: auto; }
+/* ===== Fixed, precise sticky layout ===== */
+:root{
+  --sticky1: 220px;  /* Student Name */
+  --sticky2: 140px;  /* Student Local ID */
+}
+
+/* Make fixed widths obey padding/borders */
+.matrix-table { table-layout: fixed; width: 100%; border-collapse: separate; }
+.matrix-table th, .matrix-table td { box-sizing: border-box; }
+
+/* Header cells are sticky at top */
 .matrix-table thead th { position: sticky; top: 0; z-index: 2; }
-.matrix-table thead tr:nth-child(2) th { top: 48px; }
-.matrix-table .sticky-col, .matrix-table .sticky-col-2 { position: sticky; left: 0; background-color: #fff; z-index: 1; }
-.matrix-table .sticky-col-2 { left: 220px; }
-.matrix-table thead .sticky-col, .matrix-table thead .sticky-col-2 { z-index: 3; }
-.matrix-table tbody tr:hover .sticky-col, .matrix-table tbody tr:hover .sticky-col-2 { background-color: #f8f9ff; }
-.matrix-table tbody td, .matrix-table thead th { white-space: nowrap; }
-.matrix-table thead tr:nth-child(2) th { white-space: normal; max-width: 320px; vertical-align: top; font-size: 0.7rem; line-height: 1.3; }
+
+/* Sticky header columns (bg matches header gray) */
+.matrix-table thead th.sticky-col{
+  left: 0;
+  width: var(--sticky1); min-width: var(--sticky1); max-width: var(--sticky1);
+  z-index: 3; background-color: #f3f4f6; /* same as header bg */
+}
+.matrix-table thead th.sticky-col-2{
+  left: var(--sticky1);
+  width: var(--sticky2); min-width: var(--sticky2); max-width: var(--sticky2);
+  z-index: 3; background-color: #f3f4f6; /* same as header bg */
+}
+
+/* Body sticky columns */
+.matrix-table tbody td.sticky-col{
+  position: sticky; left: 0; z-index: 1; background-color: #fff;
+  width: var(--sticky1); min-width: var(--sticky1); max-width: var(--sticky1);
+}
+.matrix-table tbody td.sticky-col-2{
+  position: sticky; left: var(--sticky1); z-index: 1; background-color: #fff;
+  width: var(--sticky2); min-width: var(--sticky2); max-width: var(--sticky2);
+}
+
+/* Header standard cells – wrap & center */
+.std-head{
+  text-align: center; vertical-align: middle;
+  white-space: normal !important; word-break: break-word; overflow-wrap: break-word;
+  max-width: 140px;
+}
+.std-head .std-code{ display:block; font-weight:700; margin-bottom:2px; }
+.std-head .std-statement{ display:block; font-size:0.7rem; line-height:1.2; color:#6b7280; }
+
+/* Ensure baseline nowrap doesn't override std-head wrap */
+.matrix-table thead th { white-space: nowrap; }
+.matrix-table thead th.std-head { white-space: normal !important; }
+
+/* Group/period headers & summaries */
 .group-header td { background-color: #e9ecef; font-weight: bold; padding: 0.5rem 1rem; position: sticky; left: 0; }
 .period-header td { background-color: #f8f9fa; padding-left: 2rem; }
+.matrix-table td, .matrix-table th { padding: 0.25rem 0.4rem; line-height: 1.15; }
+.group-divider td { border-top: 3px solid #b6c0ff; background: #f5f7ff; height: 6px; padding: 0 !important; }
+.summary-row td, .grand-row td { border-top: 2px solid #e2e8f0; }
+.grand-row td { background: #f3f4f6; font-weight: 600; }
+
+/* Quadrants */
+.quad-row td { 
+    border-top: 3px solid #fdba74; 
+    vertical-align: top;
+}
+.quad-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+.quad-metric { font-weight: 700; font-size: 1rem; }
+.quad-detail { font-size: 0.8rem; color: #374151; }
+.quad-total-row td { 
+    background: #fffbeb; 
+    border-top: 2px dashed #f59e0b; 
+    text-align: right;
+}
+.quad-total-label { font-weight: 600; margin-right: 6px; }
+.quad-total-value { font-weight: 800; }
+
+/* Quadrant theming via CSS variables (site-wide overrideable) */
+.quad-cell { border-radius: 8px; padding: 0.5rem; }
+.quadrant-challenge { background: var(--quad-challenge-bg, #ecfdf5); color: var(--quad-challenge-fg, #065f46); }
+.quadrant-benchmark { background: var(--quad-benchmark-bg, #eff6ff); color: var(--quad-benchmark-fg, #1e40af); }
+.quadrant-strategic { background: var(--quad-strategic-bg, #fffbeb); color: var(--quad-strategic-fg, #92400e); }
+.quadrant-intensive { background: var(--quad-intensive-bg, #fef2f2); color: var(--quad-intensive-fg, #991b1b); }
+
+/* -------------------- PRINT LAYOUT (append-only) -------------------- */
+/* === PRINT WIDTH EXPANSION (append-only) === */
+/* === PRINT: show only the table card, remove borders/backgrounds, keep table borders === */
+/* === PRINT WIDTH + CLEAN LAYOUT ===================================== */
+/* === Light borders & cleaner table look ============================== */
+.matrix-table {
+  border-collapse: separate;      /* safer for sticky cols */
+  border-spacing: 0;
+}
+.matrix-table th,
+.matrix-table td {
+  border: 1px solid #e5e7eb;     /* light slate-200 */
+}
+.matrix-table thead th {
+  background-color: #f3f4f6;     /* subtle header bg */
+}
+
+/* Title row styles (hidden on screen, shown in print) */
+.print-title-row { display: none; }
+.print-table-title {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  padding: .5rem .75rem;
+  background: #ffffff;           /* stays white so it pops from header bg */
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* Keep group/period rows visually distinct, even with borders */
+.group-header td { border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+.period-header td { border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+
+/* Summary & grand total rows: slightly stronger top rule */
+.summary-row td, .grand-row td { border-top: 2px solid #e2e8f0; }
+
+/* Quadrant cells already styled; ensure they keep their own backgrounds */
+.quad-row td { border-top: 3px solid #fdba74; }
+
+/* ======================== PRINT TWEAKS =============================== */
+@@page { size: Letter landscape; margin: 0.5in; }
+/* Screen: remove the surrounding card border/shadow so only table borders remain */
+.orenda-matrix-wrap {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Optional: hide the little header strip above the table on screen too */
+.orenda-matrix-wrap > .p-3 {
+  display: none !important;
+}
+
+/* Make sure the inner container has no borders/shadows either */
+.orenda-matrix-wrap .table-responsive {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Keep light borders on the actual table (you already have similar rules; safe to repeat) */
+.matrix-table {
+  border-collapse: separate;   /* better with sticky columns */
+  border-spacing: 0;
+}
+.matrix-table th,
+.matrix-table td {
+  border: 1px solid #e5e7eb;  /* subtle slate-200 */
+}
+.matrix-table thead th {
+  background-color: #f3f4f6;  /* gentle header bg */
+}
+
+/* Print: keep the same “only-table” look (no card borders, full width, page breaks still apply) */
+@@media print {
+  .orenda-matrix-wrap {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .orenda-matrix-wrap > .p-3 { display: none !important; }
+}
+
+@@media print {
+  /* Show the repeating title row in print */
+  .print-title-row { display: table-row !important; }
+  .matrix-table thead { display: table-header-group; }
+
+  /* Full width table on paper */
+  html, body { width: 100%; }
+  .container { max-width: none !important; width: auto !important; margin: 0 !important; padding: 0 !important; }
+  .table-responsive { overflow: visible !important; }
+  .matrix-table { table-layout: auto !important; width: 100% !important; }
+
+  /* Borders print crisply */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Unstick sticky elements for print (prevents overlap) */
+  .matrix-table thead th,
+  .matrix-table .sticky-col,
+  .matrix-table .sticky-col-2 {
+    position: static !important;
+    left: auto !important;
+    z-index: auto !important;
+    background: inherit !important;
+  }
+
+  /* Let standards expand in print */
+  .matrix-table thead th.std-head,
+  .matrix-table tbody td.std-cell {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    white-space: normal !important;
+  }
+
+  /* Keep first two columns readable on paper */
+  .matrix-table thead th.sticky-col,
+  .matrix-table tbody td.sticky-col {
+    width: 2.6in !important; min-width: 2.6in !important; max-width: 2.6in !important;
+  }
+  .matrix-table thead th.sticky-col-2,
+  .matrix-table tbody td.sticky-col-2 {
+    width: 1.6in !important; min-width: 1.6in !important; max-width: 1.6in !important;
+  }
+
+  /* Preserve your existing page breaks between periods */
+  .period-page-break {
+    display: table-row !important;
+    break-after: page;
+    page-break-after: always;
+    height: 0;
+  }
+
+  /* Keep headers/summaries together */
+  .group-header td, .period-header td, .summary-row td, .grand-row td {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+
+  /* Optional: hide the filter card and any footer on paper */
+  .d-print-none, footer, .footer, .site-footer { display: none !important; }
+}
+
+
+
 </style>
