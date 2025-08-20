@@ -139,24 +139,21 @@
         </div>
         <div id="studentsToolbar" class="students-toolbar">
             <div class="left">
-                <!-- This is where the DataTables buttons like Excel export are rendered -->
                 <div id="dtButtons"></div>
-                <!-- Add our new button here -->
-                <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm" disabled>
+                <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm condensed-btn" disabled>
                     <i class="bi bi-bullseye"></i> Create Target Group
                 </button>
-                <a class="btn btn-orenda-primary btn-sm"
+                <a class="btn btn-orenda-primary btn-sm condensed-btn"
                     asp-page="/GuidanceAlignment/ViewTargetGroups"
                     asp-route-schoolId="@Model.SchoolId">
                     View Target Groups
                 </a>
-                <a class="btn btn-orenda-primary btn-sm"
+                <a class="btn btn-orenda-primary btn-sm condensed-btn"
                     asp-page="/GuidanceAlignment/CompareCP"
                     asp-route-schoolId="@Model.SchoolId"
                     asp-route-grade="@Model.Grade">
                     Compare Checkpoints
                 </a>
-
             </div>
             <div class="right">
                 <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
@@ -172,7 +169,7 @@
                         <th class="py-2 draggable-header" data-column="id">ID</th>
                         <th class="py-2 draggable-header" data-column="grade">Gr</th>
                         <th class="py-2 draggable-header" data-column="counselor">Counselor</th>
-                        <th class="py-2 draggable-header" data-column="race">Race/Ethnicity</th>
+                        <th class="py-2 draggable-header" data-column="race">Race/Eth</th>
                         <th class="py-2 text-center draggable-header" data-column="swd">SWD</th>
                         <th class="py-2 text-center draggable-header" data-column="sed">SED</th>
                         <th class="py-2 text-center draggable-header" data-column="lf">LF</th>
@@ -231,7 +228,7 @@
                             <td class="py-1"><span class="badge bg-secondary" style="font-size: 0.7rem;">@s.LocalStudentId</span></td>
                             <td class="py-1">@s.Grade</td>
                             <td class="py-1">@((!string.IsNullOrEmpty(s.CounselorName) && s.CounselorName.Length > 15) ? s.CounselorName.Substring(0, 15) + "..." : s.CounselorName ?? "-")</td>
-                            <td class="py-1">@((!string.IsNullOrEmpty(s.RaceEthnicity) && s.RaceEthnicity.Length > 20) ? s.RaceEthnicity.Substring(0, 20) + "..." : s.RaceEthnicity ?? "-")</td>
+                            <td class="py-1" title="@s.RaceEthnicity">@(s.RaceEthnicity ?? "-")</td>
                             <td class="py-1 text-center">
                                 <span class="badge @(s.SWD == true ? "bg-warning" : "bg-light text-muted")" style="font-size: 0.7rem;">
                                     @(s.SWD == true ? "Y" : "N")
@@ -416,6 +413,58 @@
     .draggable-header { cursor: grab; }
     .ui-draggable-dragging { cursor: grabbing; }
     .clickable-group-header { cursor: pointer; pointer-events: auto; }
+    
+    /* ===== Orenda-Styled Student Table ===== */
+
+    /* Header Styling */
+    #studentsTable > thead th {
+        /* Apply a subtle gradient background from your theme */
+        background: linear-gradient(135deg, var(--orenda-secondary, #f8f9fb) 0%, var(--orenda-border, #e9ecef) 100%);
+        
+        /* Center-align text and vertically align for the sort icons */
+        text-align: center;
+        vertical-align: middle;
+
+        /* Text styling to match .orenda-table from site.css */
+        color: #495057;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem; /* slightly smaller for this compact table */
+        letter-spacing: .5px;
+        white-space: nowrap;
+
+        /* KEY FIX: Add padding on the right to make space for sort arrows */
+        padding-right: 1.5rem !important;
+    }
+
+    /* Row Styling */
+    #studentsTable tbody td {
+        /* Add a clean, light border between rows */
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: middle;
+    }
+
+    /* Remove the border from the very last row for a cleaner look */
+    #studentsTable tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Orenda-style hover effect for rows */
+    #studentsTable tbody tr:hover {
+        background-color: #f8f9ff; /* A subtle blue-tinted white */
+        color: var(--orenda-primary);
+    }
+
+    /* Smooth transition for the hover effect */
+    #studentsTable tbody tr {
+        transition: background-color 0.2s ease-in-out;
+    }
+    .condensed-column {
+        max-width: 120px; /* Adjust this width as needed */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
 </style>
 @section Scripts {

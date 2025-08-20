@@ -203,7 +203,8 @@ window.StudentGrouping = (function () {
             orderMulti: true,
             processing: false,
             info: false,
-            dom: 'Bfrtip',
+            // CHANGED: Removed the 'f' (filter/search) from the dom string
+            dom: 'Brtip',
             buttons: [
                 { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
                 { extend: 'csvHtml5', text: '<i class="fas fa-file-csv"></i> CSV', className: 'btn btn-info btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
@@ -216,7 +217,10 @@ window.StudentGrouping = (function () {
                     }
                 }
             ],
-            columnDefs: [{ "targets": [0], "className": "narrow-column" }],
+            columnDefs: [
+                { "targets": [1], "className": "narrow-column" }, // Targets the 'ID' column
+                { "targets": [4, 7], "className": "condensed-column" } // Targets 'Race/Eth' and 'LF'
+            ],
             orderFixed: groupIndices.length ? { pre: groupIndices.map(i => [i, 'asc']) } : null,
             rowGroup: groupingConfig ? groupingConfig.config : false,
             paging: false,
