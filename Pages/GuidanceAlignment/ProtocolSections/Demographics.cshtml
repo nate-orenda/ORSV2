@@ -42,7 +42,6 @@
                             <tr>
                                 <td class="fw-bold">@row.GradeLabel</td>
                                 
-                                <!-- English Learners -->
                                 <td class="text-center @GetPerformanceClass(row.EnglishLearnersPct)">
                                     @if (row.EnglishLearnersCount > 0)
                                     {
@@ -64,7 +63,6 @@
                                     }
                                 </td>
                                 
-                                <!-- RFEP -->
                                 <td class="text-center @GetPerformanceClass(row.RFEPPct)">
                                     @if (row.RFEPCount > 0)
                                     {
@@ -86,7 +84,6 @@
                                     }
                                 </td>
                                 
-                                <!-- Black or African American -->
                                 <td class="text-center @GetPerformanceClass(row.BlackAfricanAmericanPct)">
                                     @if (row.BlackAfricanAmericanCount > 0)
                                     {
@@ -108,7 +105,6 @@
                                     }
                                 </td>
                                 
-                                <!-- Special Education -->
                                 <td class="text-center @GetPerformanceClass(row.SpecialEducationPct)">
                                     @if (row.SpecialEducationCount > 0)
                                     {
@@ -138,8 +134,8 @@
             <div class="mt-3">
                 <small class="text-muted">
                     <strong>Note:</strong> Percentages represent the proportion of students in each demographic group 
-                    who are performing "Above the Line" (Challenge or Benchmark quadrants). 
-                    "--" indicates no students in that demographic group for the grade level.
+                    who are performing "Above the Line" (Challenge or Benchmark quadrants).
+"--" indicates no students in that demographic group for the grade level.
                 </small>
             </div>
         </div>
@@ -149,23 +145,26 @@ else
 {
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i> 
-        No demographic data available for this checkpoint. Data will appear once student results are processed.
+        No demographic data available for this checkpoint.
+Data will appear once student results are processed.
     </div>
 }
 
 <h5 class="mt-4">Reflection / Notes</h5>
 <form method="post" asp-page-handler="SaveResponse" asp-route-protocolId="@Model.ProtocolId">
     <div class="mb-3">
-        <label class="form-label">Demographics Analysis and Reflection</label>
+        <div class="form-label">
+            <strong>Guiding Questions:</strong>
+            <ul>
+                <li>How did the student groups do? “Tell the story.”</li>
+                <li>Are there any “hot spots” this checkpoint?</li>
+                <li>Are there any “sweet spots” this checkpoint?</li>
+                <li>What factors may have contributed to the grade-level’s overall results? Discuss and back up with examples.</li>
+                <li>When comparing different Checkpoints: Did students go up, down, or stay the same? What factors may have contributed to any movement? Discuss and back up with examples.</li>
+            </ul>
+        </div>
         <textarea asp-for="DemographicsResponse" class="form-control" rows="8" 
-                  placeholder="Enter your demographics analysis and reflection here...
-
-Consider questions such as:
-• What patterns do you notice in performance across demographic groups?
-• Which groups are performing above/below expectations?
-• What factors might be contributing to these patterns?
-• What interventions or supports might be needed?
-• How do these results compare to previous checkpoints or school goals?"></textarea>
+                  placeholder="Enter your demographics analysis and reflection here..."></textarea>
     </div>
     
     <button type="submit" class="btn btn-primary">Save Response</button>

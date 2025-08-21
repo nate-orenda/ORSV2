@@ -7,7 +7,6 @@
 
 <h4 class="mb-3">Indicators</h4>
 
-<!-- Demographic Filter -->
 <div class="row mb-4">
     <div class="col-md-4">
         <label class="form-label">Filter by Demographics:</label>
@@ -28,7 +27,6 @@
     </div>
 </div>
 
-<!-- Success Message -->
 @if (TempData["Success"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -37,25 +35,37 @@
     </div>
 }
 
-<!-- Indicator Tables Container -->
 <div id="indicatorTablesContainer">
     @await Html.PartialAsync("_IndicatorTables", Model)
 </div>
 
-<!-- Response Section -->
 <div class="card mt-4">
     <div class="card-header">
         <h5 class="mb-0">Analysis and Reflection</h5>
     </div>
     <div class="card-body">
+        <div class="mb-3">
+            <strong>Guiding Questions:</strong>
+            <ul>
+                <li>Review the criteria for getting a "yes" for each indicator.</li>
+                <li>What percentage of students got a "YES" on each indicator?</li>
+                <li>How far off was the grade-level from achieving the target?</li>
+                <li>Or, by how much did the grade level surpass the target?</li>
+            </ul>
+            <strong>Choose one grade level for a focused data dive.</strong>
+            <ul>
+                <li>How did the student groups do? "Tell the story."</li>
+                <li>Are there any "hot spots" this checkpoint?</li>
+                <li>Are there any "sweet spots" this checkpoint?</li>
+                <li>What factors may have contributed to the grade-level's overall results? Discuss and back up with examples.</li>
+            </ul>
+        </div>
+
         <form method="post" asp-page-handler="SaveResponse" asp-route-protocolId="@Model.ProtocolId">
             <div class="mb-3">
-                <label class="form-label">Indicators Analysis and Reflection</label>
+                <label asp-for="IndicatorsResponse" class="form-label visually-hidden">Indicators Analysis and Reflection</label>
                 <textarea asp-for="IndicatorsResponse" class="form-control" rows="8" 
-                          placeholder="Enter your indicators analysis and reflection here..."></textarea>
-                <div class="form-text">
-                    Analyze the indicator performance data above. Consider trends, areas of concern, and successes.
-                </div>
+                          placeholder="Enter your analysis and reflection here..."></textarea>
             </div>
             
             <input type="hidden" name="DemographicFilter" value="@Model.DemographicFilter" />
@@ -88,7 +98,6 @@
                 
                 // Fetch updated tables
                 const response = await fetch(`?handler=Tables&protocolId=@Model.ProtocolId&demographicFilter=${encodeURIComponent(selectedValue)}`);
-                
                 if (response.ok) {
                     const html = await response.text();
                     tablesContainer.innerHTML = html;
@@ -125,13 +134,11 @@
             formData.append('IndicatorsResponse', textarea.value);
             formData.append('DemographicFilter', document.getElementById('demographicFilter').value);
             formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-
             try {
                 const response = await fetch('?handler=SaveResponse', {
                     method: 'POST',
                     body: formData
                 });
-
                 if (response.ok) {
                     // Show subtle auto-save indicator
                     showAutoSaveStatus('Auto-saved', 'success');
@@ -154,12 +161,10 @@
             status.id = 'autoSaveStatus';
             status.className = `text-${type === 'success' ? 'success' : 'danger'} ms-2`;
             status.textContent = message;
-
             // Add after the save button
             const saveButton = document.querySelector('button[type="submit"]');
             if (saveButton) {
                 saveButton.parentNode.appendChild(status);
-                
                 // Remove after 3 seconds
                 setTimeout(() => {
                     if (status.parentNode) {

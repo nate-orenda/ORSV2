@@ -24,6 +24,10 @@ public class TargetsModel : ProtocolSectionBaseModel
         if (result.GetType() != typeof(PageResult)) return result;
 
         await LoadTargetsAsync();
+        
+        // Run the completion check on every page load.
+        await UpdateCompletionStatusAsync(); 
+        
         return Page();
     }
 
@@ -76,7 +80,7 @@ public class TargetsModel : ProtocolSectionBaseModel
         var result = await LoadProtocolDataAsync();
         if (result.GetType() != typeof(PageResult)) return result;
 
-        if (NewTarget != null && NewTarget.GradeLevel > 0 && NewTarget.TargetValue > 0 && NewTarget.TargetValue <= 100)
+        if (NewTarget != null && NewTarget.GradeLevel >= 0 && NewTarget.TargetValue > 0 && NewTarget.TargetValue <= 100)
         {
             var now = DateTime.UtcNow;
             var user = User.Identity?.Name ?? "Unknown";
@@ -91,6 +95,8 @@ public class TargetsModel : ProtocolSectionBaseModel
 
             _context.GAProtocolTargets.Add(NewTarget);
             await _context.SaveChangesAsync();
+            
+            await UpdateCompletionStatusAsync();
 
             TempData["Success"] = "Target added successfully!";
             return RedirectToPage(new { protocolId = ProtocolId });
@@ -112,6 +118,83 @@ public class TargetsModel : ProtocolSectionBaseModel
             .ToListAsync();
 
         var usedGrades = GradeLevelTargets.Select(t => t.GradeLevel).ToHashSet();
-        AvailableGradeLevels = Enumerable.Range(0, 13).Where(g => !usedGrades.Contains(g)).ToList();
+        var school = await _context.Schools.FirstOrDefaultAsync(s => s.Id == Protocol!.SchoolId);
+
+        if (school != null)
+        {
+            int schoolLowGrade = school.LowGrade ?? 0;
+            int schoolHighGrade = school.HighGrade ?? 12;
+
+            var lowGrade = schoolLowGrade < 0 ? 0 : schoolLowGrade;
+            var highGrade = schoolHighGrade > 12 ? 12 : schoolHighGrade;
+
+            if (lowGrade <= highGrade)
+            {
+                var allPossibleGrades = Enumerable.Range(lowGrade, highGrade - lowGrade + 1);
+                AvailableGradeLevels = allPossibleGrades.Where(g => !usedGrades.Contains(g)).ToList();
+            }
+            else
+            {
+                AvailableGradeLevels = new List<int>();
+            }
+        }
+        else
+        {
+            AvailableGradeLevels = Enumerable.Range(0, 13).Where(g => !usedGrades.Contains(g)).ToList();
+        }
+    }
+
+    private async Task UpdateCompletionStatusAsync()
+    {
+        var school = await _context.Schools.FindAsync(Protocol!.SchoolId);
+        if (school == null) return;
+
+        int schoolLowGrade = school.LowGrade ?? 0;
+        int schoolHighGrade = school.HighGrade ?? 12;
+        var lowGrade = schoolLowGrade < 0 ? 0 : schoolLowGrade;
+        var highGrade = schoolHighGrade > 12 ? 12 : schoolHighGrade;
+        var totalPossibleGrades = (lowGrade <= highGrade) ? (highGrade - lowGrade + 1) : 0;
+
+        var savedTargetsCount = await _context.GAProtocolTargets
+            .CountAsync(t => t.SchoolId == Protocol!.SchoolId
+                         && t.DistrictId == Protocol.DistrictId
+                         && t.SchoolYear == Protocol.SchoolYear
+                         && t.TargetType == "AboveLine");
+
+        var isComplete = (totalPossibleGrades > 0 && savedTargetsCount == totalPossibleGrades);
+
+        var response = await _context.GAProtocolSectionResponses
+            .FirstOrDefaultAsync(r => r.ProtocolId == ProtocolId && r.SectionNumber == CurrentSection);
+
+        if (isComplete)
+        {
+            // Update the in-memory dictionary to show the checkmark immediately.
+            Responses[CurrentSection] = "Complete";
+            
+            if (response == null)
+            {
+                _context.GAProtocolSectionResponses.Add(new GAProtocolSectionResponse
+                {
+                    ProtocolId = ProtocolId,
+                    SectionNumber = CurrentSection,
+                    SectionTitle = SectionTitles.GetValueOrDefault(CurrentSection) ?? $"Section {CurrentSection}",
+                    ResponseText = "Complete",
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedBy = User.Identity?.Name ?? "System"
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            // Update the in-memory dictionary to hide the checkmark immediately.
+            Responses[CurrentSection] = string.Empty;
+
+            if (response != null)
+            {
+                _context.GAProtocolSectionResponses.Remove(response);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

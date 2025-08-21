@@ -35,6 +35,7 @@
 </div>
 
 <h5 class="mt-4">Reflection / Notes</h5>
+<p>How far off was the grade-level from achieving the target? Or, by how much did the grade level surpass the target? Please explain below.</p>
 <form method="post" asp-page-handler="SaveComment" asp-route-protocolId="@Model.ProtocolId" asp-route-compareCP="@Model.CompareCP">
     <textarea asp-for="AboveLineComment" class="form-control" rows="4" placeholder="Enter reflection notes here..."></textarea>
     <button type="submit" class="btn btn-primary mt-2">Save Comment</button>
