@@ -28,8 +28,8 @@ namespace ORSV2.Models
         public bool Inactive { get; set; } = false;
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }
-        public short? LowGrade { get; set; }
-        public short? HighGrade { get; set; }
+        public int? LowGrade { get; set; }
+        public int? HighGrade { get; set; }
 
         [Display(Name = "Guidance Alignment")]
         public bool GA { get; set; } = false;

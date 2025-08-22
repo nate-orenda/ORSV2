@@ -59,17 +59,25 @@ namespace ORSV2.Areas.Identity.Pages.Account.Manage
             [Phone]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
+            [Display(Name = "First Name")]
+            public string FirstName { get; set; }
+            [Display(Name = "Last Name")]
+            public string LastName { get; set; }
         }
 
         private async Task LoadAsync(ApplicationUser user)
         {
             var userName = await _userManager.GetUserNameAsync(user);
+            var firstName = user.FirstName;
+            var lastName = user.LastName;
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
 
             Username = userName;
 
             Input = new InputModel
             {
+                FirstName = firstName,
+                LastName = lastName,
                 PhoneNumber = phoneNumber
             };
         }
@@ -107,6 +115,28 @@ namespace ORSV2.Areas.Identity.Pages.Account.Manage
                 if (!setPhoneResult.Succeeded)
                 {
                     StatusMessage = "Unexpected error when trying to set phone number.";
+                    return RedirectToPage();
+                }
+            }
+
+            var hasNameChanges = false;
+            if (!string.Equals(user.FirstName, Input.FirstName, StringComparison.Ordinal))
+            {
+                user.FirstName = Input.FirstName?.Trim();
+                hasNameChanges = true;
+            }
+            if (!string.Equals(user.LastName, Input.LastName, StringComparison.Ordinal))
+            {
+                user.LastName = Input.LastName?.Trim();
+                hasNameChanges = true;
+            }
+
+            if (hasNameChanges)
+            {
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    StatusMessage = "Unexpected error when trying to update your profile.";
                     return RedirectToPage();
                 }
             }
