@@ -77,242 +77,127 @@ namespace ORSV2.Services
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Confirm Your Email - ORSV2</title>
+    <title>Confirm Your Account - ORSV2</title>
+    <link rel='preconnect' href='https://fonts.googleapis.com'>
+    <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap' rel='stylesheet'>
     <style>
-        * {{
+        body {{
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            background-color: #f8f9fb;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }}
-        
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f8fafc;
+        .email-wrapper {{
+            background-color: #f8f9fb;
+            padding: 20px;
         }}
-        
         .email-container {{
             max-width: 600px;
-            margin: 20px auto;
+            margin: 0 auto;
             background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
             overflow: hidden;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 20px rgba(0,34,197,.15);
         }}
-        
         .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
+            background: linear-gradient(135deg, #0022C5 0%, #1a4fb8 100%);
+            padding: 30px 20px;
             text-align: center;
-            position: relative;
         }}
-        
-        .header::before {{
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100""><defs><pattern id=""grain"" width=""100"" height=""100"" patternUnits=""userSpaceOnUse""><circle cx=""50"" cy=""50"" r=""1"" fill=""rgba(255,255,255,0.1)""/></pattern></defs><rect width=""100"" height=""100"" fill=""url(%23grain)""/></svg>');
-            opacity: 0.3;
-        }}
-        
-        .logo {{
-            position: relative;
-            z-index: 1;
-        }}
-        
-        .logo h1 {{
+        .header h1 {{
             color: #ffffff;
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }}
-        
-        .logo p {{
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 16px;
-            margin: 0;
-        }}
-        
-        .content {{
-            padding: 50px 40px;
-        }}
-        
-        .welcome-text {{
-            text-align: center;
-            margin-bottom: 40px;
-        }}
-        
-        .welcome-text h2 {{
-            color: #2d3748;
             font-size: 28px;
             font-weight: 600;
-            margin-bottom: 16px;
+            margin: 0;
+            letter-spacing: .5px;
         }}
-        
-        .welcome-text p {{
-            color: #718096;
-            font-size: 18px;
-            line-height: 1.6;
+        .content {{
+            padding: 30px 40px;
+            color: #495057;
+            line-height: 1.7;
         }}
-        
+        .content h2 {{
+            font-size: 22px;
+            font-weight: 600;
+            color: #0022C5;
+            margin-bottom: 15px;
+        }}
+        .content p {{
+            font-size: 16px;
+            margin: 0 0 15px;
+        }}
         .cta-section {{
             text-align: center;
-            margin: 40px 0;
+            margin: 30px 0;
         }}
-        
         .cta-button {{
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
+            background: linear-gradient(135deg, #0022C5 0%, #1a4fb8 100%);
+            color: #ffffff !important;
             text-decoration: none;
-            padding: 18px 36px;
-            border-radius: 12px;
+            padding: 14px 28px;
+            border-radius: 8px; /* Corresponds to --btn-radius */
             font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            font-size: 16px; /* A readable size for email */
+            box-shadow: 0 4px 12px rgba(0,34,197,.15);
+            transition: all 0.2s ease;
         }}
-        
-        .cta-button:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-        }}
-        
-        .security-notice {{
-            background: linear-gradient(135deg, #e6fffa 0%, #f0fff4 100%);
-            border-left: 4px solid #38b2ac;
-            padding: 20px;
-            margin: 30px 0;
+        .fallback-link {{
+            background-color: #f8f9fb;
+            border: 1px dashed #e9ecef;
+            padding: 15px;
             border-radius: 8px;
+            margin-top: 25px;
         }}
-        
-        .security-notice h3 {{
-            color: #2d3748;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
+        .fallback-link p {{
+            font-size: 12px;
+            color: #495057;
+            margin: 0;
+            line-height: 1.5;
+            word-break: break-all;
         }}
-        
-        .security-notice p {{
-            color: #4a5568;
-            font-size: 14px;
+        .footer {{
+            background-color: #f8f9fb;
+            padding: 20px 40px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }}
+        .footer p {{
+            color: #6c757d;
+            font-size: 12px;
             margin: 0;
         }}
-        
-        .fallback-link {{
-            background: #f7fafc;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 30px 0;
-        }}
-        
-        .fallback-link p {{
-            color: #4a5568;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }}
-        
-        .fallback-link code {{
-            background: #edf2f7;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            word-break: break-all;
-            display: block;
-            color: #2d3748;
-        }}
-        
-        .footer {{
-            background: #f7fafc;
-            padding: 30px 40px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }}
-        
-        .footer p {{
-            color: #718096;
-            font-size: 14px;
-            margin: 5px 0;
-        }}
-        
-        .social-links {{
-            margin: 20px 0 10px;
-        }}
-        
-        .social-links a {{
-            display: inline-block;
-            margin: 0 10px;
-            color: #718096;
-            text-decoration: none;
-        }}
-        
         @media (max-width: 600px) {{
-            .email-container {{
-                margin: 10px;
-                border-radius: 12px;
-            }}
-            
-            .header {{
-                padding: 30px 20px;
-            }}
-            
-            .content {{
-                padding: 30px 20px;
-            }}
-            
-            .footer {{
-                padding: 20px;
-            }}
-            
-            .welcome-text h2 {{
-                font-size: 24px;
-            }}
-            
-            .welcome-text p {{
-                font-size: 16px;
-            }}
+            .content {{ padding: 25px 20px; }}
         }}
     </style>
 </head>
 <body>
-    <div class='email-container'>
-        <div class='header'>
-            <div class='logo'>
-                <h1>ORSV2</h1>
+    <div class='email-wrapper'>
+        <div class='email-container'>
+            <div class='header'>
+                <h1>ORSV2 Account Confirmation</h1>
             </div>
-        </div>
-        
-        <div class='content'>
-            <div class='welcome-text'>
-                <h2>Welcome aboard! 🎉</h2>
-                <p>We're excited to have you join our community. Just one more step to get started.</p>
+            <div class='content'>
+                <h2>Almost there!</h2>
+                <p>Thanks for signing up. Please click the button below to confirm your email address and activate your account.</p>
+                <div class='cta-section'>
+                    <a href='{confirmationUrl}' class='cta-button'>Confirm Your Account</a>
+                </div>
+                <div class='fallback-link'>
+                    <p>If the button doesn't work, please copy and paste this URL into your browser:<br>
+                       <a href='{confirmationUrl}' style='color: #0022C5; text-decoration: underline;'>{confirmationUrl}</a>
+                    </p>
+                </div>
+                <p style='margin-top:20px;'>If you did not create an account, no further action is required.</p>
             </div>
-            
-            <div class='cta-section'>
-                <a href='{confirmationUrl}' class='cta-button'>
-                    Confirm Your Email
-                </a>
+            <div class='footer'>
+                <p>&copy; 2025 ORSV2. All Rights Reserved.</p>
             </div>
-            
-            <div class='security-notice'>
-                <h3>🔒 Security Notice</h3>
-                <p>This confirmation link will expire in 24 hours for your security. If you didn't create an account with us, please ignore this email.</p>
-            </div>
-            
-            <div class='fallback-link'>
-                <p>If the button above doesn't work, copy and paste this link into your browser:</p>
-                <code>{confirmationUrl}</code>
-            </div>
-        </div>
-        
-        <div class='footer'>
-            <p>This is an automated message from ORSV2.</p>
-            <p>&copy; 2025 ORSV2. All rights reserved.</p>
         </div>
     </div>
 </body>
