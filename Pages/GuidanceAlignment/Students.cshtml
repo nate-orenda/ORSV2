@@ -40,9 +40,192 @@
         };
     }
 }
+@section Styles {
+    <style>
+        #loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        #loader-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #indicatorChart {
+            max-height: 300px;
+        }
+        
+        /* NEW: This container enables both vertical scrolling for the table body and horizontal scrolling for the whole table */
+        .table-scroll-container {
+            overflow: auto; /* Handles both x and y scroll */
+            max-height: 70vh; /* Example height, adjust as needed */
+            position: relative;
+        }
+
+        /* NEW: This makes the header sticky within the scrolling container */
+        #studentsTable > thead th {
+            position: -webkit-sticky; /* For Safari */
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #f8f9fa; /* Match table-light */
+            box-shadow: inset 0 -2px 0 #dee2e6; /* Clean bottom border */
+        }
+
+        /* Keep all your existing drag/drop and grouping styles */
+        .grouping-area {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 60px;
+            transition: all 0.3s ease;
+        }
+        
+        .grouping-area.drag-over {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .grouping-area .ga-placeholder {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            line-height: 30px;
+            background: transparent; /* ensure no grey fill */
+        }
+
+        
+        .group-tag {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 5px 12px;
+            margin: 2px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        
+        .group-tag .remove {
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .draggable-header {
+            cursor: move;
+            user-select: none;
+        }
+        /* Show/hide clear grouping button nicely */
+        .clear-grouping {
+            margin-left: auto;
+            display: none; /* JS shows it when groups exist */
+        }
+
+        button.clear-grouping.btn {
+            --bs-btn-padding-y: .25rem;
+            --bs-btn-padding-x: .5rem;
+            --bs-btn-font-size: .875rem;
+        }
+
+        /* Kill jQuery UI’s default active/hover grey states */
+        .grouping-area.ui-droppable-active,
+        .grouping-area.ui-state-active,
+        .grouping-area.ui-state-hover {
+            background: #f8f9fa !important;
+            border-color: #dee2e6 !important;
+        }
+
+        #studentsTable tbody tr { cursor: pointer; }
+        tr.dtrg-start { cursor: pointer; } /* group headers still clickable */
+
+
+        /* Optional: nicer drag cursor */
+        .draggable-header { cursor: grab; }
+        .ui-draggable-dragging { cursor: grabbing; }
+        .clickable-group-header { cursor: pointer; pointer-events: auto; }
+        
+        /* ===== Orenda-Styled Student Table ===== */
+
+        /* Header Styling */
+        #studentsTable > thead th {
+            /* Apply a subtle gradient background from your theme */
+            background: linear-gradient(135deg, var(--orenda-secondary, #f8f9fb) 0%, var(--orenda-border, #e9ecef) 100%);
+            
+            /* Center-align text and vertically align for the sort icons */
+            text-align: center;
+            vertical-align: middle;
+
+            /* Text styling to match .orenda-table from site.css */
+            color: #495057;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem; /* slightly smaller for this compact table */
+            letter-spacing: .5px;
+            white-space: nowrap;
+
+            /* KEY FIX: Add padding on the right to make space for sort arrows */
+            padding-right: 1.5rem !important;
+        }
+
+        /* Row Styling */
+        #studentsTable tbody td {
+            /* Add a clean, light border between rows */
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: middle;
+        }
+
+        /* Remove the border from the very last row for a cleaner look */
+        #studentsTable tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Orenda-style hover effect for rows */
+        #studentsTable tbody tr:hover {
+            background-color: #f8f9ff; /* A subtle blue-tinted white */
+            color: var(--orenda-primary);
+        }
+
+        /* Smooth transition for the hover effect */
+        #studentsTable tbody tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+        .condensed-column {
+            max-width: 120px; /* Adjust this width as needed */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+    </style>
+}
 
 <!-- Breadcrumbs -->
 <partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+<div id="loader-overlay">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted">Loading student data...</p>
+</div>
+
+<div id="page-content-wrapper" style="visibility: hidden;">
 <form id="createGroupForm"
       method="post"
       asp-page-handler="CreateTargetGroup"
@@ -316,157 +499,8 @@
     </div>
   </div>
 </div>
+</div>
 
-<style>
-    #indicatorChart {
-        max-height: 300px;
-    }
-    
-    /* NEW: This container enables both vertical scrolling for the table body and horizontal scrolling for the whole table */
-    .table-scroll-container {
-        overflow: auto; /* Handles both x and y scroll */
-        max-height: 70vh; /* Example height, adjust as needed */
-        position: relative;
-    }
-
-    /* NEW: This makes the header sticky within the scrolling container */
-    #studentsTable > thead th {
-        position: -webkit-sticky; /* For Safari */
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        background-color: #f8f9fa; /* Match table-light */
-        box-shadow: inset 0 -2px 0 #dee2e6; /* Clean bottom border */
-    }
-
-    /* Keep all your existing drag/drop and grouping styles */
-    .grouping-area {
-        background: #f8f9fa;
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        min-height: 60px;
-        transition: all 0.3s ease;
-    }
-    
-    .grouping-area.drag-over {
-        background: #e3f2fd;
-        border-color: #2196f3;
-    }
-    
-    .grouping-area .ga-placeholder {
-        color: #6c757d;
-        font-style: italic;
-        text-align: center;
-        line-height: 30px;
-        background: transparent; /* ensure no grey fill */
-    }
-
-    
-    .group-tag {
-        display: inline-block;
-        background: #007bff;
-        color: white;
-        padding: 5px 12px;
-        margin: 2px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        cursor: pointer;
-    }
-    
-    .group-tag .remove {
-        margin-left: 8px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    
-    .draggable-header {
-        cursor: move;
-        user-select: none;
-    }
-    /* Show/hide clear grouping button nicely */
-    .clear-grouping {
-        margin-left: auto;
-        display: none; /* JS shows it when groups exist */
-    }
-
-    button.clear-grouping.btn {
-        --bs-btn-padding-y: .25rem;
-        --bs-btn-padding-x: .5rem;
-        --bs-btn-font-size: .875rem;
-    }
-
-    /* Kill jQuery UI’s default active/hover grey states */
-    .grouping-area.ui-droppable-active,
-    .grouping-area.ui-state-active,
-    .grouping-area.ui-state-hover {
-        background: #f8f9fa !important;
-        border-color: #dee2e6 !important;
-    }
-
-    #studentsTable tbody tr { cursor: pointer; }
-    tr.dtrg-start { cursor: pointer; } /* group headers still clickable */
-
-
-    /* Optional: nicer drag cursor */
-    .draggable-header { cursor: grab; }
-    .ui-draggable-dragging { cursor: grabbing; }
-    .clickable-group-header { cursor: pointer; pointer-events: auto; }
-    
-    /* ===== Orenda-Styled Student Table ===== */
-
-    /* Header Styling */
-    #studentsTable > thead th {
-        /* Apply a subtle gradient background from your theme */
-        background: linear-gradient(135deg, var(--orenda-secondary, #f8f9fb) 0%, var(--orenda-border, #e9ecef) 100%);
-        
-        /* Center-align text and vertically align for the sort icons */
-        text-align: center;
-        vertical-align: middle;
-
-        /* Text styling to match .orenda-table from site.css */
-        color: #495057;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.7rem; /* slightly smaller for this compact table */
-        letter-spacing: .5px;
-        white-space: nowrap;
-
-        /* KEY FIX: Add padding on the right to make space for sort arrows */
-        padding-right: 1.5rem !important;
-    }
-
-    /* Row Styling */
-    #studentsTable tbody td {
-        /* Add a clean, light border between rows */
-        border-bottom: 1px solid #f1f3f4;
-        vertical-align: middle;
-    }
-
-    /* Remove the border from the very last row for a cleaner look */
-    #studentsTable tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* Orenda-style hover effect for rows */
-    #studentsTable tbody tr:hover {
-        background-color: #f8f9ff; /* A subtle blue-tinted white */
-        color: var(--orenda-primary);
-    }
-
-    /* Smooth transition for the hover effect */
-    #studentsTable tbody tr {
-        transition: background-color 0.2s ease-in-out;
-    }
-    .condensed-column {
-        max-width: 120px; /* Adjust this width as needed */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-</style>
 @section Scripts {
     <!-- libs -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">

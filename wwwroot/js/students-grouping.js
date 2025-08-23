@@ -46,6 +46,22 @@ window.StudentGrouping = (function () {
         bindCreateModalConfirm();
         setupGroupSelectionEvents();
         loadJQueryUI();
+
+        // Wait for charts to be initialized as well
+        if (window.StudentCharts?.init) {
+            StudentCharts.init();
+        }
+
+        // --- HIDE LOADER ---
+        // This should be the VERY LAST step.
+        const loader = document.getElementById('loader-overlay');
+        const content = document.getElementById('page-content-wrapper');
+        if (loader) {
+            loader.classList.add('hidden');
+        }
+        if (content) {
+            content.style.visibility = 'visible';
+        }
     }
 
     /**
