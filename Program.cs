@@ -8,21 +8,6 @@ using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Azure Key Vault for production - simplified
-/*
-if (builder.Environment.IsProduction())
-{
-    try
-    {
-        var keyVaultEndpoint = new Uri("https://promotekeys.vault.azure.net/");
-        builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
-    }
-    catch
-    {
-        // Silent fallback to environment variables if Key Vault fails
-    }
-}*/
-
 // Get connection string - simplified
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                       builder.Configuration["DefaultConnection"];
