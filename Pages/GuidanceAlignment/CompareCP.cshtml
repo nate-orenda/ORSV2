@@ -132,12 +132,9 @@ else
       </div>
     </div>
 
-    @if (Model.PreviousIndicatorSummaries is not null)
-    {
       <div class="mt-2">
         <canvas id="indicatorTrend" height="140"></canvas>
       </div>
-    }
   </div>
 </div>
 
@@ -210,139 +207,145 @@ else
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-  (function(){
-    const indicatorNames      = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
-    const currentSummaries    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
-    const previousSummaries   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousIndicatorSummaries));
-    const currentQuadrants    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentQuadrantCounts));
-    const previousQuadrants   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousQuadrantCounts));
-    const cpNow               = @Model.CurrentCheckpoint;
-    const cpPrev              = @(Model.PreviousCheckpoint?.ToString() ?? "null");
-
-    function ensureSingleChart(el){
-      const ctx = el.getContext('2d');
-      if (el._chart) { el._chart.destroy(); el._chart = null; }
-      return ctx;
-    }
-
-    // Quadrant comparison chart
     (function(){
-      const el = document.getElementById('quadrantCompare');
-      if (!el) return;
+      const indicatorNames      = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
+      const currentSummaries    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
+      const previousSummaries   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousIndicatorSummaries));
+      const currentQuadrants    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentQuadrantCounts));
+      const previousQuadrants   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousQuadrantCounts));
+      const cpNow               = @Model.CurrentCheckpoint;
+      const cpPrev              = @(Model.PreviousCheckpoint?.ToString() ?? "null");
 
-      const palette = {
-        Challenge: '#0d6efd',
-        Benchmark: '#198754',
-        Strategic: '#ffc107',
-        Intensive: '#dc3545',
-        Unknown: '#adb5bd'
-      };
-      const normalize = (obj) => ({
-        Challenge: obj?.Challenge || 0,
-        Benchmark: obj?.Benchmark || 0,
-        Strategic: obj?.Strategic || 0,
-        Intensive: obj?.Intensive || 0,
-        Unknown: obj?.Unknown || 0
-      });
+      function ensureSingleChart(el){
+        const ctx = el.getContext('2d');
+        if (el._chart) { el._chart.destroy(); el._chart = null; }
+        return ctx;
+      }
 
-      const cur = normalize(currentQuadrants || {});
-      const hasPrev = !!previousQuadrants;
-      const prev = hasPrev ? normalize(previousQuadrants || {}) : null;
+      // ---- Quadrant comparison chart ----
+      (function(){
+        const el = document.getElementById('quadrantCompare');
+        if (!el) return;
 
-      const labels = hasPrev ? ['CP ' + cpPrev, 'CP ' + cpNow] : ['CP ' + cpNow];
-      const quadrants = ['Challenge', 'Benchmark', 'Strategic', 'Intensive'];
-      const datasets = quadrants.map(q => ({
-        label: q,
-        backgroundColor: palette[q],
-        data: hasPrev ? [prev[q], cur[q]] : [cur[q]],
-        stack: 'q'
-      }));
+        const palette = {
+          Challenge: '#0d6efd',
+          Benchmark: '#198754',
+          Strategic: '#ffc107',
+          Intensive: '#dc3545',
+          Unknown: '#adb5bd'
+        };
+        const normalize = (obj) => ({
+          Challenge: obj?.Challenge || 0,
+          Benchmark: obj?.Benchmark || 0,
+          Strategic: obj?.Strategic || 0,
+          Intensive: obj?.Intensive || 0,
+          Unknown: obj?.Unknown || 0
+        });
 
-      const totals = hasPrev
-        ? [Object.values(prev).reduce((a,b)=>a+b,0), Object.values(cur).reduce((a,b)=>a+b,0)]
-        : [Object.values(cur).reduce((a,b)=>a+b,0)];
+        const cur = normalize(currentQuadrants || {});
+        const hasPrev = !!previousQuadrants;
+        const prev = hasPrev ? normalize(previousQuadrants || {}) : null;
 
-      const ctx = ensureSingleChart(el);
-      el._chart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          plugins: {
-            legend: { position: 'bottom' },
-            title: {
-              display: true,
-              text: 'Quadrant Comparison',
-              align: 'center',
-              font: { weight: 'bold', size: 14 }
-            },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const val = ctx.parsed.y;
-                  const total = totals[ctx.dataIndex] || 1;
-                  const pct = Math.round((val * 100) / total);
-                  return `${ctx.dataset.label}: ${val} (${pct}%)`;
+        const labels = hasPrev ? ['CP ' + cpPrev, 'CP ' + cpNow] : ['CP ' + cpNow];
+        const quadrants = ['Challenge', 'Benchmark', 'Strategic', 'Intensive'];
+        const datasets = quadrants.map(q => ({
+          label: q,
+          backgroundColor: palette[q],
+          data: hasPrev ? [prev[q], cur[q]] : [cur[q]],
+          stack: 'q'
+        }));
+
+        const totals = hasPrev
+          ? [Object.values(prev).reduce((a,b)=>a+b,0), Object.values(cur).reduce((a,b)=>a+b,0)]
+          : [Object.values(cur).reduce((a,b)=>a+b,0)];
+
+        const ctx = ensureSingleChart(el);
+        el._chart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              title: { display: true, text: 'Quadrant Comparison', align: 'center', font: { weight: 'bold', size: 14 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y;
+                    const total = totals[ctx.dataIndex] || 1;
+                    const pct = Math.round((val * 100) / total);
+                    return `${ctx.dataset.label}: ${val} (${pct}%)`;
+                  }
                 }
               }
-            }
-          },
-          scales: {
-            x: { stacked: true, ticks: { precision: 0 } },
-            y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
-          }
-        }
-      });
-    })();
-
-    // Indicator trend chart
-    (function(){
-      if (!previousSummaries) return;
-      const labels = indicatorNames;
-      const findPct = (arr, key) => {
-        const item = arr.find(x => x.name === key) || arr.find(x => x.Name === key);
-        return item ? item.PercentMet : 0;
-      };
-      const cur  = labels.map(n => findPct(currentSummaries, n));
-      const prev = labels.map(n => findPct(previousSummaries, n));
-      const el = document.getElementById('indicatorTrend');
-      if (!el) return;
-
-      const ctx = ensureSingleChart(el);
-      el._chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'CP ' + cpPrev, data: prev },
-            { label: 'CP ' + cpNow, data: cur }
-          ]
-        },
-        options: {
-          responsive: true,
-          animation: false,
-          plugins: {
-            legend: { display: true },
-            title: {
-              display: true,
-              text: 'Indicator Trend',
-              align: 'center',
-              font: { weight: 'bold', size: 14 }
             },
-            tooltip: { mode: 'index', intersect: false }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              suggestedMax: 100,
-              ticks: { callback: v => v + '%' }
+            scales: {
+              x: { stacked: true, ticks: { precision: 0 } },
+              y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
             }
           }
-        }
-      });
+        });
+      })();
+
+      // ---- Indicator trend chart ----
+      (function(){
+        const labels = indicatorNames || [];
+        const hasPrev = !!previousSummaries;
+
+        const findPct = (arr, key) => {
+          const item = arr?.find(x => x.name === key) || arr?.find(x => x.Name === key);
+          return item ? item.PercentMet : 0;
+        };
+
+        const cur  = labels.map(n => findPct(currentSummaries, n));
+        const prev = hasPrev ? labels.map(n => findPct(previousSummaries, n)) : null;
+
+        const el = document.getElementById('indicatorTrend');
+        if (!el) return;
+
+        const ctx = ensureSingleChart(el);
+        const datasets = hasPrev
+          ? [
+              { label: 'CP ' + cpPrev, data: prev },
+              { label: 'CP ' + cpNow,  data: cur  }
+            ]
+          : [
+              { label: 'CP ' + cpNow, data: cur }
+            ];
+
+        el._chart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            animation: false,
+            plugins: {
+              legend: { display: true },
+              title: {
+                display: true,
+                text: hasPrev ? 'Indicator Trend' : 'Indicator % Met',
+                align: 'center',
+                font: { weight: 'bold', size: 14 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(0)}%`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                suggestedMax: 100,
+                ticks: { callback: v => v + '%' }
+              }
+            }
+          }
+        });
+      })();
     })();
-  })();
   </script>
 }
+
