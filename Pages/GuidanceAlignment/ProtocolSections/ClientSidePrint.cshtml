@@ -2,370 +2,369 @@
 @model ORSV2.Pages.GuidanceAlignment.ProtocolSections.ClientSidePrintModel
 @{
     ViewData["Title"] = "Print Protocol";
-    Layout = null;
+    // Use the shared layout you pasted; do NOT set Layout = null;
+}
+@section Styles {
+<style>
+  /* ==== PRINT LAYOUT TUNING ==== */
+  @@page {
+    size: Letter;
+    margin: 0.5in; /* slightly tighter margin */
+  }
+
+  @@media print {
+    html, body {
+      font-size: 10pt;          /* smaller text overall */
+      line-height: 1.3;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .container, .container-fluid, #sectionsContainer {
+      max-width: none !important;
+      width: 100% !important;
+      padding-left: 0.1in !important;
+      padding-right: 0.1in !important;
+    }
+
+    /* Headings slightly smaller/compact */
+    h1 { font-size: 16pt; margin-bottom: 0.2in; }
+    h2 { font-size: 13pt; margin: 0.15in 0 0.1in; }
+    h3.section-header { font-size: 12pt; }
+    h4, h5, h6 { font-size: 10.5pt; }
+
+    .section-content { margin-bottom: 0.25in; page-break-inside: avoid; }
+    .section-header { border-bottom: 1px solid #ccc; padding-bottom: .1rem; margin-bottom: .25rem; color: #000; }
+
+    /* === TABLES === */
+    table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 9pt;             /* smaller for dense data */
+      table-layout: fixed;        /* helps force-fit */
+      word-wrap: break-word;      /* break long values */
+    }
+    th, td {
+      padding: 4px 6px !important;
+      border: 1px solid #ccc !important;
+      vertical-align: top;
+    }
+    thead th { font-weight: 600; }
+
+    /* Charts full width */
+    #sectionsContainer canvas,
+    #sectionsContainer .chart,
+    #sectionsContainer .chart-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* Hide app chrome in print */
+    header.main-header, footer, .print-controls, .navbar,
+    .dropdown, .user-profile,
+    .alert, .alert-info, .toast, .toast-container,
+    .btn, button, .btn-group, .toolbar, [role="toolbar"],
+    .form-actions, .card-footer, .pagination, .page-item, .page-link,
+    .form-group, .form-check, .input-group, .form-label, label {
+      display: none !important;
+    }
+
+    /* Strip extra decoration for clean print */
+    .card, .shadow, .shadow-sm, .shadow-lg { box-shadow: none !important; }
+    .rounded, .rounded-1, .rounded-2, .rounded-3 { border-radius: 0 !important; }
+  }
+
+  /* On screen (unchanged) */
+  .section-content { margin-bottom: 2rem; page-break-inside: avoid; }
+  .section-header { color: #0d6efd; border-bottom: 2px solid #e9ecef; padding-bottom: .4rem; margin-bottom: 1rem; page-break-after: avoid; }
+</style>
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Protocol Report - CP @Model.Protocol?.CP</title>
-    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="~/css/print-styles.css" rel="stylesheet" />
-    <style>
-        .loading-section {
-            padding: 2rem;
-            text-align: center;
-            color: #6c757d;
-        }
-        
-        .section-content {
-            margin-bottom: 2rem;
-            page-break-inside: avoid;
-        }
-        
-        .section-header {
-            color: #0066cc;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-            page-break-after: avoid;
-        }
-        
-        .print-controls {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            background: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        @@media print {
-            .print-controls { display: none; }
-            .no-print { display: none; }
-        }
-    </style>
-</head>
-<body>
+
+
+<section class="container my-3">
     <!-- Print Controls -->
-    <div class="print-controls no-print">
+    <div class="print-controls d-flex gap-2 align-items-center mb-3">
         <button id="printBtn" class="btn btn-primary" disabled>
             <i class="bi bi-printer"></i> Print Report
         </button>
         <button id="refreshBtn" class="btn btn-secondary">
             <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
-        <div class="mt-2">
-            <small id="loadStatus">Loading sections...</small>
-        </div>
+        <small id="loadStatus" class="text-muted ms-2">Loading sections…</small>
     </div>
 
-    <!-- Protocol Header -->
+    <!-- Protocol Header (shows once) -->
     <header class="mb-4">
-        <h1>Guidance Alignment Protocol - Checkpoint @Model.Protocol?.CP</h1>
+        <h1 class="h3">Guidance Alignment Protocol - Checkpoint @Model.Protocol?.CP</h1>
         <div class="row">
             <div class="col-md-6">
-                <p><strong>School:</strong> @Model.School?.Name</p>
-                <p><strong>District:</strong> @Model.School?.District?.Name</p>
+                <p class="mb-1"><strong>School:</strong> @Model.School?.Name</p>
+                <p class="mb-1"><strong>District:</strong> @Model.School?.District?.Name</p>
             </div>
             <div class="col-md-6">
-                <p><strong>School Year:</strong> @Model.Protocol?.SchoolYear</p>
-                <p><strong>Generated:</strong> <span id="generatedTime"></span></p>
+                <p class="mb-1"><strong>School Year:</strong> @Model.Protocol?.SchoolYear</p>
+                <p class="mb-1"><strong>Generated:</strong> <span id="generatedTime"></span></p>
             </div>
         </div>
     </header>
 
     <!-- Sections Container -->
-    <div id="sectionsContainer">
-        <!-- Sections will be loaded here -->
+    <div id="sectionsContainer" class="pb-5">
+        <!-- Sections will be injected here -->
     </div>
+</section>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script>
-        const protocolId = @Model.ProtocolId;
-        const sections = [
-            { id: 1, title: 'Introduction', url: '/GuidanceAlignment/ProtocolSections/Introduction' },
-            { id: 2, title: 'Targets', url: '/GuidanceAlignment/ProtocolSections/Targets' },
-            { id: 3, title: 'Above the Line', url: '/GuidanceAlignment/ProtocolSections/Abovetheline' },
-            { id: 4, title: 'Demographics', url: '/GuidanceAlignment/ProtocolSections/Demographics' },
-            { id: 5, title: 'Indicators', url: '/GuidanceAlignment/ProtocolSections/Indicators' },
-            { id: 6, title: 'Trends', url: '/GuidanceAlignment/ProtocolSections/Trends' },
-            { id: 7, title: 'Common Agreements', url: '/GuidanceAlignment/ProtocolSections/CommonAgreements' },
-            { id: 8, title: 'Action Plan', url: '/GuidanceAlignment/ProtocolSections/ActionPlan' },
-            { id: 9, title: 'Wrap Up', url: '/GuidanceAlignment/ProtocolSections/WrapUp' }
+
+@section Scripts {
+<script>
+  // ------- SECTIONS to load -------
+  const sectionsToLoad = [
+    { title: "1. Introduction",     url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Introduction",     new { protocolId = Model.Protocol?.Id })' },
+    { title: "2. Targets",          url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Targets",          new { protocolId = Model.Protocol?.Id })' },
+    { title: "3. Above the Line",   url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Abovetheline",     new { protocolId = Model.Protocol?.Id })' },
+    { title: "4. Demographics",     url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Demographics",     new { protocolId = Model.Protocol?.Id })' },
+    { title: "5. Indicators",       url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Indicators",       new { protocolId = Model.Protocol?.Id })' },
+    { title: "6. Trends",           url: '@Url.Page("/GuidanceAlignment/ProtocolSections/Trends",           new { protocolId = Model.Protocol?.Id })' },
+    { title: "7. Common Agreements",url: '@Url.Page("/GuidanceAlignment/ProtocolSections/CommonAgreements", new { protocolId = Model.Protocol?.Id })' },
+    { title: "9. Wrap Up",          url: '@Url.Page("/GuidanceAlignment/ProtocolSections/WrapUp",           new { protocolId = Model.Protocol?.Id })' }
+  ];
+
+  // Small utils
+  function formatDate(d) {
+    try { return new Intl.DateTimeFormat(undefined, { dateStyle:"medium", timeStyle:"short" }).format(d); }
+    catch { return d.toLocaleString(); }
+  }
+  function looksLikeLoginPage(html) {
+    const lc = html.toLowerCase();
+    return lc.includes("/account/login") || lc.includes("returnurl=") || lc.includes('name="input.password"');
+  }
+
+  // --- NEW: post-insert chart normalization for Trends ---
+  function normalizeCharts(rootEl) {
+    if (!rootEl) return;
+
+    // Ensure any collapses/tabs housing charts are open/visible
+    rootEl.querySelectorAll('.collapse,[aria-expanded="false"]').forEach(el => {
+      el.classList.add('show');
+      el.setAttribute('aria-expanded', 'true');
+      el.style.removeProperty('height');
+      el.style.removeProperty('max-height');
+      el.style.removeProperty('overflow');
+    });
+
+    // Make canvases fill parent and have a reasonable height if missing
+    rootEl.querySelectorAll('canvas').forEach(cv => {
+      // If explicit height/width aren’t set, give a sensible height
+      if (!cv.getAttribute('height') && !cv.style.height) {
+        cv.style.height = '320px';
+      }
+      cv.style.width = '100%';
+      cv.removeAttribute('width'); // let CSS control width
+    });
+
+    // Nudge Chart.js / ECharts / D3 to recompute sizes
+    try {
+      // Chart.js 3+: window.Chart.getChart(canvas)
+      rootEl.querySelectorAll('canvas').forEach(cv => {
+        const inst = (window.Chart && window.Chart.getChart) ? window.Chart.getChart(cv) : null;
+        if (inst && inst.resize) inst.resize();
+      });
+    } catch {}
+
+    // Global resize for libs that listen to window
+    window.dispatchEvent(new Event('resize'));
+    // One more tick after layout settles
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  }
+
+  // ------- Cleaner (Targets fixes + Trends sidebar removal/centering) -------
+  function extractMainContent(rawHtml, { lenient = false } = {}) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, "text/html");
+
+    const root =
+      doc.querySelector("main") ||
+      doc.querySelector("#main-content") ||
+      doc.querySelector(".content") ||
+      doc.body;
+
+    // Intro banner
+    root.querySelectorAll(".alert, .alert-info").forEach(a => {
+      const t = (a.textContent || "").toLowerCase();
+      if (t.includes("welcome to the guidance alignment protocol workspace")) a.remove();
+    });
+
+    // Light shell removal
+    const toRemove = lenient
+      ? ["script","link","style","footer"]
+      : [
+          "script","link","style","footer",
+          "header.main-header",".navbar",".sidebar-container",".sidebar-content",
+          ".breadcrumb",".breadcrumbs",".nav.flex-column",".nav-link"
         ];
+    toRemove.forEach(sel => root.querySelectorAll(sel).forEach(el => el.remove()));
 
-        let loadedSections = 0;
+    // TARGETS: remove add form
+    root.querySelectorAll("h3,h4").forEach(h => {
+      const t = (h.textContent || "").trim().toLowerCase();
+      if (t.startsWith("add new target")) h.remove();
+    });
+    root.querySelectorAll("form").forEach(f => {
+      const action = (f.getAttribute("action") || "").toLowerCase();
+      if (action.includes("handler=addtarget")) f.remove();
+    });
 
-        async function loadAllSections() {
-            const container = document.getElementById('sectionsContainer');
-            const printBtn = document.getElementById('printBtn');
-            const loadStatus = document.getElementById('loadStatus');
-            
-            container.innerHTML = '';
-            loadedSections = 0;
-            printBtn.disabled = true;
+    // Unwrap remaining forms
+    root.querySelectorAll("form").forEach(form => {
+      const p = form.parentNode; if (!p) return;
+      while (form.firstChild) p.insertBefore(form.firstChild, form);
+      form.remove();
+    });
 
-            for (const section of sections) {
-                // Create section container
-                const sectionDiv = document.createElement('div');
-                sectionDiv.className = 'section-content';
-                sectionDiv.id = `section-${section.id}`;
-                
-                // Add section header
-                sectionDiv.innerHTML = `
-                    <h2 class="section-header">${section.id}. ${section.title}</h2>
-                    <div class="loading-section">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading ${section.title}...</p>
-                    </div>
-                `;
-                
-                container.appendChild(sectionDiv);
-                
-                try {
-                    // Load section content
-                    const response = await fetch(`${section.url}?protocolId=${protocolId}`);
-                    
-                    if (response.ok) {
-                        const html = await response.text();
-                        const cleanContent = extractMainContent(html);
-                        
-                        // Replace loading with actual content
-                        sectionDiv.innerHTML = `
-                            <h2 class="section-header">${section.id}. ${section.title}</h2>
-                            <div class="section-body">${cleanContent}</div>
-                        `;
-                        
-                        // Re-initialize Bootstrap components for this section
-                        initializeBootstrapComponents(sectionDiv);
-                    } else {
-                        sectionDiv.innerHTML = `
-                            <h2 class="section-header">${section.id}. ${section.title}</h2>
-                            <div class="alert alert-warning">
-                                Unable to load ${section.title} section (Status: ${response.status})
-                            </div>
-                        `;
-                    }
-                } catch (error) {
-                    sectionDiv.innerHTML = `
-                        <h2 class="section-header">${section.id}. ${section.title}</h2>
-                        <div class="alert alert-danger">
-                            Error loading ${section.title}: ${error.message}
-                        </div>
-                    `;
-                }
-                
-                loadedSections++;
-                loadStatus.textContent = `Loaded ${loadedSections}/${sections.length} sections`;
-                
-                // Small delay to prevent overwhelming the server
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-            // All sections loaded
-            printBtn.disabled = false;
-            loadStatus.textContent = 'All sections loaded - Ready to print!';
-            loadStatus.className = 'text-success';
-            
-            // Update generated time
-            document.getElementById('generatedTime').textContent = new Date().toLocaleString();
+    // Remove anti-forgery hidden input
+    root.querySelectorAll('input[type="hidden"][name="__RequestVerificationToken"]').forEach(el => el.remove());
+
+    // Convert inputs -> text
+    root.querySelectorAll("input, select, textarea").forEach(el => {
+      if (el.tagName === "INPUT" && (el.type === "hidden" || el.type === "submit" || el.type === "button")) return;
+      let val = "";
+      if (el.tagName === "SELECT") {
+        const opt = el.selectedOptions && el.selectedOptions[0];
+        val = opt ? (opt.textContent || opt.innerText || opt.value || "") : (el.value || "");
+      } else if (el.type === "checkbox" || el.type === "radio") {
+        val = el.checked ? "Yes" : "No";
+      } else {
+        val = el.value ?? el.textContent ?? "";
+      }
+      const span = doc.createElement("span");
+      span.textContent = (val || "").trim();
+      el.replaceWith(span);
+    });
+
+    // Strip leftover placeholders (Targets)
+    const killTexts = new Set(["grade","target %","-- select --","grade -- select --"]);
+    root.querySelectorAll("label, span, p, small").forEach(el => {
+      const txt = (el.textContent || "").trim().toLowerCase();
+      if ((killTexts.has(txt) && el.tagName !== "TH") || !txt) el.remove();
+    });
+
+    // Remove action controls
+    [
+      "button",".btn","a.btn",".btn-group",
+      "[role='toolbar']",".form-actions",".card-footer",
+      "input[type='submit']","input[type='button']",
+      ".pagination",".page-item",".page-link",".toast",".toast-container"
+    ].forEach(sel => root.querySelectorAll(sel).forEach(el => el.remove()));
+
+    // TRENDS: remove left nav column & expand main col
+    const trendsHeadings = ["navigate trends","trends analysis","predictive grades analysis"];
+    root.querySelectorAll(".row").forEach(row => {
+      const cols = Array.from(row.children).filter(c => /\bcol(-sm|-md|-lg)?-\d+\b/.test(c.className));
+      const sidebar = cols.find(c => {
+        const t = (c.textContent || "").toLowerCase();
+        return trendsHeadings.some(h => t.includes(h));
+      });
+      if (sidebar) {
+        sidebar.remove();
+        const remaining = Array.from(row.children).filter(c => /\bcol(-sm|-md|-lg)?-\d+\b/.test(c.className));
+        if (remaining.length === 1) {
+          remaining[0].className = remaining[0].className
+            .replace(/\bcol(-sm|-md|-lg)?-\d+\b/g, "")
+            .trim() + " col-12 text-start";
+        }
+      }
+    });
+
+    // remove duplicated per-section header
+    root.querySelectorAll("h2").forEach(h2 => {
+      const t = (h2.textContent || "").toLowerCase();
+      if (t.includes("protocol") && t.includes("checkpoint")) h2.remove();
+    });
+
+    // remove duplicate School/District/Year lines
+    root.querySelectorAll("p").forEach(p => {
+      const t = (p.textContent || "").toLowerCase();
+      if (t.includes("school:") && t.includes("district:") && t.includes("year:")) p.remove();
+    });
+
+    // Tidy
+    root.querySelectorAll("div, section, article").forEach(el => {
+      const text = (el.textContent || "").trim();
+      if (!text && el.children.length === 0) el.remove();
+    });
+
+    return root.innerHTML || "";
+  }
+
+  // ------- Loader -------
+  async function loadSections() {
+    const statusEl  = document.getElementById("loadStatus");
+    const printBtn  = document.getElementById("printBtn");
+    const container = document.getElementById("sectionsContainer");
+
+    printBtn.disabled = true;
+    statusEl.textContent = "Loading sections…";
+    container.innerHTML = "";
+
+    let i = 0;
+    for (const s of sectionsToLoad) {
+      i++;
+      statusEl.textContent = `Loading ${s.title} (${i}/${sectionsToLoad.length})…`;
+
+      const wrap = document.createElement("section");
+      wrap.className = "section-content";
+      wrap.innerHTML = `<h3 class="section-header">${s.title}</h3><div class="text-muted">Loading…</div>`;
+      container.appendChild(wrap);
+
+      try {
+        const resp = await fetch(s.url, { credentials: "same-origin", cache: "no-store" });
+        const rawHtml = await resp.text();
+
+        if (!resp.ok || looksLikeLoginPage(rawHtml)) {
+          wrap.querySelector(".text-muted")?.remove();
+          wrap.insertAdjacentHTML("beforeend",
+            `<div class="alert alert-warning">Could not load this section. ${!resp.ok ? `HTTP ${resp.status} ${resp.statusText}` : "Received a login/redirect page."}</div>`);
+          continue;
         }
 
-        function extractMainContent(html) {
-            // Create a temporary DOM element to parse the HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            
-            // Try to find the main content area
-            let mainContent = tempDiv.querySelector('#section-wrapper');
-            if (!mainContent) {
-                mainContent = tempDiv.querySelector('.main-content-container');
-            }
-            if (!mainContent) {
-                // Fallback to body content
-                mainContent = tempDiv.querySelector('main') || tempDiv;
-            }
-            
-            // REMOVE UNWANTED ELEMENTS FIRST (before expanding)
-            const elementsToRemove = [
-                'aside', 'nav', '.sidebar-container', '.sidebar-content', 
-                '.breadcrumb', '.breadcrumbs',
-                'button[type="submit"]', 'form[method="post"]',
-                '.alert-dismissible button', '.btn-close',
-                '.layout-container', // Remove entire layout wrapper
-                '.nav.flex-column', // Remove section navigation
-                '.nav-link', // Remove nav links
-                '.sticky-top', // Remove sticky navigation
-                '.position-sticky' // Remove any sticky elements
-            ];
-            
-            elementsToRemove.forEach(selector => {
-                const elements = mainContent.querySelectorAll(selector);
-                elements.forEach(el => el.remove());
-            });
-            
-            // EXPAND ALL COLLAPSIBLES FOR PRINT
-            const collapseElements = mainContent.querySelectorAll('.collapse');
-            collapseElements.forEach(element => {
-                element.classList.add('show'); // Bootstrap's class for expanded
-                element.classList.remove('collapse'); // Remove collapse class entirely
-                element.style.display = 'block'; // Force visibility
-                element.style.height = 'auto'; // Override any height restrictions
-            });
-            
-            // Handle accordion items specifically
-            const accordionItems = mainContent.querySelectorAll('.accordion-collapse');
-            accordionItems.forEach(element => {
-                element.classList.add('show');
-                element.classList.remove('collapse');
-                element.style.display = 'block';
-                element.style.height = 'auto';
-            });
-            
-            // Handle any other hidden content
-            const hiddenElements = mainContent.querySelectorAll('[style*="display: none"], [style*="display:none"]');
-            hiddenElements.forEach(element => {
-                element.style.display = 'block';
-            });
-            
-            // Remove collapse toggle buttons (they're not needed in print)
-            const toggleButtons = mainContent.querySelectorAll('[data-bs-toggle="collapse"]');
-            toggleButtons.forEach(button => {
-                // Convert to regular header without toggle functionality
-                button.removeAttribute('data-bs-toggle');
-                button.removeAttribute('data-bs-target');
-                button.removeAttribute('aria-expanded');
-                button.removeAttribute('aria-controls');
-                button.style.cursor = 'default';
-                button.classList.remove('collapsed');
-                
-                // Remove collapse icons
-                const icons = button.querySelectorAll('.bi-chevron-down, .bi-chevron-up, .bi-plus, .bi-dash, .bi-caret-down, .bi-caret-up');
-                icons.forEach(icon => icon.remove());
-            });
-            
-            // Clean up protocol header since we have our own
-            const protocolHeaders = mainContent.querySelectorAll('h2');
-            protocolHeaders.forEach(h2 => {
-                if (h2.textContent.includes('Protocol – Checkpoint')) {
-                    h2.remove();
-                }
-            });
-            
-            // Remove any remaining layout containers and move children up
-            const layoutContainers = mainContent.querySelectorAll('.layout-container, .d-flex');
-            layoutContainers.forEach(container => {
-                // If this container only has layout purposes, unwrap it
-                if (container.children.length > 0) {
-                    const parent = container.parentNode;
-                    while (container.firstChild) {
-                        parent.insertBefore(container.firstChild, container);
-                    }
-                    container.remove();
-                }
-            });
-            
-            // Specific fix for Trends section navigation
-            const trendsNavigation = mainContent.querySelectorAll('.nav-pills, .nav-tabs, .nav.nav-pills, .nav.nav-tabs');
-            trendsNavigation.forEach(nav => nav.remove());
-            
-            // Show all tab content (if any tabs exist)
-            const tabContent = mainContent.querySelectorAll('.tab-pane');
-            tabContent.forEach(pane => {
-                pane.classList.add('show', 'active');
-                pane.style.display = 'block';
-            });
-            
-            // Remove any remaining interactive elements
-            const interactiveElements = mainContent.querySelectorAll('button:not(.no-remove), .btn:not(.no-remove), input, select, textarea');
-            interactiveElements.forEach(element => {
-                // Only remove if it's not part of the actual content
-                if (!element.closest('.section-content, .response-content, .data-table')) {
-                    element.remove();
-                }
-            });
-            
-            return mainContent.innerHTML;
+        let cleaned = extractMainContent(rawHtml, { lenient: false });
+        if (!cleaned || cleaned.replace(/\s+/g,'').length < 60) {
+          cleaned = extractMainContent(rawHtml, { lenient: true });
         }
 
-        function initializeBootstrapComponents(container) {
-            // Re-initialize all Bootstrap components in the loaded content
-            
-            // Collapsible components
-            const collapseElements = container.querySelectorAll('[data-bs-toggle="collapse"]');
-            collapseElements.forEach(element => {
-                // Remove any existing Bootstrap instances
-                const existingInstance = bootstrap.Collapse.getInstance(element);
-                if (existingInstance) {
-                    existingInstance.dispose();
-                }
-                // Initialize new instance
-                new bootstrap.Collapse(element);
-            });
-            
-            // Accordions
-            const accordionElements = container.querySelectorAll('.accordion-button');
-            accordionElements.forEach(element => {
-                const existingInstance = bootstrap.Collapse.getInstance(element);
-                if (existingInstance) {
-                    existingInstance.dispose();
-                }
-                new bootstrap.Collapse(element);
-            });
-            
-            // Tooltips
-            const tooltipElements = container.querySelectorAll('[data-bs-toggle="tooltip"]');
-            tooltipElements.forEach(element => {
-                const existingInstance = bootstrap.Tooltip.getInstance(element);
-                if (existingInstance) {
-                    existingInstance.dispose();
-                }
-                new bootstrap.Tooltip(element);
-            });
-            
-            // Dropdowns
-            const dropdownElements = container.querySelectorAll('[data-bs-toggle="dropdown"]');
-            dropdownElements.forEach(element => {
-                const existingInstance = bootstrap.Dropdown.getInstance(element);
-                if (existingInstance) {
-                    existingInstance.dispose();
-                }
-                new bootstrap.Dropdown(element);
-            });
+        wrap.querySelector(".text-muted")?.remove();
+        wrap.insertAdjacentHTML("beforeend", cleaned);
+
+        // If this was the Trends section, expand/resize charts now
+        if (/^\s*6\.\s*Trends/i.test(s.title)) {
+          normalizeCharts(wrap);
         }
+      } catch (e) {
+        wrap.querySelector(".text-muted")?.remove();
+        wrap.insertAdjacentHTML("beforeend", `<div class="alert alert-danger">Error loading: ${e?.message || "Unknown error"}</div>`);
+      }
+    }
 
-        // Event handlers
-        document.getElementById('printBtn').addEventListener('click', () => {
-            window.print();
-        });
+    statusEl.textContent = "All sections loaded.";
+    printBtn.disabled = false;
+  }
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            loadAllSections();
-        });
+  // ------- Wire up -------
+  document.addEventListener("DOMContentLoaded", () => {
+    const genEl = document.getElementById("generatedTime");
+    if (genEl) genEl.textContent = formatDate(new Date());
 
-        // Load sections on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            loadAllSections();
-        });
+    document.getElementById("printBtn").addEventListener("click", () => {
+      // one last resize nudge before printing
+      window.dispatchEvent(new Event('resize'));
+      setTimeout(() => window.print(), 20);
+    });
+    document.getElementById("refreshBtn").addEventListener("click", loadSections);
 
-        // Auto-print if requested
-        if (window.location.search.includes('autoprint=true')) {
-            window.addEventListener('load', () => {
-                // Wait for all sections to load, then print
-                const checkReady = setInterval(() => {
-                    if (!document.getElementById('printBtn').disabled) {
-                        clearInterval(checkReady);
-                        setTimeout(() => window.print(), 1000);
-                    }
-                }, 500);
-            });
-        }
-    </script>
-</body>
-</html>
+    loadSections();
+  });
+</script>
+}
+
