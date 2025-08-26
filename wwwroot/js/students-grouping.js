@@ -31,6 +31,8 @@ window.StudentGrouping = (function () {
         initializeModal();
         initializeDragAndDrop();
         initializeDataTable();
+        resetGroupingArea();
+
         // Bootstrap 5 modal instance
         createGroupModal = document.getElementById('createGroupModal');
         if (createGroupModal && window.bootstrap) {
