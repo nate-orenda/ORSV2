@@ -241,6 +241,31 @@
     <!-- Left: Indicator Bar Chart -->
     <div class="col-md-6 mb-4 d-flex">
         <div class="card shadow-sm p-3 w-100 d-flex flex-column align-self-end">
+            <form method="get" class="d-flex align-items-center gap-2 mb-2">
+                <input type="hidden" name="SchoolId" value="@Model.SchoolId" />
+                <input type="hidden" name="Grade" value="@Model.Grade" />
+
+                <label for="gaFilter" class="fw-semibold text-primary me-2">Filter:</label>
+                <select id="gaFilter" name="Filter" class="form-select form-select-sm orenda-select" onchange="this.form.submit()">
+                    <option value="ALL" selected="@(Model.Filter is null || Model.Filter.ToUpper() == "ALL")">All students (default)</option>
+                    <option value="SWD" selected="@(Model.Filter?.ToUpper() == "SWD")">Students with Disabilities (SWD)</option>
+                    <option value="SED" selected="@(Model.Filter?.ToUpper() == "SED")">Low Income Students (SED)</option>
+                    <option value="EL" selected="@(Model.Filter?.ToUpper() == "EL")">English Learners (EL)</option>
+                    <option value="RFEP" selected="@(Model.Filter?.ToUpper() == "RFEP")">Redesignated English Proficient (RFEP)</option>
+                    <option value="G_M" selected="@(Model.Filter?.ToUpper() == "G_M")">Gender (Male)</option>
+                    <option value="G_F" selected="@(Model.Filter?.ToUpper() == "G_F")">Gender (Female)</option>
+                    <option value="G_X" selected="@(Model.Filter?.ToUpper() == "G_X")">Gender (X)</option>
+                    <option value="RE_BLACK" selected="@(Model.Filter?.ToUpper() == "RE_BLACK")">Black or African American</option>
+                    <option value="RE_HISP" selected="@(Model.Filter?.ToUpper() == "RE_HISP")">Hispanic or Latino</option>
+                    <option value="FOSTER" selected="@(Model.Filter?.ToUpper() == "FOSTER")">Foster</option>
+                    <option value="MIGRANT" selected="@(Model.Filter?.ToUpper() == "MIGRANT")">Migrant</option>
+                    <option value="HOMELESS" selected="@(Model.Filter?.ToUpper() == "HOMELESS")">Homeless</option>
+                </select>
+
+                <span class="badge bg-light text-dark ms-1" title="Active filter">
+                    @Model.ActiveFilterLabel
+                </span>
+            </form>
             <!-- Summary Table (no header) -->
             <table class="table table-sm mb-2">
                 <tr>

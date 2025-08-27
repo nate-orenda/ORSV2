@@ -37,8 +37,8 @@ namespace ORSV2.Models
         [MaxLength(100)]
         public string? RaceEthnicity { get; set; }
 
-        public bool? SWD { get; set; }
-        public bool? SED { get; set; }
+        public bool SWD { get; set; }
+        public bool SED { get; set; }
 
         [MaxLength(50)]
         public string? LF { get; set; }
@@ -51,9 +51,9 @@ namespace ORSV2.Models
         [MaxLength(100)]
         public string? Counselor { get; set; }
 
-        public bool? Foster { get; set; }
-        public bool? Migrant { get; set; }
-        public bool? Homeless { get; set; }
+        public bool Foster { get; set; }
+        public bool Migrant { get; set; }
+        public bool Homeless { get; set; }
 
         public int CP { get; set; }  // Checkpoint (e.g., 1–5)
         public int SchoolYear { get; set; }

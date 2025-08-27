@@ -17,6 +17,25 @@ namespace ORSV2.Pages.GuidanceAlignment
         public string SchoolName { get; set; } = "";
         public List<GAResults> Students { get; set; } = new();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
+        [BindProperty(SupportsGet = true)] public string? Filter { get; set; }  // e.g., "ALL", "SWD", ...
+
+        private static readonly Dictionary<string, string> FilterLabels = new()
+        {
+            ["ALL"] = "All students",
+            ["SWD"] = "Students with Disabilities (SWD)",
+            ["SED"] = "Low Income Students (SED)",
+            ["EL"] = "English Learners (EL)",
+            ["RFEP"] = "Redesignated English Proficient (RFEP)",
+            ["G_M"] = "Gender (Male)",
+            ["G_F"] = "Gender (Female)",
+            ["G_X"] = "Gender (X)",
+            ["RE_BLACK"] = "Black or African American",
+            ["RE_HISP"] = "Hispanic or Latino",
+            ["FOSTER"] = "Foster",
+            ["MIGRANT"] = "Migrant",
+            ["HOMELESS"] = "Homeless"
+        };
+        public string ActiveFilterLabel => FilterLabels.TryGetValue(Filter ?? "ALL", out var v) ? v : "All students";
 
         public class IndicatorSummary
         {
@@ -59,9 +78,61 @@ namespace ORSV2.Pages.GuidanceAlignment
             var schoolYear = today.Month >= 8 ? today.Year + 1 : today.Year;
             var districtId = school.DistrictId;
 
-            Students = await _context.GAResults
+            // Base query
+            var q = _context.GAResults
                 .AsNoTracking()
-                .Where(r => r.SchoolId == SchoolId && r.Grade == Grade && r.CP == cp && r.SchoolYear == schoolYear)
+                .Where(r => r.SchoolId == SchoolId && r.Grade == Grade && r.CP == cp && r.SchoolYear == schoolYear);
+
+            // Normalize / default filter value
+            var f = (Filter ?? "ALL").ToUpperInvariant();
+
+            // Apply filter (switch keeps it safe & explicit)
+            switch (f)
+            {
+                case "SWD":
+                    q = q.Where(r => r.SWD);   // bool
+                    break;
+                case "SED":
+                    q = q.Where(r => r.SED);   // bool
+                    break;
+                case "EL":
+                    q = q.Where(r => r.LF == "EL" || r.LF == "English Learner");
+                    break;
+                case "RFEP":
+                    q = q.Where(r => r.LF == "RFEP" || r.LF == "Redesignated");
+                    break;
+                case "G_M":
+                    q = q.Where(r => r.Gender == "M");
+                    break;
+                case "G_F":
+                    q = q.Where(r => r.Gender == "F");
+                    break;
+                case "G_X":
+                    q = q.Where(r => r.Gender == "X");
+                    break;
+                case "RE_BLACK":
+                    q = q.Where(r => r.RaceEthnicity == "Black or African American");
+                    break;
+                case "RE_HISP":
+                    q = q.Where(r => r.RaceEthnicity == "Hispanic or Latino");
+                    break;
+                case "FOSTER":
+                    q = q.Where(r => r.Foster);   // bool
+                    break;
+                case "MIGRANT":
+                    q = q.Where(r => r.Migrant);  // bool
+                    break;
+                case "HOMELESS":
+                    q = q.Where(r => r.Homeless); // bool
+                    break;
+                case "ALL":
+                default:
+                    break;
+            }
+
+
+            // Continue as you already do, now using `q`:
+            Students = await q
                 .Select(r => new GAResults
                 {
                     ResultId = r.ResultId,
@@ -94,6 +165,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 })
                 .ToListAsync();
 
+
             // Build indicator/quadrant summaries (unchanged)
             var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
             var indicatorCounts = new Dictionary<string, int>
@@ -121,7 +193,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 if (!string.IsNullOrEmpty(s.Quadrant))
                 {
                     var key = (s.Grade, s.Quadrant!);
-                    quadrantDict[key] = quadrantDict.TryGetValue(key, out var q) ? q + 1 : 1;
+                    quadrantDict[key] = quadrantDict.TryGetValue(key, out var count) ? count + 1 : 1;
                 }
             }
 

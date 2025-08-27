@@ -683,3 +683,25 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   transform: translateY(-1px); /* Subtle lift effect, matches your buttons */
   border-bottom-color: var(--orenda-primary-hover); /* Reveals border on hover */
 }
+/* Make the select feel lighter but still clickable */
+.orenda-select {
+  min-width: 220px;
+  border-radius: 10px;
+  border-color: #dee2e6;
+  font-size: 0.9rem;
+}
+
+/* Focus highlight */
+.orenda-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .25);
+}
+
+/* Active filter badge to look more tag-like */
+.orenda-badge-filter,
+.badge.bg-light.text-dark {
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+  border-radius: 999px;
+  padding: 0.35em 0.75em;
+}
