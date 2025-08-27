@@ -76,6 +76,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; }
+
+            [Required, StringLength(50)]
+            [Display(Name = "First name")]
+            public string FirstName { get; set; }
+
+            [Required, StringLength(50)]
+            [Display(Name = "Last name")]
+            public string LastName { get; set; }
         }
 
         private class SchoolAccessEntry
@@ -143,6 +151,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
                 else
                 {
+                    user.FirstName = Input.FirstName?.Trim();
+                    user.LastName  = Input.LastName?.Trim();
                     user.LockoutEnabled = true;
                     user.LockoutEnd = DateTimeOffset.MaxValue;
                 }

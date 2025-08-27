@@ -63,6 +63,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
             [Required]
             [EmailAddress]
             public string Email { get; set; }
+
+            [StringLength(50)]
+            [Display(Name = "First name")]
+            public string FirstName { get; set; }
+
+            [StringLength(50)]
+            [Display(Name = "Last name")]
+            public string LastName { get; set; }
         }
 
         private class SchoolAccessEntry
@@ -127,6 +135,28 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 {
                     Email = info.Principal.FindFirstValue(ClaimTypes.Email)
                 };
+                var given = info.Principal.FindFirstValue(ClaimTypes.GivenName)
+                ?? info.Principal.FindFirstValue("given_name");
+                var family = info.Principal.FindFirstValue(ClaimTypes.Surname)
+                            ?? info.Principal.FindFirstValue("family_name");
+
+                if (string.IsNullOrWhiteSpace(given) || string.IsNullOrWhiteSpace(family))
+                {
+                    var full = info.Principal.FindFirstValue(ClaimTypes.Name);
+                    if (!string.IsNullOrWhiteSpace(full))
+                    {
+                        var parts = full.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length == 1) given = parts[0];
+                        else if (parts.Length > 1)
+                        {
+                            family = parts[^1];
+                            given = string.Join(' ', parts[..^1]);
+                        }
+                    }
+                }
+
+                Input.FirstName = given;
+                Input.LastName  = family;
             }
 
             return Page();
@@ -200,6 +230,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
                 else
                 {
+                    user.FirstName = Input.FirstName?.Trim();
+                    user.LastName  = Input.LastName?.Trim();
                     user.LockoutEnabled = true;
                     user.LockoutEnd = DateTimeOffset.MaxValue;
                 }
