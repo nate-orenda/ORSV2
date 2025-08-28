@@ -91,7 +91,7 @@
         <!-- Right Column: Chart -->
         <div class="col-md-6 d-flex justify-content-center">
             <div style="max-width: 100%; width: 100%; max-height: 400px;">
-                <canvas id="quadrantPie"></canvas>
+                <canvas id="quadrantChart"></canvas>
             </div>
         </div>
     </div>
@@ -104,54 +104,133 @@
     }
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
+    // Pull model data
     const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));
-    const aboveCount = @Model.AboveTheLineCount;
-    const belowCount = @Model.BelowTheLineCount;
     const total = @Model.TotalCount;
 
-    const quadrantPie = new Chart(document.getElementById('quadrantPie'), {
-        type: 'pie',
+    // Safe getters
+    const challenge = quadrantCounts["Challenge"] ?? 0;
+    const benchmark = quadrantCounts["Benchmark"] ?? 0;
+    const strategic = quadrantCounts["Strategic"] ?? 0;
+    const intensive = quadrantCounts["Intensive"] ?? 0;
+
+    // color palette (matching your badges)
+    const COLORS = {
+        challenge: '#007bff', // primary
+        benchmark: '#28a745', // success
+        strategic: '#ffc107', // warning
+        intensive: '#dc3545'  // danger
+    };
+
+    // Helpers
+    function pct(value) {
+        return total > 0 ? ((value / total) * 100) : 0;
+    }
+    function labelPct(value) {
+        const p = pct(value);
+        // Only show a label if the slice is at least ~2% to reduce clutter
+        return p >= 2 ? `${p.toFixed(1)}%` : '';
+    }
+    function pickTextColor(bg) {
+        // Simple luminance heuristic for contrast
+        // Returns '#000' for light backgrounds (e.g., yellow), otherwise '#fff'
+        const c = bg.replace('#','');
+        const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+        const luminance = (0.2126*r + 0.7152*g + 0.0722*b);
+        return luminance > 160 ? '#000' : '#fff';
+    }
+
+    const ctx = document.getElementById('quadrantChart').getContext('2d');
+
+    // Register plugin
+    Chart.register(ChartDataLabels);
+
+    const quadrantChart = new Chart(ctx, {
+        type: 'bar',
         data: {
-            labels: [
-                `Challenge (${quadrantCounts["Challenge"] || 0})`,
-                `Benchmark (${quadrantCounts["Benchmark"] || 0})`,
-                `Strategic (${quadrantCounts["Strategic"] || 0})`,
-                `Intensive (${quadrantCounts["Intensive"] || 0})`
-            ],
-            datasets: [{
-                data: [
-                    quadrantCounts["Challenge"] || 0,
-                    quadrantCounts["Benchmark"] || 0,
-                    quadrantCounts["Strategic"] || 0,
-                    quadrantCounts["Intensive"] || 0
-                ],
-                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'], // Blue, Green, Yellow, Red
-                borderColor: '#fff',
-                borderWidth: 1
-            }]
+            labels: ['Students'],
+            datasets: [
+                {
+                    label: 'Challenge',
+                    data: [challenge],
+                    backgroundColor: COLORS.challenge
+                },
+                {
+                    label: 'Benchmark',
+                    data: [benchmark],
+                    backgroundColor: COLORS.benchmark
+                },
+                {
+                    label: 'Strategic',
+                    data: [strategic],
+                    backgroundColor: COLORS.strategic
+                },
+                {
+                    label: 'Intensive',
+                    data: [intensive],
+                    backgroundColor: COLORS.intensive
+                }
+            ]
         },
         options: {
+            // Vertical stacked bar (default indexAxis is 'x')
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: false
-                },
+                legend: { display: false }, // minimalist, legend not needed (labels shown on page)
+                title: { display: false },
                 tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
                     callbacks: {
-                        label: function(context) {
-                            const value = context.parsed;
-                            const percent = ((value / total) * 100).toFixed(1);
-                            return `${context.label}: ${value} (${percent}%)`;
-                        }
+                        label: (ctx) => {
+                            const val = ctx.parsed.y ?? ctx.raw ?? 0;
+                            const p = pct(val).toFixed(1);
+                            return `${ctx.dataset.label}: ${val} (${p}%)`;
+                        },
+                        footer: () => `Total: ${total}`
+                    }
+                },
+                datalabels: {
+                    anchor: 'center',
+                    align: 'center',
+                    clip: true,
+                    formatter: (value) => labelPct(value),
+                    color: (ctx) => {
+                        const bg = ctx.dataset.backgroundColor;
+                        return pickTextColor(bg);
+                    },
+                    font: {
+                        weight: 600
                     }
                 }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false, drawBorder: false },
+                    ticks: { display: false }
+                },
+                y: {
+                    stacked: true,
+                    grid: { display: false, drawBorder: false },
+                    ticks: { display: false }
+                }
+            },
+            elements: {
+                bar: {
+                    borderWidth: 0,
+                    // slightly slimmer bar to give breathing room
+                    categoryPercentage: 0.6,
+                    barPercentage: 0.9
+                }
+            },
+            layout: {
+                padding: { top: 8, bottom: 8 }
             }
         }
     });
