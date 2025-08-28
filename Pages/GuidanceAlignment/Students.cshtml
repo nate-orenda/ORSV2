@@ -321,9 +321,11 @@
 
     <!-- Right: Quadrant Pie Chart -->
     <div class="col-md-6 mb-4 d-flex">
-        <div class="card shadow-sm p-3 w-100 d-flex flex-column justify-content-end">
-            <h6 class="text-center mb-3">Quadrant Distribution – Grade @Model.Grade</h6>
-            <canvas id="quadrantPie"></canvas>
+        <div class="card shadow-sm p-3 w-100 d-flex flex-column">
+            <h6 class="text-center mb-3">Quadrant Summary – Grade @Model.Grade</h6>
+            <div class="flex-grow-1" style="position: relative; min-height: 250px;">
+                <canvas id="quadrantBarChart" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -526,7 +528,6 @@
 </div>
 
 @section Scripts {
-    <!-- libs -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -551,30 +552,171 @@
 
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
-    <!-- If your _Layout does NOT already include Bootstrap bundle, add it: -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
-
-    <!-- your page script -->
     <script src="~/js/students-grouping.js" asp-append-version="true"></script>
 
     <script>
-      // Page data for charts
-      window.studentPageData = {
-        indicatorData: @Html.Raw(JsonSerializer.Serialize(Model.IndicatorSummaries)),
-        quadrantCounts: @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts)),
-        aboveCount: @Model.AboveTheLineCount,
-        belowCount: @Model.BelowTheLineCount,
-        total: @Model.TotalCount
-      };
+        document.addEventListener('DOMContentLoaded', function () {
+            window.studentPageData = {
+                indicatorData: @Html.Raw(JsonSerializer.Serialize(Model.IndicatorSummaries)),
+                quadrantCounts: @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts)),
+                total: @Model.TotalCount
+            };
 
-      // Initialize once
-      (function () {
-        if (!window.__studentsInitDone) {
-          window.__studentsInitDone = true;
-          StudentGrouping.init({ schoolId: @Model.SchoolId, grade: @Model.Grade });
-          if (window.StudentCharts?.init) StudentCharts.init();
-        }
-      })();
+            // --- 1. DEFINE & REGISTER PLUGINS GLOBALLY ---
+            const lineLabelsPlugin = {
+                id: 'lineLabels',
+                afterDraw: (chart) => {
+                    const { ctx, chartArea: { top, bottom }, data } = chart;
+                    
+                    // IMPROVED LOGIC: Check for students in both above/below categories
+                    const intensive = data.datasets[0]?.data[0] ?? 0;
+                    const strategic = data.datasets[1]?.data[0] ?? 0;
+                    const benchmark = data.datasets[2]?.data[0] ?? 0;
+                    const challenge = data.datasets[3]?.data[0] ?? 0;
+
+                    const belowCount = intensive + strategic;
+                    const aboveCount = benchmark + challenge;
+
+                    // Only draw if there are students in both categories
+                    if (belowCount === 0 || aboveCount === 0) {
+                        return;
+                    }
+
+                    // Find the Y coordinate of the line. It's the top of the highest 'below' bar.
+                    let lineY;
+                    if (strategic > 0) {
+                        lineY = chart.getDatasetMeta(1).data[0].y;
+                    } else {
+                        // If no strategic students, the line is at the top of the intensive bar
+                        lineY = chart.getDatasetMeta(0).data[0].y;
+                    }
+                    
+                    const bar = chart.getDatasetMeta(0).data[0];
+                    const labelX = bar.x + bar.width / 2 + 20;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#343a40';
+                    ctx.lineWidth = 2;
+                    ctx.moveTo(bar.x - bar.width / 2, lineY);
+                    ctx.lineTo(labelX - 10, lineY);
+                    ctx.stroke();
+
+                    ctx.font = '600 0.8rem sans-serif';
+                    ctx.fillStyle = '#343a40';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    const total = belowCount + aboveCount;
+                    const pct = (value) => total > 0 ? (value / total * 100) : 0;
+
+                    const belowTheLinePct = pct(belowCount).toFixed(0);
+                    ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, lineY + (bottom - lineY) / 2);
+                    const aboveTheLinePct = pct(aboveCount).toFixed(0);
+                    ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, top + (lineY - top) / 2);
+                    ctx.restore();
+                }
+            };
+            Chart.register(lineLabelsPlugin, ChartDataLabels);
+
+
+            // --- 2. INITIALIZE SCRIPTS & CHARTS ---
+            StudentGrouping.init({ schoolId: @Model.SchoolId, grade: @Model.Grade });
+
+            // Indicator Bar Chart
+            try {
+                const indicatorData = window.studentPageData.indicatorData;
+                if (indicatorData && indicatorData.length > 0) {
+                    const ctx = document.getElementById('indicatorChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: indicatorData.map(d => d.Name),
+                            datasets: [{ label: '% Met', data: indicatorData.map(d => d.PercentMet), backgroundColor: '#0d6efd' }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(1)}%` } },
+                                // CHANGED: Enabled datalabels and set color to white
+                                datalabels: {
+                                    display: true,
+                                    color: 'white',
+                                    anchor: 'center',
+                                    align: 'center',
+                                    font: { weight: 'bold' },
+                                    formatter: (value) => value > 5 ? `${value.toFixed(0)}%` : '' // Hide if bar is too small
+                                }
+                            },
+                            scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } } }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to initialize indicator chart:", e);
+            }
+
+            // Quadrant Bar Chart
+            try {
+                const { quadrantCounts, total } = window.studentPageData;
+                if (quadrantCounts && total > 0) {
+                    const challenge = quadrantCounts["Challenge"] ?? 0;
+                    const benchmark = quadrantCounts["Benchmark"] ?? 0;
+                    const strategic = quadrantCounts["Strategic"] ?? 0;
+                    const intensive = quadrantCounts["Intensive"] ?? 0;
+                    const COLORS = { challenge: '#0d6efd', benchmark: '#198754', strategic: '#ffc107', intensive: '#dc3545' };
+                    const pct = (value) => total > 0 ? ((value / total) * 100) : 0;
+                    const pickTextColor = (bg) => {
+                        const color = (bg.charAt(0) === '#') ? bg.substring(1, 7) : bg;
+                        const r = parseInt(color.substring(0, 2), 16), g = parseInt(color.substring(2, 4), 16), b = parseInt(color.substring(4, 6), 16);
+                        return (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) ? '#000' : '#fff';
+                    };
+                    const ctx = document.getElementById('quadrantBarChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Students'],
+                            datasets: [
+                                { label: 'Intensive', data: [intensive], backgroundColor: COLORS.intensive },
+                                { label: 'Strategic', data: [strategic], backgroundColor: COLORS.strategic },
+                                { label: 'Benchmark', data: [benchmark], backgroundColor: COLORS.benchmark },
+                                { label: 'Challenge', data: [challenge], backgroundColor: COLORS.challenge }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y} (${pct(c.parsed.y).toFixed(1)}%)` } },
+                                datalabels: {
+                                    color: (context) => pickTextColor(context.dataset.backgroundColor),
+                                    anchor: 'center',
+                                    align: 'center',
+                                    font: { weight: 'bold' },
+                                    formatter: (value) => {
+                                        const percentage = pct(value);
+                                        return percentage >= 3 ? `${percentage.toFixed(0)}%` : '';
+                                    }
+                                }
+                            },
+                            scales: { x: { stacked: true, grid: { display: false }, ticks: { display: false } }, y: { stacked: true, grid: { display: false }, ticks: { display: false }, max: total } },
+                            layout: { padding: { top: 15, bottom: 15, right: 120, left: 10 } }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to initialize quadrant chart:", e);
+            }
+
+            // --- 3. HIDE LOADER AND SHOW PAGE ---
+            const loader = document.getElementById('loader-overlay');
+            const content = document.getElementById('page-content-wrapper');
+            if (loader) loader.classList.add('hidden');
+            if (content) content.style.visibility = 'visible';
+        });
     </script>
 }

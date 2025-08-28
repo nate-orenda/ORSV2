@@ -111,102 +111,128 @@
     const quadrantCounts = @Html.Raw(JsonSerializer.Serialize(Model.QuadrantCounts));
     const total = @Model.TotalCount;
 
-    // Safe getters
+    // Safe getters for values
     const challenge = quadrantCounts["Challenge"] ?? 0;
     const benchmark = quadrantCounts["Benchmark"] ?? 0;
     const strategic = quadrantCounts["Strategic"] ?? 0;
     const intensive = quadrantCounts["Intensive"] ?? 0;
 
-    // color palette (matching your badges)
+    // Color palette (matching your badges)
     const COLORS = {
-        challenge: '#007bff', // primary
-        benchmark: '#28a745', // success
-        strategic: '#ffc107', // warning
-        intensive: '#dc3545'  // danger
+        challenge: '#0d6efd', // Bootstrap 5 primary
+        benchmark: '#198754', // Bootstrap 5 success
+        strategic: '#ffc107', // Bootstrap 5 warning
+        intensive: '#dc3545'  // Bootstrap 5 danger
     };
 
-    // Helpers
+    // Helper functions
     function pct(value) {
         return total > 0 ? ((value / total) * 100) : 0;
     }
     function labelPct(value) {
         const p = pct(value);
-        // Only show a label if the slice is at least ~2% to reduce clutter
-        return p >= 2 ? `${p.toFixed(1)}%` : '';
+        return p >= 3 ? `${p.toFixed(0)}%` : '';
     }
     function pickTextColor(bg) {
-        // Simple luminance heuristic for contrast
-        // Returns '#000' for light backgrounds (e.g., yellow), otherwise '#fff'
-        const c = bg.replace('#','');
-        const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
-        const luminance = (0.2126*r + 0.7152*g + 0.0722*b);
-        return luminance > 160 ? '#000' : '#fff';
+        const c = bg.substring(1); // strip #
+        const rgb = parseInt(c, 16);
+        const r = (rgb >> 16) & 0xff;
+        const g = (rgb >> 8) & 0xff;
+        const b = (rgb >> 0) & 0xff;
+        const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luma < 150 ? 'white' : '#333';
     }
 
+    /**
+     * Custom plugin to draw "Above/Below the Line" labels and a dividing line.
+     */
+    const lineLabelsPlugin = {
+        id: 'lineLabels',
+        afterDraw: (chart, args, options) => {
+            const { ctx, chartArea: { top, bottom }, data } = chart;
+            
+            // Check if there's enough data to draw the line
+            if (chart.getDatasetMeta(1).hidden || data.datasets[1].data[0] === 0 || total === 0) return;
+
+            // The dividing line is the top of the 'Strategic' bar (dataset at index 1)
+            const strategicMeta = chart.getDatasetMeta(1);
+            const lineY = strategicMeta.data[0].y;
+            
+            const bar = chart.getDatasetMeta(0).data[0];
+            const barRight = bar.x + bar.width / 2;
+            const labelX = barRight + 20; // Position labels to the right of the bar
+
+            ctx.save();
+            
+            // --- 1. Draw the Dividing Line ---
+            ctx.beginPath();
+            ctx.strokeStyle = '#343a40'; // Darker gray for prominence
+            ctx.lineWidth = 2; // Thicker line
+            ctx.setLineDash([]); // Solid line
+            ctx.moveTo(bar.x - bar.width / 2, lineY);
+            ctx.lineTo(labelX - 10, lineY);
+            ctx.stroke();
+
+            // --- 2. Calculate and Draw the Labels with Percentages ---
+            ctx.font = '600 0.8rem sans-serif';
+            ctx.fillStyle = '#343a40'; // Darker text
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
+            // Calculate "Below the Line" totals
+            const belowTheLineCount = intensive + strategic;
+            const belowTheLinePct = pct(belowTheLineCount).toFixed(0);
+            const belowMidpointY = lineY + (bottom - lineY) / 2;
+            ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, belowMidpointY);
+            
+            // Calculate "Above the Line" totals
+            const aboveTheLineCount = benchmark + challenge;
+            const aboveTheLinePct = pct(aboveTheLineCount).toFixed(0);
+            const aboveMidpointY = top + (lineY - top) / 2;
+            ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, aboveMidpointY);
+
+            ctx.restore();
+        }
+    };
+    
+    // Get canvas context
     const ctx = document.getElementById('quadrantChart').getContext('2d');
 
-    // Register plugin
-    Chart.register(ChartDataLabels);
+    // Register plugins
+    Chart.register(ChartDataLabels, lineLabelsPlugin);
 
     const quadrantChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['Students'],
             datasets: [
-                {
-                    label: 'Challenge',
-                    data: [challenge],
-                    backgroundColor: COLORS.challenge
-                },
-                {
-                    label: 'Benchmark',
-                    data: [benchmark],
-                    backgroundColor: COLORS.benchmark
-                },
-                {
-                    label: 'Strategic',
-                    data: [strategic],
-                    backgroundColor: COLORS.strategic
-                },
-                {
-                    label: 'Intensive',
-                    data: [intensive],
-                    backgroundColor: COLORS.intensive
-                }
+                { label: 'Intensive', data: [intensive], backgroundColor: COLORS.intensive },
+                { label: 'Strategic', data: [strategic], backgroundColor: COLORS.strategic },
+                { label: 'Benchmark', data: [benchmark], backgroundColor: COLORS.benchmark },
+                { label: 'Challenge', data: [challenge], backgroundColor: COLORS.challenge }
             ]
         },
         options: {
-            // Vertical stacked bar (default indexAxis is 'x')
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: { display: false }, // minimalist, legend not needed (labels shown on page)
+                legend: { display: false },
                 title: { display: false },
                 tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
                     callbacks: {
                         label: (ctx) => {
-                            const val = ctx.parsed.y ?? ctx.raw ?? 0;
+                            const val = ctx.parsed.y ?? 0;
                             const p = pct(val).toFixed(1);
                             return `${ctx.dataset.label}: ${val} (${p}%)`;
-                        },
-                        footer: () => `Total: ${total}`
+                        }
                     }
                 },
                 datalabels: {
                     anchor: 'center',
                     align: 'center',
-                    clip: true,
                     formatter: (value) => labelPct(value),
-                    color: (ctx) => {
-                        const bg = ctx.dataset.backgroundColor;
-                        return pickTextColor(bg);
-                    },
-                    font: {
-                        weight: 600
-                    }
+                    color: (ctx) => pickTextColor(ctx.dataset.backgroundColor),
+                    font: { weight: 'bold' }
                 }
             },
             scales: {
@@ -218,19 +244,12 @@
                 y: {
                     stacked: true,
                     grid: { display: false, drawBorder: false },
-                    ticks: { display: false }
-                }
-            },
-            elements: {
-                bar: {
-                    borderWidth: 0,
-                    // slightly slimmer bar to give breathing room
-                    categoryPercentage: 0.6,
-                    barPercentage: 0.9
+                    ticks: { display: false },
+                    max: total
                 }
             },
             layout: {
-                padding: { top: 8, bottom: 8 }
+                padding: { top: 15, bottom: 15, right: 120, left: 10 } // Increased right padding for longer labels
             }
         }
     });
