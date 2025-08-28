@@ -62,27 +62,23 @@
                                         <h5 class="mb-0 text-orenda-primary text-truncate me-2"
                                             title="@s.SchoolName"
                                             style="font-weight:600; max-width:100%;">
-                                        @s.SchoolName
+                                            @s.SchoolName
                                         </h5>
                                     </div>
 
                                     <!-- Data box -->
                                     <div class="d-flex flex-column gap-1 small text-muted">
-
-                                        <!-- Enrollment inline -->
                                         <div class="orenda-summary-item">
-                                        <span class="orenda-summary-label">Enrollment:</span>
-                                        <span class="fw-semibold ms-1">@s.Enrollment</span>
+                                            <span class="orenda-summary-label">Enrollment:</span>
+                                            <span class="fw-semibold ms-1">@s.Enrollment</span>
                                         </div>
 
-                                        <!-- GA row: green ✓ or red ✕ next to words -->
                                         <div class="orenda-summary-item">
                                             <div class="d-flex align-items-center gap-2">
                                                 @if (s.GA)
                                                 {
                                                     <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
-                                                    class="orenda-link"
-                                                    style="text-decoration:none;">
+                                                       class="orenda-link" style="text-decoration:none;">
                                                         Guidance Alignment
                                                     </a>
                                                     <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
@@ -97,15 +93,12 @@
                                             </div>
                                         </div>
 
-
-                                        <!-- CP line -->
                                         <div class="small text-muted" style="margin-top:-.2rem;">
-                                        Checkpoint: @(s.CurrentCP.HasValue && s.CurrentCP.Value > 0 ? s.CurrentCP.Value.ToString() : "—")
+                                            Checkpoint: @cpText
                                         </div>
 
-                                        <!-- Date line -->
                                         <div class="small text-muted" style="margin-top:-.2rem;">
-                                        Last Updated: @(s.GAResultsLastUpdated.HasValue ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy") : "—")
+                                            Last Updated: @gaUpdatedText
                                         </div>
 
                                         <div class="orenda-summary-item">
@@ -113,8 +106,7 @@
                                                 @if (s.CA)
                                                 {
                                                     <a href="@Url.Page("/CurriculumAlignment/Form1", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
-                                                    class="orenda-link"
-                                                    style="text-decoration:none;">
+                                                       class="orenda-link" style="text-decoration:none;">
                                                         Curriculum Alignment
                                                     </a>
                                                     <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
@@ -131,13 +123,165 @@
                                     </div>
                                     </div>
                                 </div>
-                                </div>
-
+                            </div>
                         }
                     </div>
                 </div>
             </section>
         }
+
+        <!-- ===== Calendar (patched) ===== -->
+        <div class="orenda-card mt-4">
+            <div class="orenda-card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="mb-0">Guidance Alignment Calendar</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn-orenda-outline btn-sm" id="calPrev" aria-label="Previous Month">&larr;</button>
+                        <div class="badge-compact" id="calTitle"></div>
+                        <button class="btn-orenda-outline btn-sm" id="calNext" aria-label="Next Month">&rarr;</button>
+                        <button class="btn-orenda-ghost btn-sm" id="calToday">Today</button>
+                    </div>
+                </div>
+
+                <div class="ga-calendar" id="gaCalendar" aria-label="Month calendar"></div>
+
+                @{
+                    var clientItems = Model.CalendarItems.Select(it => new {
+                        date = it.Date,
+                        dateStr = it.Date.ToString("yyyy-MM-dd"),
+                        label = it.Label,
+                        schoolId = it.SchoolId,
+                        districtId = it.DistrictId,
+                        districtName = it.DistrictName,   // ⬅️ NEW
+                        cp = it.Cp
+                    }).ToList();
+
+                    var json = System.Text.Json.JsonSerializer.Serialize(
+                        clientItems,
+                        new System.Text.Json.JsonSerializerOptions {
+                            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                        }
+                    );
+                }
+                <script>
+                (function(){
+                    // Data from server (camelCase + dateStr)
+                    const items = @Html.Raw(json);
+
+                    // Index by yyyy-MM-dd
+                    const byDate = items.reduce((m, it) => {
+                        (m[it.dateStr] ||= []).push(it);
+                        return m;
+                    }, {});
+
+                    const el = document.getElementById('gaCalendar');
+                    const titleEl = document.getElementById('calTitle');
+                    const prevBtn = document.getElementById('calPrev');
+                    const nextBtn = document.getElementById('calNext');
+                    const todayBtn= document.getElementById('calToday');
+
+                    let view = new Date(); // today
+
+                    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+                    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+                    function toYmd(d){
+                        return [
+                            d.getFullYear(),
+                            String(d.getMonth()+1).padStart(2,"0"),
+                            String(d.getDate()).padStart(2,"0")
+                        ].join("-");
+                    }
+
+                    function render(){
+                        const s = startOfMonth(view);
+                        const e = endOfMonth(view);
+
+                        // US week: Sunday start
+                        const start = new Date(s);
+                        start.setDate(s.getDate() - s.getDay());
+                        const end = new Date(e);
+                        end.setDate(e.getDate() + (6 - e.getDay()));
+
+                        // Title
+                        titleEl.textContent = s.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+                        // Build day cells
+                        const days = [];
+                        for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate()+1)) {
+                            days.push(new Date(dt));
+                        }
+
+                        const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                        let html = '<div class="ga-cal-grid">';
+                        // header
+                        for (const h of dow) html += `<div class="ga-cal-head">${h}</div>`;
+
+                        const todayIso = toYmd(new Date());
+
+                        // cells
+                        for (const d of days) {
+                        const inMonth = d.getMonth() === s.getMonth();
+                        const iso = toYmd(d);
+
+                        const dayEvents = byDate[iso] || [];
+                        let chipsHtml = '';
+
+                        if (dayEvents.length > 0) {
+                            // Group events by districtId -> { name, cps:Set }
+                            const grouped = {};
+                            for (const ev of dayEvents) {
+                            if (!grouped[ev.districtId]) {
+                                grouped[ev.districtId] = { name: ev.districtName, cps: new Set() };
+                            }
+                            grouped[ev.districtId].cps.add(ev.cp);
+                            }
+
+                            // Build one chip per district: "District – CP1, CP2"
+                            const districtChips = Object.values(grouped).map(g => {
+                            const cpsJoined = Array.from(g.cps).join(', ');
+                            const text = `${g.name} – ${cpsJoined}`;
+                            const title = text; // full tooltip
+                            return `<span class="ga-chip district-chip" title="${title}">${text}</span>`;
+                            });
+
+                            // Cap how many we show to keep rows tidy
+                            const MAX_CHIPS = 2;
+                            const visible = districtChips.slice(0, MAX_CHIPS);
+                            const hiddenCount = districtChips.length - visible.length;
+
+                            if (hiddenCount > 0) {
+                            visible.push(
+                                `<span class="ga-chip" title="${hiddenCount} more">+${hiddenCount} more</span>`
+                            );
+                            }
+
+                            chipsHtml = visible.join('');
+                        }
+
+                        const todayCls = (iso===todayIso)?' is-today':'';
+                        const dimCls = inMonth ? '' : ' is-out';
+
+                        html += `<div class="ga-cal-cell${dimCls}${todayCls}">
+                                    <div class="ga-cal-date">${d.getDate()}</div>
+                                    <div class="ga-cal-chips">${chipsHtml}</div>
+                                </div>`;
+                        }
+
+
+                        html += '</div>';
+                        el.innerHTML = html;
+                    }
+
+                    prevBtn.addEventListener('click', () => { view.setMonth(view.getMonth()-1); render(); });
+                    nextBtn.addEventListener('click', () => { view.setMonth(view.getMonth()+1); render(); });
+                    todayBtn.addEventListener('click', () => { view = new Date(); render(); });
+
+                    render();
+                })();
+                </script>
+            </div>
+        </div>
+        <!-- ===== /Calendar ===== -->
     }
 </div>
 
@@ -176,4 +320,3 @@
     });
   })();
 </script>
-
