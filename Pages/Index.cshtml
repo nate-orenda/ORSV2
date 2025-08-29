@@ -239,7 +239,7 @@
                             // Build one chip per district: "District – CP1, CP2"
                             const districtChips = Object.values(grouped).map(g => {
                             const cpsJoined = Array.from(g.cps).join(', ');
-                            const text = `${g.name} – ${cpsJoined}`;
+                            const text = `${cpsJoined}-${g.name}`;
                             const title = text; // full tooltip
                             return `<span class="ga-chip district-chip" title="${title}">${text}</span>`;
                             });

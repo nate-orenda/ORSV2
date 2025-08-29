@@ -420,7 +420,7 @@
                                 @foreach (var indicator in Model.IndicatorSummaries)
                                 {
                                     var value = GetIndicatorValue(s, indicator.Name);
-                                    @Html.Raw($"data-{indicator.Name.ToLower()}=\"{(value == true ? "Met" : value == false ? "Not Met" : "N/A")}\"")
+                                    @Html.Raw($"data-{indicator.Name.ToLower()}=\"{(value == true ? "Met" : value == false ? "Not Met" : "N/A") }\"")
                                 }
                             }
                             data-quadrant="@(s.Quadrant ?? "")">
@@ -564,64 +564,65 @@
                 total: @Model.TotalCount
             };
 
-            // --- 1. DEFINE & REGISTER PLUGINS GLOBALLY ---
+            // === NEW: make canvas text white by default ===
+            Chart.defaults.color = '#fff';
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.15)';
+
+            const pickTextColor = (bg) => {
+                const c = bg.substring(1); const rgb = parseInt(c, 16);
+                const r = (rgb >> 16) & 0xff, g = (rgb >> 8) & 0xff, b = (rgb >> 0) & 0xff;
+                return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 150 ? 'white' : '#333';
+            };
+
             const lineLabelsPlugin = {
                 id: 'lineLabels',
-                afterDraw: (chart) => {
-                    const { ctx, chartArea: { top, bottom }, data } = chart;
-                    
-                    // IMPROVED LOGIC: Check for students in both above/below categories
+                afterDraw: (chart, args, options) => {
+                    const { ctx, chartArea: { top, bottom, left, right }, data } = chart;
                     const intensive = data.datasets[0]?.data[0] ?? 0;
                     const strategic = data.datasets[1]?.data[0] ?? 0;
                     const benchmark = data.datasets[2]?.data[0] ?? 0;
                     const challenge = data.datasets[3]?.data[0] ?? 0;
-
                     const belowCount = intensive + strategic;
                     const aboveCount = benchmark + challenge;
 
-                    // Only draw if there are students in both categories
-                    if (belowCount === 0 || aboveCount === 0) {
-                        return;
-                    }
+                    if (belowCount === 0 || aboveCount === 0) return;
 
-                    // Find the Y coordinate of the line. It's the top of the highest 'below' bar.
-                    let lineY;
-                    if (strategic > 0) {
-                        lineY = chart.getDatasetMeta(1).data[0].y;
-                    } else {
-                        // If no strategic students, the line is at the top of the intensive bar
-                        lineY = chart.getDatasetMeta(0).data[0].y;
-                    }
-                    
+                    const strategicMeta = chart.getDatasetMeta(1);
+                    const lineY = strategicMeta.data[0].y;
+
                     const bar = chart.getDatasetMeta(0).data[0];
-                    const labelX = bar.x + bar.width / 2 + 20;
+                    const barRight = bar.x + bar.width / 2;
+                    const labelX = barRight + 15;
+
                     ctx.save();
                     ctx.beginPath();
-                    ctx.strokeStyle = '#343a40';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; // was #6c757d
                     ctx.lineWidth = 2;
-                    ctx.moveTo(bar.x - bar.width / 2, lineY);
-                    ctx.lineTo(labelX - 10, lineY);
+                    ctx.setLineDash([6, 3]);
+                    ctx.moveTo(left, lineY);
+                    ctx.lineTo(right, lineY);
                     ctx.stroke();
 
                     ctx.font = '600 0.8rem sans-serif';
-                    ctx.fillStyle = '#343a40';
+                    ctx.fillStyle = '#fff'; // was #343a40
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
-                    
+
                     const total = belowCount + aboveCount;
                     const pct = (value) => total > 0 ? (value / total * 100) : 0;
-
+                    
                     const belowTheLinePct = pct(belowCount).toFixed(0);
-                    ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, lineY + (bottom - lineY) / 2);
+                    const belowMidpointY = lineY + (bottom - lineY) / 2;
+                    ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, belowMidpointY);
+
                     const aboveTheLinePct = pct(aboveCount).toFixed(0);
-                    ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, top + (lineY - top) / 2);
+                    const aboveMidpointY = top + (lineY - top) / 2;
+                    ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, aboveMidpointY);
                     ctx.restore();
                 }
             };
             Chart.register(lineLabelsPlugin, ChartDataLabels);
 
-
-            // --- 2. INITIALIZE SCRIPTS & CHARTS ---
             StudentGrouping.init({ schoolId: @Model.SchoolId, grade: @Model.Grade });
 
             // Indicator Bar Chart
@@ -636,23 +637,33 @@
                             datasets: [{ label: '% Met', data: indicatorData.map(d => d.PercentMet), backgroundColor: '#0d6efd' }]
                         },
                         options: {
-                            indexAxis: 'y',
-                            responsive: true,
-                            maintainAspectRatio: false,
+                            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                             plugins: {
-                                legend: { display: false },
+                                legend: { display: false, labels: { color: '#fff' } },
                                 tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(1)}%` } },
-                                // CHANGED: Enabled datalabels and set color to white
                                 datalabels: {
-                                    display: true,
-                                    color: 'white',
-                                    anchor: 'center',
-                                    align: 'center',
+                                    color: '#fff', // force white for readability
+                                    anchor: 'end',
+                                    align: 'left',
                                     font: { weight: 'bold' },
-                                    formatter: (value) => value > 5 ? `${value.toFixed(0)}%` : '' // Hide if bar is too small
+                                    formatter: (value) => value > 5 ? `${value.toFixed(0)}%` : '',
+                                    padding: { right: 5 }
                                 }
                             },
-                            scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + '%' } } }
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    ticks: { color: '#fff', callback: (v) => v + '%' },
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    border: { color: 'rgba(255,255,255,0.2)' }
+                                },
+                                y: {
+                                    ticks: { color: '#fff' },
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    border: { color: 'rgba(255,255,255,0.2)' }
+                                }
+                            }
                         }
                     });
                 }
@@ -670,21 +681,18 @@
                     const intensive = quadrantCounts["Intensive"] ?? 0;
                     const COLORS = { challenge: '#0d6efd', benchmark: '#198754', strategic: '#ffc107', intensive: '#dc3545' };
                     const pct = (value) => total > 0 ? ((value / total) * 100) : 0;
-                    const pickTextColor = (bg) => {
-                        const color = (bg.charAt(0) === '#') ? bg.substring(1, 7) : bg;
-                        const r = parseInt(color.substring(0, 2), 16), g = parseInt(color.substring(2, 4), 16), b = parseInt(color.substring(4, 6), 16);
-                        return (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) ? '#000' : '#fff';
-                    };
+                    const labelPct = (value) => { const p = pct(value); return p >= 3 ? `${p.toFixed(0)}%` : ''; };
+                    
                     const ctx = document.getElementById('quadrantBarChart').getContext('2d');
                     new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: ['Students'],
                             datasets: [
-                                { label: 'Intensive', data: [intensive], backgroundColor: COLORS.intensive },
+                                { label: 'Intensive', data: [intensive], backgroundColor: COLORS.intensive, borderRadius: { bottomLeft: 6, bottomRight: 6 } },
                                 { label: 'Strategic', data: [strategic], backgroundColor: COLORS.strategic },
                                 { label: 'Benchmark', data: [benchmark], backgroundColor: COLORS.benchmark },
-                                { label: 'Challenge', data: [challenge], backgroundColor: COLORS.challenge }
+                                { label: 'Challenge', data: [challenge], backgroundColor: COLORS.challenge, borderRadius: { topLeft: 6, topRight: 6 } }
                             ]
                         },
                         options: {
@@ -693,18 +701,20 @@
                                 legend: { display: false },
                                 tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y} (${pct(c.parsed.y).toFixed(1)}%)` } },
                                 datalabels: {
-                                    color: (context) => pickTextColor(context.dataset.backgroundColor),
-                                    anchor: 'center',
-                                    align: 'center',
-                                    font: { weight: 'bold' },
-                                    formatter: (value) => {
-                                        const percentage = pct(value);
-                                        return percentage >= 3 ? `${percentage.toFixed(0)}%` : '';
-                                    }
+                                    anchor: 'center', align: 'center', font: { weight: 'bold' },
+                                    formatter: (value, context) => {
+                                        const percentageLabel = labelPct(value);
+                                        if (!percentageLabel) return '';
+                                        return `${context.dataset.label} ${percentageLabel}`;
+                                    },
+                                    color: (ctx) => pickTextColor(ctx.dataset.backgroundColor)
                                 }
                             },
-                            scales: { x: { stacked: true, grid: { display: false }, ticks: { display: false } }, y: { stacked: true, grid: { display: false }, ticks: { display: false }, max: total } },
-                            layout: { padding: { top: 15, bottom: 15, right: 120, left: 10 } }
+                            scales: {
+                                x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { display: false } },
+                                y: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { display: false }, max: total }
+                            },
+                            layout: { padding: { top: 15, bottom: 15, right: 130, left: 15 } }
                         }
                     });
                 }
