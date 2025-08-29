@@ -565,9 +565,7 @@
             };
 
             // === NEW: make canvas text white by default ===
-            Chart.defaults.color = '#fff';
-            Chart.defaults.borderColor = 'rgba(255,255,255,0.15)';
-
+            Chart.defaults.color = '#000';
             const pickTextColor = (bg) => {
                 const c = bg.substring(1); const rgb = parseInt(c, 16);
                 const r = (rgb >> 16) & 0xff, g = (rgb >> 8) & 0xff, b = (rgb >> 0) & 0xff;
@@ -577,48 +575,54 @@
             const lineLabelsPlugin = {
                 id: 'lineLabels',
                 afterDraw: (chart, args, options) => {
-                    const { ctx, chartArea: { top, bottom, left, right }, data } = chart;
-                    const intensive = data.datasets[0]?.data[0] ?? 0;
-                    const strategic = data.datasets[1]?.data[0] ?? 0;
-                    const benchmark = data.datasets[2]?.data[0] ?? 0;
-                    const challenge = data.datasets[3]?.data[0] ?? 0;
-                    const belowCount = intensive + strategic;
-                    const aboveCount = benchmark + challenge;
+                const { ctx, chartArea: { top, bottom, left, right }, data } = chart;
+                const intensive = data.datasets[0]?.data[0] ?? 0;
+                const strategic = data.datasets[1]?.data[0] ?? 0;
+                const benchmark = data.datasets[2]?.data[0] ?? 0;
+                const challenge = data.datasets[3]?.data[0] ?? 0;
+                const belowCount = intensive + strategic;
+                const aboveCount = benchmark + challenge;
 
-                    if (belowCount === 0 || aboveCount === 0) return;
 
-                    const strategicMeta = chart.getDatasetMeta(1);
-                    const lineY = strategicMeta.data[0].y;
+                if (belowCount === 0 || aboveCount === 0) return;
 
-                    const bar = chart.getDatasetMeta(0).data[0];
-                    const barRight = bar.x + bar.width / 2;
-                    const labelX = barRight + 15;
 
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; // was #6c757d
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([6, 3]);
-                    ctx.moveTo(left, lineY);
-                    ctx.lineTo(right, lineY);
-                    ctx.stroke();
+                const strategicMeta = chart.getDatasetMeta(1);
+                const lineY = strategicMeta.data[0].y;
 
-                    ctx.font = '600 0.8rem sans-serif';
-                    ctx.fillStyle = '#fff'; // was #343a40
-                    ctx.textAlign = 'left';
-                    ctx.textBaseline = 'middle';
 
-                    const total = belowCount + aboveCount;
-                    const pct = (value) => total > 0 ? (value / total * 100) : 0;
-                    
-                    const belowTheLinePct = pct(belowCount).toFixed(0);
-                    const belowMidpointY = lineY + (bottom - lineY) / 2;
-                    ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, belowMidpointY);
+                const bar = chart.getDatasetMeta(0).data[0];
+                const barRight = bar.x + bar.width / 2;
+                const labelX = barRight + 15;
 
-                    const aboveTheLinePct = pct(aboveCount).toFixed(0);
-                    const aboveMidpointY = top + (lineY - top) / 2;
-                    ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, aboveMidpointY);
-                    ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = '#6c757d'; // reverted to black line
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.moveTo(left, lineY);
+                ctx.lineTo(right, lineY);
+                ctx.stroke();
+
+
+                ctx.font = '600 0.8rem sans-serif';
+                ctx.fillStyle = '#000'; // black text for above/below labels
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+
+
+                const total = belowCount + aboveCount;
+                const pct = (value) => total > 0 ? (value / total * 100) : 0;
+                const belowTheLinePct = pct(belowCount).toFixed(0);
+                const belowMidpointY = lineY + (bottom - lineY) / 2;
+                ctx.fillText(`Below the Line (${belowTheLinePct}%)`, labelX, belowMidpointY);
+
+
+                const aboveTheLinePct = pct(aboveCount).toFixed(0);
+                const aboveMidpointY = top + (lineY - top) / 2;
+                ctx.fillText(`Above the Line (${aboveTheLinePct}%)`, labelX, aboveMidpointY);
+                ctx.restore();
                 }
             };
             Chart.register(lineLabelsPlugin, ChartDataLabels);
@@ -631,41 +635,31 @@
                 if (indicatorData && indicatorData.length > 0) {
                     const ctx = document.getElementById('indicatorChart').getContext('2d');
                     new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: indicatorData.map(d => d.Name),
-                            datasets: [{ label: '% Met', data: indicatorData.map(d => d.PercentMet), backgroundColor: '#0d6efd' }]
-                        },
-                        options: {
-                            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false, labels: { color: '#fff' } },
-                                tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw.toFixed(1)}%` } },
-                                datalabels: {
-                                    color: '#fff', // force white for readability
-                                    anchor: 'end',
-                                    align: 'left',
-                                    font: { weight: 'bold' },
-                                    formatter: (value) => value > 5 ? `${value.toFixed(0)}%` : '',
-                                    padding: { right: 5 }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    beginAtZero: true,
-                                    max: 100,
-                                    ticks: { color: '#fff', callback: (v) => v + '%' },
-                                    grid: { color: 'rgba(255,255,255,0.1)' },
-                                    border: { color: 'rgba(255,255,255,0.2)' }
-                                },
-                                y: {
-                                    ticks: { color: '#fff' },
-                                    grid: { color: 'rgba(255,255,255,0.1)' },
-                                    border: { color: 'rgba(255,255,255,0.2)' }
-                                }
-                            }
-                        }
-                    });
+  type: 'bar',
+  data: { /* ... */ },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { /* legend/tooltip/datalabels */ },
+    // MUST be inside options:
+    scales: {
+      x: {
+        beginAtZero: true,
+        max: 100,
+        ticks: { color: 'rgba(0,0,0,0.65)', callback: (v) => v + '%' },
+        grid:  { color: 'rgba(0,0,0,0.08)' },
+        border:{ color: 'rgba(0,0,0,0.2)' }
+      },
+      y: {
+        ticks: { color: 'rgba(0,0,0,0.65)' },
+        grid:  { color: 'rgba(0,0,0,0.05)' },
+        border:{ color: 'rgba(0,0,0,0.2)' }
+      }
+    }
+  }
+});
+
                 }
             } catch (e) {
                 console.error("Failed to initialize indicator chart:", e);
