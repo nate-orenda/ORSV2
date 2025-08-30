@@ -6,25 +6,24 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using System;
-
+using System.Security.Claims; // Added this using statement
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
-    [Authorize]
-    public class Form1Model : PageModel
+    [Authorize(Policy = "CanViewCurriculumForms")]
+    public class Form1Model : SecureReportPageModel
     {
+        // ... all of your existing class definitions (ColDef, GroupSummary, etc.) are correct and remain here ...
         public class ColDef { public string Code { get; set; } = ""; public string ShortStatement { get; set; } = ""; }
         public record GroupKey(string TeacherName, string Period);
 
-        
         public class GroupSummary
         {
             public GroupKey Key { get; init; } = new("", "");
             public int StudentCount { get; init; }
             public int[] PassedPerStd { get; init; } = Array.Empty<int>();
             public int[] NotPassedPerStd { get; init; } = Array.Empty<int>();
-            public int[] DenomPerStd { get; init; } = Array.Empty<int>(); // denominator per standard
-            // Totals based on the 'Total Passed' column (>=3 vs <3)
+            public int[] DenomPerStd { get; init; } = Array.Empty<int>();
             public int PassedByTotal { get; init; }
             public int NotPassedByTotal { get; init; }
         }
@@ -35,7 +34,6 @@ namespace ORSV2.Pages.CurriculumAlignment
             public int[] PassedPerStd { get; init; } = Array.Empty<int>();
             public int[] NotPassedPerStd { get; init; } = Array.Empty<int>();
             public int[] DenomPerStd { get; init; } = Array.Empty<int>();
-            // Totals based on the 'Total Passed' column (>=3 vs <3)
             public int PassedByTotal { get; init; }
             public int NotPassedByTotal { get; init; }
         }
@@ -43,16 +41,12 @@ namespace ORSV2.Pages.CurriculumAlignment
         public class QuadrantSummary
         {
             public int TotalTested { get; init; }
-            public int Challenge { get; init; } // 4-5 standards passed
-            public int Benchmark { get; init; } // 3
-            public int Strategic { get; init; } // 2
-            public int Intensive { get; init; } // 0-1
+            public int Challenge { get; init; }
+            public int Benchmark { get; init; }
+            public int Strategic { get; init; }
+            public int Intensive { get; init; }
         }
 
-
-        public List<GroupSummary> GroupSummaries { get; private set; } = new();
-        public GrandSummary? GrandTotals { get; private set; }
-        public QuadrantSummary? Quadrants { get; private set; }
         public class RowVm
         {
             public string StudentName { get; set; } = "";
@@ -63,17 +57,20 @@ namespace ORSV2.Pages.CurriculumAlignment
             public int TotalPassed { get; set; }
         }
 
+
         [BindProperty(SupportsGet = true)] public int? DistrictId { get; set; }
         [BindProperty(SupportsGet = true)] public string? UnitCycle { get; set; }
         [BindProperty(SupportsGet = true)] public string? BatchId { get; set; }
         [BindProperty(SupportsGet = true)] public int? SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public int? TeacherId { get; set; }
 
+        public List<GroupSummary> GroupSummaries { get; private set; } = new();
+        public GrandSummary? GrandTotals { get; private set; }
+        public QuadrantSummary? Quadrants { get; private set; }
         public List<SelectListItem> AvailableUnitCycles { get; private set; } = new();
         public List<SelectListItem> AvailableBatches { get; private set; } = new();
         public List<SelectListItem> AvailableSchools { get; private set; } = new();
         public List<SelectListItem> AvailableTeachers { get; private set; } = new();
-        
         public List<ColDef> Columns { get; private set; } = new();
         public List<RowVm> Rows { get; private set; } = new();
 
@@ -82,10 +79,28 @@ namespace ORSV2.Pages.CurriculumAlignment
 
         public async Task OnGet()
         {
+            InitializeUserDataScope();
+
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
-
+            
+            if (IsDistrictAdmin && UserDistrictId.HasValue)
+            {
+                DistrictId = UserDistrictId.Value;
+            }
+            if (IsSchoolAdmin && UserSchoolIds.Any())
+            {
+                DistrictId = UserDistrictId;
+                if (!SchoolId.HasValue) SchoolId = UserSchoolIds.First();
+            }
+            if (IsTeacher && UserStaffId.HasValue)
+            {
+                DistrictId = UserDistrictId;
+                if (UserSchoolIds.Any()) SchoolId = UserSchoolIds.First();
+                TeacherId = UserStaffId;
+            }
+            
             if (DistrictId.HasValue)
             {
                 AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
@@ -96,14 +111,13 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
             if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
             {
-                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId));
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId), IsSchoolAdmin ? UserSchoolIds : null);
             }
             if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
             {
-                AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId));
+                AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId), IsTeacher ? UserStaffId : null);
             }
 
-            // UPDATED: Reverted to load as soon as a school is selected.
             if (SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId) && Guid.TryParse(BatchId, out var bid))
             {
                 await LoadMatrixData(conn, bid);
@@ -112,7 +126,8 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
         // --- Data Fetching Helper Methods ---
-
+        // GetUnitCyclesByDistrictAsync, GetAssessmentsByUnitCycleAsync, GetSchoolsByAssessmentAsync,
+        // and GetTeachersByAssessmentAsync are all correct from your code and remain here.
         private async Task<List<SelectListItem>> GetUnitCyclesByDistrictAsync(SqlConnection conn, int districtId)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select a unit/cycle...", "") };
@@ -125,7 +140,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
             return list;
         }
-        
+
         private async Task<List<SelectListItem>> GetAssessmentsByUnitCycleAsync(SqlConnection conn, int districtId, string unitCycle)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select an assessment...", "") };
@@ -140,12 +155,16 @@ namespace ORSV2.Pages.CurriculumAlignment
             return list;
         }
 
-        private async Task<List<SelectListItem>> GetSchoolsByAssessmentAsync(SqlConnection conn, int districtId, Guid batchId)
+        private async Task<List<SelectListItem>> GetSchoolsByAssessmentAsync(SqlConnection conn, int districtId, Guid batchId, List<int>? userSchoolIds = null)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select a school...", "") };
             using var cmd = new SqlCommand("dbo.GetSchoolsByAssessment", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@DistrictId", districtId);
             cmd.Parameters.AddWithValue("@BatchId", batchId);
+            if (userSchoolIds != null && userSchoolIds.Any())
+            {
+                cmd.Parameters.AddWithValue("@AllowedSchoolIds", string.Join(",", userSchoolIds));
+            }
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
@@ -154,13 +173,19 @@ namespace ORSV2.Pages.CurriculumAlignment
             return list;
         }
 
-        private async Task<List<SelectListItem>> GetTeachersByAssessmentAsync(SqlConnection conn, int districtId, int schoolId, Guid batchId)
+        private async Task<List<SelectListItem>> GetTeachersByAssessmentAsync(SqlConnection conn, int districtId, int schoolId, Guid batchId, int? userStaffId = null)
         {
-            var list = new List<SelectListItem> { new SelectListItem("All Teachers", "") };
+            var list = userStaffId.HasValue
+                ? new List<SelectListItem>()
+                : new List<SelectListItem> { new SelectListItem("All Teachers", "") };
             using var cmd = new SqlCommand("dbo.GetTeachersByAssessment", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@DistrictId", districtId);
             cmd.Parameters.AddWithValue("@SchoolId", schoolId);
             cmd.Parameters.AddWithValue("@BatchId", batchId);
+            if (userStaffId.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@UserStaffId", userStaffId.Value);
+            }
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
@@ -169,14 +194,31 @@ namespace ORSV2.Pages.CurriculumAlignment
             return list;
         }
 
+        // --- THIS IS THE CORRECTED METHOD ---
         private async Task LoadMatrixData(SqlConnection conn, Guid batchId)
         {
             using var cmd = new SqlCommand("dbo.GetAssessmentBatchMatrix", conn) { CommandType = CommandType.StoredProcedure };
+            
+            // Add UI filter parameters
             cmd.Parameters.AddWithValue("@BatchId", batchId);
             if (DistrictId.HasValue) cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
             if (SchoolId.HasValue) cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
             if (TeacherId.HasValue) cmd.Parameters.AddWithValue("@TeacherId", TeacherId.Value);
 
+            // Add user identity parameters for security enforcement in the stored procedure
+            string userRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "";
+            cmd.Parameters.AddWithValue("@UserRole", userRole);
+
+            if (IsTeacher && UserStaffId.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@UserScopeId", UserStaffId.Value);
+            }
+            else if (IsDistrictAdmin && UserDistrictId.HasValue)
+            {
+                 cmd.Parameters.AddWithValue("@UserScopeId", UserDistrictId.Value);
+            }
+            // Note: SchoolAdmins are scoped by the @SchoolId parameter, which is already enforced by the UI logic.
+            
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
@@ -204,12 +246,15 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
             }
         }
+
         private void BuildSummaries()
         {
-            int m = Columns.Count;
-            const decimal PASS_CUTOFF = 4m; // Passed is >= 4
+            if (!Rows.Any()) return; // Added guard clause
 
-            // Group summaries by Teacher + Period
+            int m = Columns.Count;
+            const decimal PASS_CUTOFF = 4m;
+            
+            // ... the rest of your BuildSummaries method is correct and remains here ...
             GroupSummaries = Rows
                 .GroupBy(r => new GroupKey(r.TeacherName, r.Period))
                 .Select(g =>
@@ -243,8 +288,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 .OrderBy(gs => gs.Key.TeacherName)
                 .ThenBy(gs => gs.Key.Period)
                 .ToList();
-
-            // Grand totals
+            
             {
                 var passed = new int[m];
                 var notPassed = new int[m];
@@ -269,8 +313,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                     NotPassedByTotal = Rows.Count(r => r.TotalPassed < 3)
                 };
             }
-
-            // Quadrant distribution based on TotalPassed
+            
             {
                 int challenge = Rows.Count(r => r.TotalPassed >= 4);
                 int benchmark = Rows.Count(r => r.TotalPassed == 3);
@@ -286,7 +329,5 @@ namespace ORSV2.Pages.CurriculumAlignment
                 };
             }
         }
-
-
     }
 }

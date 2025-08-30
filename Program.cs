@@ -1,17 +1,16 @@
+using Azure.Identity;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 using ORSV2.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.EntityFrameworkCore;
-using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Get connection string - simplified
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                      builder.Configuration["DefaultConnection"];
-
+// Get connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -21,7 +20,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// Configure SMTP settings - simplified
+// Configure SMTP settings
 builder.Services.Configure<SmtpSettings>(options =>
 {
     options.Host = builder.Configuration["SMTP-HOST"] ?? "";
@@ -34,13 +33,19 @@ builder.Services.Configure<SmtpSettings>(options =>
 // Register email service
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 
-// Set up Identity with roles
-builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+// --- CORRECTED IDENTITY CONFIGURATION ---
+// Set up Identity with roles and custom claims factory
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
 })
-.AddRoles<ApplicationRole>()
-.AddEntityFrameworkStores<ApplicationDbContext>();
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders()
+.AddRoles<ApplicationRole>(); // Ensure roles are registered
+
+// Register your custom factory AFTER setting up Identity
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomClaimsPrincipalFactory>();
+// --- END IDENTITY CONFIGURATION ---
 
 // Add Razor Pages
 builder.Services.AddRazorPages(options =>
@@ -90,7 +95,20 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+    options.AddPolicy("CanViewCurriculumForms", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(
+            "OrendaAdmin",
+            "OrendaManager",
+            "OrendaUser",
+            "DistrictAdmin",
+            "SchoolAdmin",
+            "Teacher"
+        );
+    });
 });
+
 builder.Services.Configure<FunctionEndpointsOptions>(
     builder.Configuration.GetSection("FunctionEndpoints"));
     
@@ -100,27 +118,20 @@ builder.Services.AddHttpClient("ImportsClient")
         c.Timeout = TimeSpan.FromMinutes(10); // extend to 10 minutes
     });
 
-
 var app = builder.Build();
-
-
 
 if (!app.Environment.IsDevelopment())
 {
-    // Use your custom Error page in PROD
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
 else
 {
-    // Optional in ASP.NET Core 6+: shows detailed errors locally
     app.UseDeveloperExceptionPage();
 }
 
-// (optional but recommended) pretty status-code pages like 404:
 app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
 
-// the rest of your pipeline...
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
