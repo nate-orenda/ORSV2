@@ -1,8 +1,9 @@
 @model ORSV2.Pages.CurriculumAlignment.Form2Model.QuadVm
 
-<div class="orenda-card quad-card mb-4 quad-@Model.CssKey">
+<div class="orenda-card quad-card quad-@Model.CssKey">
   <div class="quad-head d-flex justify-content-between align-items-center">
     <div>@Model.Title</div>
+    
     <div class="small fw-semibold">
       Totals:
       AA: @Model.Totals.AA.PercentString (@Model.Totals.AA.Passed/@Model.Totals.AA.Total) ·
@@ -10,35 +11,33 @@
       SWD: @Model.Totals.SWD.PercentString (@Model.Totals.SWD.Passed/@Model.Totals.SWD.Total) ·
       All: @Model.Totals.All.PercentString (@Model.Totals.All.Passed/@Model.Totals.All.Total)
     </div>
+
   </div>
   <div class="quad-body">
-    <div class="orenda-table-wrapper">
-      <table class="table orenda-table mb-0">
-        <thead>
+    <table class="table orenda-table">
+      <thead>
+        <tr>
+          <th>Last Name</th>
+          <th>First Name</th>
+          <th>Race/Ethnicity</th>
+          <th>Language Fluency</th>
+          <th>SWD</th>
+          <th>Total Passed</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var s in Model.Students)
+        {
           <tr>
-            <th>Last Name</th>
-            <th>First Name</th>
-            <th>Race/Ethnicity</th>
-            <th>Language Fluency</th>
-            <th>SWD</th>
-            <th>Proficiency (Total Passed)</th>
+            <td>@s.LastName</td>
+            <td>@s.FirstName</td>
+            <td class="@(s.IsAA ? "hi-aa" : "")">@s.RaceEthnicity</td>
+            <td class="@(s.IsEL ? "hi-el" : "")">@s.LanguageFluency</td>
+            <td class="@(s.IsSWD ? "hi-swd" : "")">@(s.SWD ? "True" : "False")</td>
+            <td>@s.TotalPassed</td>
           </tr>
-        </thead>
-        <tbody>
-          @foreach (var s in Model.Students)
-            {
-            <tr>
-                <td>@s.LastName</td>
-                <td>@s.FirstName</td>
-                <td class="@(s.IsAA ? "hi-aa" : "")">@s.RaceEthnicity</td>
-                <td class="@(s.IsEL ? "hi-el" : "")">@s.LanguageFluency</td>
-                <td class="@(s.IsSWD ? "hi-swd" : "")">@(s.SWD ? "True" : "False")</td>
-                <td>@s.TotalPassed</td>
-            </tr>
-            }
-
-        </tbody>
-      </table>
-    </div>
+        }
+      </tbody>
+    </table>
   </div>
 </div>

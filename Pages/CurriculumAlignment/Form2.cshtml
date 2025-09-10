@@ -6,78 +6,122 @@
 
 @section Styles {
 <style>
-  /* === Quadrant theme (Orenda vibe; darker headers + matched borders) === */
-  .quad-card { border-radius:14px; overflow:hidden; box-shadow:none; }
+  /* =================================================================== */
+  /* 1. REDESIGNED SCREEN LAYOUT                                        */
+  /* =================================================================== */
 
-  /* Challenge = BLUE */
-  .quad-challenge { --q-head:#1e40af; --q-border:#1e3a8a; --q-bg:#e0e7ff; --q-fg:#ffffff; }
-  /* Benchmark = GREEN */
-  .quad-benchmark { --q-head:#16a34a; --q-border:#15803d; --q-bg:#dcfce7; --q-fg:#ffffff; }
-  /* Strategic = YELLOW */
-  .quad-strategic { --q-head:#FEC401; --q-border:#FEC401; --q-bg:#FEC401; --q-fg:#111827; }
-  /* Intensive = RED */
-  .quad-intensive { --q-head:#dc2626; --q-border:#b91c1c; --q-bg:#fecaca; --q-fg:#ffffff; }
+  /* The new grid container for the quadrants */
+    .quadrant-grid {
+        display: grid;
+        gap: 1.5rem;
+        /* This now creates a single, full-width column for all screen sizes. */
+        grid-template-columns: 1fr;
+    }
 
-  /* Card border + header + body tint */
-  .quad-card { border:2px solid var(--q-border); }
-  .quad-card .quad-head { background:var(--q-head); color:var(--q-fg); padding:.9rem 1.25rem; font-weight:700; letter-spacing:.3px; }
-  .quad-card .quad-body { background:var(--q-bg); padding:0; }
+  /* Simplified Card and Table Styles */
+  .quad-card {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid var(--q-border);
+    display: flex; /* Make the card a flex container */
+    flex-direction: column;
+  }
 
-  /* Table outer border + clean corners */
-  .quad-card .orenda-table { 
-    border:2px solid var(--q-border); 
-    border-radius:12px; 
-    border-collapse:separate; 
-    border-spacing:0; 
-    overflow:hidden;
+  .quad-head {
+    background: var(--q-head);
+    color: var(--q-fg);
+    padding: .9rem 1.25rem;
+    font-weight: 700;
+  }
+  .quad-head .small {
+  font-size: 0.8rem !important;
+}
+  
+  .quad-body {
+    background: var(--q-bg);
+    overflow-x: auto; /* Handle table scrolling if needed */
+    flex-grow: 1; /* Allow body to grow and fill space */
+  }
+
+  .orenda-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   /* Table header + grid lines */
-  .quad-card .orenda-table thead th { 
-    background:rgba(255,255,255,0.70); 
-    color:#111827; 
-    border-bottom:2px solid var(--q-border);
+  .orenda-table thead th {
+    background: rgba(255, 255, 255, 0.70);
+    color: #111827;
+    border-bottom: 2px solid var(--q-border);
+    padding: .75rem;
   }
-  .quad-card .orenda-table tbody td, 
-  .quad-card .orenda-table tbody th { 
-    border-top:1px solid rgba(0,0,0,0.06); 
+
+  .orenda-table tbody td {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding: .5rem .75rem;
   }
-  .quad-card .orenda-table tbody tr:hover { background:rgba(255,255,255,0.45); }
+  
+  /* Quadrant Colors & Highlights (no changes needed here) */
+  .quad-challenge { --q-head:#1e40af; --q-border:#1e3a8a; --q-bg:#e0e7ff; --q-fg:#ffffff; }
+  .quad-benchmark { --q-head:#16a34a; --q-border:#15803d; --q-bg:#dcfce7; --q-fg:#ffffff; }
+  .quad-strategic { --q-head:#FEC401; --q-border:#FEC401; --q-bg:#FEC401; --q-fg:#111827; }
+  .quad-intensive { --q-head:#dc2626; --q-border:#b91c1c; --q-bg:#fecaca; --q-fg:#ffffff; }
+  .hi-aa  { background-color: #bbf7d0 !important; }
+  .hi-el  { background-color: #fbcfe8 !important; }
+  .hi-swd { background-color: #fde68a !important; }
 
-  /* Demographic highlights (kept) */
-  .hi-aa  { background:#d1fae5 !important; }   /* AA = soft green */
-  .hi-el  { background:#fce7f3 !important; }   /* EL = soft pink  */
-  .hi-swd { background:#fef9c3 !important; }   /* SWD = soft yellow */
-  /* Strong cell highlights for Form 2 (beat Bootstrap) */
-.quad-card .orenda-table td.hi-aa,
-.quad-card .orenda-table th.hi-aa {
-  background-color: #bbf7d0 !important; /* green */
-  background-image: none !important;
+  /* =================================================================== */
+  /* 2. REDESIGNED PRINT LOGIC (Print Reset)                            */
+  /* =================================================================== */
+  @@media print {
+    @@page {
+      size: letter portrait;
+      margin: 0.5in;
+    }
+
+    /* 1. Hide everything on the page by default */
+    body * {
+      visibility: hidden;
+    }
+
+    /* 2. Make ONLY the quadrant grid and its contents visible */
+    .quadrant-grid, .quadrant-grid * {
+      visibility: visible;
+    }
+
+    /* 3. Position the grid to take up the entire page */
+    .quadrant-grid {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+    
+    /* 4. Reset the layout: no grid, just stack the cards */
+    .quadrant-grid {
+      display: block;
+    }
+
+    /* 5. Ensure each card starts on a new page */
+    .quad-card {
+      page-break-after: always;
+      border: 2px solid var(--q-border) !important;
+    }
+    
+    /* 6. Ensure the table body does not scroll, but expands */
+    .quad-body {
+      overflow: visible !important;
+    }
+        /* Add this to your @@media print block */
+    .quad-head {
+        background-color: var(--q-head) !important; /* Use the ORIGINAL dark background */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
-
-.quad-card .orenda-table td.hi-el,
-.quad-card .orenda-table th.hi-el {
-  background-color: #fbcfe8 !important; /* pink */
-  background-image: none !important;
-}
-
-.quad-card .orenda-table td.hi-swd,
-.quad-card .orenda-table th.hi-swd {
-  background-color: #fde68a !important; /* yellow */
-  background-image: none !important;
-}
-
-/* Keep the multi-flag name emphasis */
-.quad-card .orenda-table td.hi-name-multi,
-.quad-card .orenda-table th.hi-name-multi {
-  color: #9a3412 !important;
-  font-weight: 700 !important;
-}
-
 </style>
 }
-
-
 
 <div class="orenda-container">
   <div class="orenda-header shadow-orenda">
@@ -85,7 +129,12 @@
     <p class="mb-0">Challenge · Benchmark · Strategic · Intensive</p>
   </div>
 
-  <!-- Filters (mirroring Form 1) -->
+  <div class="d-print-none my-3">
+      <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+          <i class="fas fa-print"></i> Print Quadrants
+      </button>
+  </div>
+
   <div class="orenda-card mb-3">
     <div class="orenda-card-body">
       <form method="get" class="row g-3 align-items-end">
@@ -94,14 +143,16 @@
           <input class="form-control" value="@Model.DistrictId" name="DistrictId" placeholder="District Id" />
         </div>
 
-        <div class="col-md-2">
+  
+       <div class="col-md-2">
           <label class="form-label fw-semibold">Unit/Cycle</label>
           <select name="UnitCycle" class="form-select orenda-select"
                   onchange="this.form.submit()">
             @foreach (var o in Model.AvailableUnitCycles) {
               <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
             }
-          </select>
+   
+        </select>
         </div>
 
         <div class="col-md-3">
@@ -109,7 +160,8 @@
           <select name="BatchId" class="form-select orenda-select"
                   onchange="this.form.submit()">
             @foreach (var o in Model.AvailableBatches) {
-              <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
+              <option value="@o.Value" 
+ selected="@(o.Value == Model.BatchId)">@o.Text</option>
             }
           </select>
         </div>
@@ -129,6 +181,7 @@
           <select name="TeacherId" class="form-select orenda-select"
                   onchange="this.form.submit()">
             @foreach (var o in Model.AvailableTeachers) {
+ 
               <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option>
             }
           </select>
@@ -137,7 +190,6 @@
     </div>
   </div>
 
-  <!-- Legend -->
   <div class="orenda-card mb-3">
     <div class="orenda-card-body d-flex flex-wrap gap-3">
       <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African American</span></div>
@@ -155,10 +207,14 @@
   }
   else
   {
-    <!-- Four quadrant tables -->
+   <div class="quadrant-grid">
     @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Challenge"))
     @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Benchmark"))
     @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Strategic"))
     @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Intensive"))
-  }
+  </div>
+  
+ }
 </div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">

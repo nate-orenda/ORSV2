@@ -205,21 +205,26 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
         // === View helper: builds the VM for a given quadrant ===
+        // In Pages/CurriculumAlignment/Form2.cshtml.cs
+
         public QuadVm GetQuadrantVm(string quadrant)
         {
-            // who’s in this quadrant (for the table rows)
+            // Students in this specific quadrant
             var q = Students
                 .Where(s => s.Quadrant.Equals(quadrant, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
                 .ToList();
 
-            // denominators are ACROSS ALL RESULTS (not within the quadrant)
+            // Denominators: Total students IN EACH SUBGROUP across all quadrants
             int totalAll = Students.Count;
+            int totalAA = Students.Count(s => s.IsAA);
+            int totalEL = Students.Count(s => s.IsEL);
+            int totalSWD = Students.Count(s => s.IsSWD);
 
-            // numerators: # in this quadrant (overall + by subgroup)
+            // Numerators: # in this quadrant (overall + by subgroup)
             int numAll = q.Count;
-            int numAA  = q.Count(s => s.IsAA);
-            int numEL  = q.Count(s => s.IsEL);
+            int numAA = q.Count(s => s.IsAA);
+            int numEL = q.Count(s => s.IsEL);
             int numSWD = q.Count(s => s.IsSWD);
 
             var vm = new QuadVm
@@ -230,18 +235,18 @@ namespace ORSV2.Pages.CurriculumAlignment
                 Totals = new QuadTotals()
             };
 
-            // Use TotalsBucket.Passed as "numerator" and TotalsBucket.Total as "denominator"
+            // Assign numerators (Passed) and the correct subgroup denominators (Total)
             vm.Totals.All.Passed = numAll;
-            vm.Totals.All.Total  = totalAll;
+            vm.Totals.All.Total = totalAll;
 
-            vm.Totals.AA.Passed  = numAA;
-            vm.Totals.AA.Total   = totalAll;
+            vm.Totals.AA.Passed = numAA;
+            vm.Totals.AA.Total = totalAA;
 
-            vm.Totals.EL.Passed  = numEL;
-            vm.Totals.EL.Total   = totalAll;
+            vm.Totals.EL.Passed = numEL;
+            vm.Totals.EL.Total = totalEL;
 
             vm.Totals.SWD.Passed = numSWD;
-            vm.Totals.SWD.Total  = totalAll;
+            vm.Totals.SWD.Total = totalSWD;
 
             return vm;
         }
