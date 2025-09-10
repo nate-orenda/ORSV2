@@ -20,8 +20,8 @@ namespace ORSV2.Pages.CurriculumAlignment
             int TotalPassed
         )
         {
-            public bool IsAA  => Form2Model.IsBlackAA(RaceEthnicity);
-            public bool IsEL  => Form2Model.IsEnglishLearner(LanguageFluency);
+            public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
+            public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
             public bool IsSWD => SWD;
 
             public string Quadrant => TotalPassed >= 4 ? "Challenge"
@@ -99,7 +99,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             // Fetch the District Name based on the determined DistrictId
             if (DistrictId.HasValue)
             {
-                try 
+                try
                 {
                     using var cmd = new SqlCommand("SELECT Name FROM dbo.Districts WHERE Id = @DistrictId", conn);
                     cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
@@ -270,7 +270,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             return vm;
         }
 
-        
+
         // Add these helpers inside the Form2Model class (e.g., just above StudentVm)
         private static string Normalize(string? s)
         {

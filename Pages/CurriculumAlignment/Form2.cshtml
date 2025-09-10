@@ -5,228 +5,284 @@
 }
 
 @section Styles {
-<style>
-  /* =================================================================== */
-  /* 1. REDESIGNED SCREEN LAYOUT                                        */
-  /* =================================================================== */
+    <style>
+        /* =================================================================== */
+        /* 1. REDESIGNED SCREEN LAYOUT                                        */
+        /* =================================================================== */
 
-  /* The new grid container for the quadrants */
-    .quadrant-grid {
-        display: grid;
-        gap: 1.5rem;
-        /* This now creates a single, full-width column for all screen sizes. */
-        grid-template-columns: 1fr;
-    }
+        /* The new grid container for the quadrants */
+        .quadrant-grid {
+            display: grid;
+            gap: 1.5rem;
+            /* This now creates a single, full-width column for all screen sizes. */
+            grid-template-columns: 1fr;
+        }
 
-  /* Simplified Card and Table Styles */
-  .quad-card {
-    border-radius: 14px;
-    overflow: hidden;
-    border: 2px solid var(--q-border);
-    display: flex; /* Make the card a flex container */
-    flex-direction: column;
-  }
+        /* Simplified Card and Table Styles */
+        .quad-card {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 2px solid var(--q-border);
+            display: flex;
+            /* Make the card a flex container */
+            flex-direction: column;
+        }
 
-  .quad-head {
-    background: var(--q-head);
-    color: var(--q-fg);
-    padding: .9rem 1.25rem;
-    font-weight: 700;
-  }
-  .quad-head .small {
-  font-size: 0.8rem !important;
-}
-  
-  .quad-body {
-    background: var(--q-bg);
-    overflow-x: auto; /* Handle table scrolling if needed */
-    flex-grow: 1; /* Allow body to grow and fill space */
-  }
+        .quad-head {
+            background: var(--q-head);
+            color: var(--q-fg);
+            padding: .9rem 1.25rem;
+            font-weight: 700;
+        }
 
-  .orenda-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
+        .quad-head .small {
+            font-size: 0.8rem !important;
+        }
 
-  /* Table header + grid lines */
-  .orenda-table thead th {
-    background: rgba(255, 255, 255, 0.70);
-    color: #111827;
-    border-bottom: 2px solid var(--q-border);
-    padding: .75rem;
-  }
+        .quad-body {
+            background: var(--q-bg);
+            overflow-x: auto;
+            /* Handle table scrolling if needed */
+            flex-grow: 1;
+            /* Allow body to grow and fill space */
+        }
 
-  .orenda-table tbody td {
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-    padding: .5rem .75rem;
-  }
+        .orenda-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
 
-  .filter-container {
-  display: flex;       /* Turns the form into a flex container */
-  flex-wrap: wrap;     /* Allows items to wrap to the next line */
-  gap: 1rem;           /* Creates space between filters */
-  align-items: flex-end; /* Aligns filters to the bottom */
-}
+        /* Table header + grid lines */
+        .orenda-table thead th {
+            background: rgba(255, 255, 255, 0.70);
+            color: #111827;
+            border-bottom: 2px solid var(--q-border);
+            padding: .75rem;
+        }
 
-.filter-item {
-  flex-grow: 1;        /* Allows items to grow and fill available space */
-  min-width: 200px;    /* Sets a minimum width before wrapping */
-}
-.filter-item-tight {
-  flex-grow: 0;        /* Prevent this item from growing */
-  min-width: 120px;    /* Give it a smaller, fixed minimum width */
-}
-  
-  /* Quadrant Colors & Highlights (no changes needed here) */
-  .quad-challenge { --q-head:#1e40af; --q-border:#1e3a8a; --q-bg:#e0e7ff; --q-fg:#ffffff; }
-  .quad-benchmark { --q-head:#16a34a; --q-border:#15803d; --q-bg:#dcfce7; --q-fg:#ffffff; }
-  .quad-strategic { --q-head:#FEC401; --q-border:#FEC401; --q-bg:#FEC401; --q-fg:#111827; }
-  .quad-intensive { --q-head:#dc2626; --q-border:#b91c1c; --q-bg:#fecaca; --q-fg:#ffffff; }
-  .hi-aa  { background-color: #bbf7d0 !important; }
-  .hi-el  { background-color: #fbcfe8 !important; }
-  .hi-swd { background-color: #fde68a !important; }
+        .orenda-table tbody td {
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            padding: .5rem .75rem;
+        }
 
-  /* =================================================================== */
-  /* 2. REDESIGNED PRINT LOGIC (Print Reset)                            */
-  /* =================================================================== */
-  @@media print {
-    @@page {
-      size: letter portrait;
-      margin: 0.5in;
-    }
+        .filter-container {
+            display: flex;
+            /* Turns the form into a flex container */
+            flex-wrap: wrap;
+            /* Allows items to wrap to the next line */
+            gap: 1rem;
+            /* Creates space between filters */
+            align-items: flex-end;
+            /* Aligns filters to the bottom */
+        }
 
-    /* 1. Hide everything on the page by default */
-    body * {
-      visibility: hidden;
-    }
+        .filter-item {
+            flex-grow: 1;
+            /* Allows items to grow and fill available space */
+            min-width: 200px;
+            /* Sets a minimum width before wrapping */
+        }
 
-    /* 2. Make ONLY the quadrant grid and its contents visible */
-    .quadrant-grid, .quadrant-grid * {
-      visibility: visible;
-    }
+        .filter-item-tight {
+            flex-grow: 0;
+            /* Prevent this item from growing */
+            min-width: 120px;
+            /* Give it a smaller, fixed minimum width */
+        }
 
-    /* 3. Position the grid to take up the entire page */
-    .quadrant-grid {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-    }
-    
-    /* 4. Reset the layout: no grid, just stack the cards */
-    .quadrant-grid {
-      display: block;
-    }
+        /* Quadrant Colors & Highlights (no changes needed here) */
+        .quad-challenge {
+            --q-head: #1e40af;
+            --q-border: #1e3a8a;
+            --q-bg: #e0e7ff;
+            --q-fg: #ffffff;
+        }
 
-    /* 5. Ensure each card starts on a new page */
-    .quad-card {
-      page-break-after: always;
-      border: 2px solid var(--q-border) !important;
-    }
-    
-    /* 6. Ensure the table body does not scroll, but expands */
-    .quad-body {
-      overflow: visible !important;
-    }
-        /* Add this to your @@media print block */
-    .quad-head {
-        background-color: var(--q-head) !important; /* Use the ORIGINAL dark background */
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-}
-</style>
+        .quad-benchmark {
+            --q-head: #16a34a;
+            --q-border: #15803d;
+            --q-bg: #dcfce7;
+            --q-fg: #ffffff;
+        }
+
+        .quad-strategic {
+            --q-head: #FEC401;
+            --q-border: #FEC401;
+            --q-bg: #FEC401;
+            --q-fg: #111827;
+        }
+
+        .quad-intensive {
+            --q-head: #dc2626;
+            --q-border: #b91c1c;
+            --q-bg: #fecaca;
+            --q-fg: #ffffff;
+        }
+
+        .hi-aa {
+            background-color: #bbf7d0 !important;
+        }
+
+        .hi-el {
+            background-color: #fbcfe8 !important;
+        }
+
+        .hi-swd {
+            background-color: #fde68a !important;
+        }
+
+        /* =================================================================== */
+        /* 2. REDESIGNED PRINT LOGIC (Print Reset)                            */
+        /* =================================================================== */
+        @@media print {
+            @@page {
+                size: letter portrait;
+                margin: 0.5in;
+            }
+
+            /* 1. Hide everything on the page by default */
+            body * {
+                visibility: hidden;
+            }
+
+            /* 2. Make ONLY the quadrant grid and its contents visible */
+            .quadrant-grid,
+            .quadrant-grid * {
+                visibility: visible;
+            }
+
+            /* 3. Position the grid to take up the entire page */
+            .quadrant-grid {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+
+            /* 4. Reset the layout: no grid, just stack the cards */
+            .quadrant-grid {
+                display: block;
+            }
+
+            /* 5. Ensure each card starts on a new page */
+            .quad-card {
+                page-break-after: always;
+                border: 2px solid var(--q-border) !important;
+            }
+
+            /* 6. Ensure the table body does not scroll, but expands */
+            .quad-body {
+                overflow: visible !important;
+            }
+
+            /* Add this to your @@media print block */
+            .quad-head {
+                background-color: var(--q-head) !important;
+                /* Use the ORIGINAL dark background */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
 }
 
 <div class="orenda-header shadow-orenda">
-  <h2 class="mb-1">Quadrant Breakdown</h2>
-  
-  @if (!string.IsNullOrEmpty(Model.DistrictName))
-  {
-    <h5 class="fw-normal mb-0 opacity-75">District: @Model.DistrictName</h5>
-  }
+    <h2 class="mb-1">Quadrant Breakdown</h2>
 
-  <p class="mb-0 mt-2">Challenge · Benchmark · Strategic · Intensive</p>
+    @if (!string.IsNullOrEmpty(Model.DistrictName))
+    {
+        <h5 class="fw-normal mb-0 opacity-75">District: @Model.DistrictName</h5>
+    }
+
+    <p class="mb-0 mt-2">Challenge · Benchmark · Strategic · Intensive</p>
 </div>
-  <div class="d-print-none my-3">
-      <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-          <i class="fas fa-print"></i> Print Quadrants
-      </button>
-  </div>
-
-  <div class="orenda-card mb-3">
-  <div class="orenda-card-body">
-    <form method="get" class="filter-container">
-  
-  <!-- This hidden input ensures the DistrictId is always passed in the URL -->
-  <input type="hidden" asp-for="DistrictId" />
-
-  <!-- "Unit/Cycle" div now has the "filter-item-tight" class -->
-  <div class="filter-item filter-item-tight">
-    <label class="form-label fw-semibold">Unit/Cycle</label>
-    <select name="UnitCycle" class="form-select orenda-select" onchange="this.form.submit()">
-      @foreach (var o in Model.AvailableUnitCycles) {
-        <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
-      }
-    </select>
-  </div>
-
-  <div class="filter-item">
-    <label class="form-label fw-semibold">Assessment</label>
-    <select name="BatchId" class="form-select orenda-select" onchange="this.form.submit()">
-      @foreach (var o in Model.AvailableBatches) {
-        <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
-      }
-    </select>
-  </div>
-
-  <div class="filter-item">
-    <label class="form-label fw-semibold">School</label>
-    <select name="SchoolId" class="form-select orenda-select" onchange="this.form.submit()">
-      @foreach (var o in Model.AvailableSchools) {
-        <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option>
-      }
-    </select>
-  </div>
-
-  <div class="filter-item">
-    <label class="form-label fw-semibold">Teacher</label>
-    <select name="TeacherId" class="form-select orenda-select" onchange="this.form.submit()">
-      @foreach (var o in Model.AvailableTeachers) {
-        <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option>
-      }
-    </select>
-  </div>
-</form>
-  </div>
+<div class="d-print-none my-3">
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Quadrants
+    </button>
 </div>
 
 <div class="orenda-card mb-3">
-  <div class="orenda-card-body d-flex flex-wrap gap-3">
-    <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African American</span></div>
-    <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
-    <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
-    <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+ flags</span></div>
-  </div>
+    <div class="orenda-card-body">
+        <form method="get" class="filter-container">
+
+            <!-- This hidden input ensures the DistrictId is always passed in the URL -->
+            <input type="hidden" asp-for="DistrictId" />
+
+            <!-- "Unit/Cycle" div now has the "filter-item-tight" class -->
+            <div class="filter-item filter-item-tight">
+                <label class="form-label fw-semibold">Unit/Cycle</label>
+                <select name="UnitCycle" class="form-select orenda-select" onchange="this.form.submit()">
+                    @foreach (var o in Model.AvailableUnitCycles)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label fw-semibold">Assessment</label>
+                <select name="BatchId" class="form-select orenda-select" onchange="this.form.submit()">
+                    @foreach (var o in Model.AvailableBatches)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label fw-semibold">School</label>
+                <select name="SchoolId" class="form-select orenda-select" onchange="this.form.submit()">
+                    @foreach (var o in Model.AvailableSchools)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label class="form-label fw-semibold">Teacher</label>
+                <select name="TeacherId" class="form-select orenda-select" onchange="this.form.submit()">
+                    @foreach (var o in Model.AvailableTeachers)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text
+                        </option>
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
 </div>
 
-  @if (!Model.Students.Any())
-  {
-    <div class="orenda-card">
-      <div class="orenda-card-body text-muted">Select Unit/Cycle and Assessment to view quadrant breakdown.</div>
+<div class="orenda-card mb-3">
+    <div class="orenda-card-body d-flex flex-wrap gap-3">
+        <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African
+                American</span></div>
+        <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
+        <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
+        <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+
+                flags</span></div>
     </div>
-  }
-  else
-  {
-   <div class="quadrant-grid">
-    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Challenge"))
-    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Benchmark"))
-    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Strategic"))
-    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Intensive"))
-  </div>
-  
- }
+</div>
+
+@if (!Model.Students.Any())
+{
+    <div class="orenda-card">
+        <div class="orenda-card-body text-muted">Select Unit/Cycle and Assessment to view quadrant breakdown.</div>
+    </div>
+}
+else
+{
+    <div class="quadrant-grid">
+        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Challenge"))
+        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Benchmark"))
+        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Strategic"))
+        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Intensive"))
+    </div>
+
+}
 </div>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
