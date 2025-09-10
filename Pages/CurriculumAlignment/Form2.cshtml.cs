@@ -66,6 +66,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         public List<SelectListItem> AvailableBatches { get; private set; } = new();
         public List<SelectListItem> AvailableSchools { get; private set; } = new();
         public List<SelectListItem> AvailableTeachers { get; private set; } = new();
+        public string? DistrictName { get; private set; }
 
         // Data
         public List<StudentVm> Students { get; private set; } = new();
@@ -95,6 +96,26 @@ namespace ORSV2.Pages.CurriculumAlignment
                 TeacherId = UserStaffId;
             }
 
+            // Fetch the District Name based on the determined DistrictId
+            if (DistrictId.HasValue)
+            {
+                try 
+                {
+                    using var cmd = new SqlCommand("SELECT Name FROM dbo.Districts WHERE Id = @DistrictId", conn);
+                    cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
+                    var result = await cmd.ExecuteScalarAsync();
+                    if (result != null)
+                    {
+                        DistrictName = result.ToString();
+                    }
+                }
+                catch (SqlException)
+                {
+                    // If the query fails, we can log it or just proceed.
+                    // The DistrictName will remain null and won't be displayed.
+                }
+            }
+
             if (DistrictId.HasValue)
                 AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
 
@@ -112,9 +133,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 try { await LoadStudents(conn, bid); }
                 catch (SqlException) { ModelState.AddModelError("", "We couldn’t load data for this selection."); Students = new(); }
             }
-
         }
-
         // === Dropdown helpers (reused endpoints from Form 1) ===
         private async Task<List<SelectListItem>> GetUnitCyclesByDistrictAsync(SqlConnection conn, int districtId)
         {

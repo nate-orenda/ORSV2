@@ -61,6 +61,22 @@
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     padding: .5rem .75rem;
   }
+
+  .filter-container {
+  display: flex;       /* Turns the form into a flex container */
+  flex-wrap: wrap;     /* Allows items to wrap to the next line */
+  gap: 1rem;           /* Creates space between filters */
+  align-items: flex-end; /* Aligns filters to the bottom */
+}
+
+.filter-item {
+  flex-grow: 1;        /* Allows items to grow and fill available space */
+  min-width: 200px;    /* Sets a minimum width before wrapping */
+}
+.filter-item-tight {
+  flex-grow: 0;        /* Prevent this item from growing */
+  min-width: 120px;    /* Give it a smaller, fixed minimum width */
+}
   
   /* Quadrant Colors & Highlights (no changes needed here) */
   .quad-challenge { --q-head:#1e40af; --q-border:#1e3a8a; --q-bg:#e0e7ff; --q-fg:#ffffff; }
@@ -123,12 +139,16 @@
 </style>
 }
 
-<div class="orenda-container">
-  <div class="orenda-header shadow-orenda">
-    <h2 class="mb-1">Quadrant Breakdown</h2>
-    <p class="mb-0">Challenge · Benchmark · Strategic · Intensive</p>
-  </div>
+<div class="orenda-header shadow-orenda">
+  <h2 class="mb-1">Quadrant Breakdown</h2>
+  
+  @if (!string.IsNullOrEmpty(Model.DistrictName))
+  {
+    <h5 class="fw-normal mb-0 opacity-75">District: @Model.DistrictName</h5>
+  }
 
+  <p class="mb-0 mt-2">Challenge · Benchmark · Strategic · Intensive</p>
+</div>
   <div class="d-print-none my-3">
       <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
           <i class="fas fa-print"></i> Print Quadrants
@@ -136,68 +156,60 @@
   </div>
 
   <div class="orenda-card mb-3">
-    <div class="orenda-card-body">
-      <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">District</label>
-          <input class="form-control" value="@Model.DistrictId" name="DistrictId" placeholder="District Id" />
-        </div>
-
+  <div class="orenda-card-body">
+    <form method="get" class="filter-container">
   
-       <div class="col-md-2">
-          <label class="form-label fw-semibold">Unit/Cycle</label>
-          <select name="UnitCycle" class="form-select orenda-select"
-                  onchange="this.form.submit()">
-            @foreach (var o in Model.AvailableUnitCycles) {
-              <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
-            }
-   
-        </select>
-        </div>
+  <!-- This hidden input ensures the DistrictId is always passed in the URL -->
+  <input type="hidden" asp-for="DistrictId" />
 
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Assessment</label>
-          <select name="BatchId" class="form-select orenda-select"
-                  onchange="this.form.submit()">
-            @foreach (var o in Model.AvailableBatches) {
-              <option value="@o.Value" 
- selected="@(o.Value == Model.BatchId)">@o.Text</option>
-            }
-          </select>
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">School</label>
-          <select name="SchoolId" class="form-select orenda-select"
-                  onchange="this.form.submit()">
-            @foreach (var o in Model.AvailableSchools) {
-              <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option>
-            }
-          </select>
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">Teacher</label>
-          <select name="TeacherId" class="form-select orenda-select"
-                  onchange="this.form.submit()">
-            @foreach (var o in Model.AvailableTeachers) {
- 
-              <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option>
-            }
-          </select>
-        </div>
-      </form>
-    </div>
+  <!-- "Unit/Cycle" div now has the "filter-item-tight" class -->
+  <div class="filter-item filter-item-tight">
+    <label class="form-label fw-semibold">Unit/Cycle</label>
+    <select name="UnitCycle" class="form-select orenda-select" onchange="this.form.submit()">
+      @foreach (var o in Model.AvailableUnitCycles) {
+        <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
+      }
+    </select>
   </div>
 
-  <div class="orenda-card mb-3">
-    <div class="orenda-card-body d-flex flex-wrap gap-3">
-      <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African American</span></div>
-      <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
-      <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
-      <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+ flags</span></div>
-    </div>
+  <div class="filter-item">
+    <label class="form-label fw-semibold">Assessment</label>
+    <select name="BatchId" class="form-select orenda-select" onchange="this.form.submit()">
+      @foreach (var o in Model.AvailableBatches) {
+        <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
+      }
+    </select>
   </div>
+
+  <div class="filter-item">
+    <label class="form-label fw-semibold">School</label>
+    <select name="SchoolId" class="form-select orenda-select" onchange="this.form.submit()">
+      @foreach (var o in Model.AvailableSchools) {
+        <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option>
+      }
+    </select>
+  </div>
+
+  <div class="filter-item">
+    <label class="form-label fw-semibold">Teacher</label>
+    <select name="TeacherId" class="form-select orenda-select" onchange="this.form.submit()">
+      @foreach (var o in Model.AvailableTeachers) {
+        <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option>
+      }
+    </select>
+  </div>
+</form>
+  </div>
+</div>
+
+<div class="orenda-card mb-3">
+  <div class="orenda-card-body d-flex flex-wrap gap-3">
+    <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African American</span></div>
+    <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
+    <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
+    <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+ flags</span></div>
+  </div>
+</div>
 
   @if (!Model.Students.Any())
   {
