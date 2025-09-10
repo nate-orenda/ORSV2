@@ -1,239 +1,4 @@
 /* =========================================================
-   NEW VERTICAL LAYOUT STYLES
-   ========================================================= */
-
-:root {
-    --sidebar-width: 260px;
-    --sidebar-bg: linear-gradient(160deg, var(--orenda-primary) 0%, var(--orenda-primary-hover) 100%);
-    --sidebar-color: rgba(255, 255, 255, 0.8);
-    --sidebar-color-hover: #fff;
-    --sidebar-color-active: #fff;
-    --sidebar-active-bg: rgba(255, 255, 255, 0.1);
-    --topbar-height: 60px;
-}
-
-body {
-    background-color: #f8f9fa; /* Lighter background for content area */
-}
-
-.page-wrapper {
-    display: flex;
-    position: relative;
-    min-height: 100vh;
-}
-
-/* --- Sidebar --- */
-.sidebar {
-    width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1030;
-    background: var(--sidebar-bg);
-    box-shadow: 0 0 2rem 0 rgba(0, 0, 0, 0.1);
-    transition: margin-left 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-header {
-    padding: 1.25rem;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-brand .brand-logo {
-    height: 48px;
-    width: auto;
-    transition: transform 0.3s ease;
-}
-
-.sidebar-brand:hover .brand-logo {
-    transform: scale(1.05);
-}
-
-/* --- Sidebar Navigation --- */
-.sidebar-nav {
-    flex-grow: 1;
-    padding: 1rem;
-    overflow-y: auto; /* For long menus */
-}
-
-.sidebar-item {
-    margin-bottom: 0.25rem;
-}
-
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1rem;
-    border-radius: 0.5rem;
-    color: var(--sidebar-color);
-    font-weight: 500;
-    text-decoration: none;
-    transition: background 0.2s ease, color 0.2s ease;
-    position: relative;
-}
-
-.sidebar-link:hover {
-    background: var(--sidebar-active-bg);
-    color: var(--sidebar-color-hover);
-}
-
-.sidebar-item.active > .sidebar-link {
-    background: var(--sidebar-active-bg);
-    color: var(--sidebar-color-active);
-    font-weight: 600;
-}
-/* Active class on the link itself for submenu items */
-.sidebar-link.active {
-     font-weight: 600;
-     color: var(--sidebar-color-active);
-}
-
-
-.sidebar-link .bi {
-    font-size: 1.2rem;
-    line-height: 1;
-    min-width: 2rem;
-}
-
-/* Submenu */
-.submenu-caret {
-    margin-left: auto;
-    transition: transform 0.3s ease;
-    font-size: 0.8rem;
-}
-
-.sidebar-link[aria-expanded="true"] .submenu-caret {
-    transform: rotate(180deg);
-}
-
-.submenu {
-    padding-left: 1.25rem; 
-    margin: 0.25rem 0;
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 0.5rem;
-    padding-top: .5rem;
-    padding-bottom: .5rem;
-}
-
-.submenu-item .submenu-link {
-    display: flex;
-    align-items: center;
-    padding: 0.6rem 0.5rem;
-    color: var(--sidebar-color);
-    text-decoration: none;
-    position: relative;
-    font-size: 0.9rem;
-    border-radius: 0.375rem;
-}
-
-.submenu-item .submenu-link:hover,
-.submenu-link.active {
-    color: var(--sidebar-color-hover);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-
-/* --- Sidebar Footer (User Profile) --- */
-.sidebar-footer {
-    padding: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-footer .sidebar-link {
-    background-color: rgba(0, 0, 0, 0.2);
-}
-
-.sidebar-footer .sidebar-link:hover {
-    background-color: rgba(0, 0, 0, 0.3);
-}
-
-.sidebar-footer .dropdown-menu {
-    position: static !important;
-    transform: none !important;
-    width: 100%;
-    border-radius: .5rem;
-    margin-top: .5rem;
-    background-color: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* --- Main Content --- */
-.main-content-wrapper {
-    flex-grow: 1;
-    margin-left: var(--sidebar-width);
-    transition: margin-left 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.content-fluid {
-    flex-grow: 1;
-}
-
-/*.topbar {
-    height: var(--topbar-height);
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
-    padding: 0 1.5rem;
-    display: flex;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-}*/
-
-.sidebar-toggle-btn {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: #343a40;
-    display: none; /* Hidden on desktop by default */
-}
-
-/* --- Responsive Behavior --- */
-@media (max-width: 991.98px) {
-    .sidebar {
-        margin-left: calc(-1 * var(--sidebar-width));
-    }
-    .main-content-wrapper {
-        margin-left: 0;
-    }
-    /*
-    .topbar {
-        justify-content: space-between;
-    }*/
-    .sidebar-toggle-btn {
-        display: block;
-    }
-    .page-wrapper.sidebar-toggled .sidebar {
-        margin-left: 0;
-    }
-    .sidebar-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1029;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-    .page-wrapper.sidebar-toggled .sidebar-overlay {
-        opacity: 1;
-        visibility: visible;
-    }
-}
-
-
-/* =========================================================
    ORSV2 – Global Styles (cleaned + unified)
    - Brand tokens + shadows
    - Gradient buttons as default (login-button look)
@@ -250,7 +15,12 @@ html {
   html { font-size: 16px; }
 }
 
-/* Body is already defined above, so we can remove the duplicate */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12pt;
+  font-weight: 400;
+}
 
 .btn:focus,
 .btn:active:focus,
@@ -611,9 +381,8 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 
 
 /* =========================================================
-   Header / Nav (OLD - REPLACED BY VERTICAL NAV)
+   Header / Nav
    ========================================================= */
-/*
 .main-header{
   background:linear-gradient(135deg,var(--orenda-primary) 0%,var(--orenda-primary-hover) 100%);
   box-shadow:var(--orenda-shadow-lg);
@@ -696,7 +465,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .nav-main .nav-link, .nav-main .dropdown-toggle{ font-size:.85rem; padding:.375rem .5rem; }
   .main-header, .main-header .navbar, .main-header .container-fluid{ min-height:55px; }
 }
-*/
+
 /* Dropdown (global) */
 .dropdown-menu{ border:none; box-shadow:var(--orenda-shadow-lg); border-radius:.5rem; overflow:hidden; }
 .dropdown-item{ padding:.75rem 1.25rem; font-weight:500; transition:all .2s ease; }
@@ -1023,67 +792,3 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color: var(--quad-benchmark-fg);
   font-weight: 600;
 }
-
-/* === Orenda: Sidebar compact & chip polish === */
-
-/* Slightly narrower default, still readable on desktop */
-:root { --sidebar-width: 220px; } /* was 260px; see existing var */
-
-/* Collapsed mode toggled on <html class="sidebar-collapsed"> */
-html.sidebar-collapsed .sidebar { width: 92px; min-width: 92px; }
-html.sidebar-collapsed .main-content-wrapper { margin-left: 92px; }
-
-/* Center icon, stack label under it and allow wrapping */
-html.sidebar-collapsed .sidebar-link {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: .35rem;
-  text-align: center;
-  padding: .75rem .5rem;
-}
-html.sidebar-collapsed .sidebar-link .bi { font-size: 1.3rem; min-width: 0; line-height: 1; }
-html.sidebar-collapsed .sidebar-link .me-2 { margin-right: 0 !important; }
-html.sidebar-collapsed .sidebar-link span {
-  font-size: .72rem;
-  line-height: 1.1;
-  white-space: normal; /* wrap to 2 lines e.g., "Guidance\nAlignment" */
-  max-width: 100%;
-}
-
-/* Hide submenu carets and nested items when collapsed */
-html.sidebar-collapsed .submenu,
-html.sidebar-collapsed .submenu-caret { display: none !important; }
-
-/* Optional: reduce left padding of nav container when collapsed */
-html.sidebar-collapsed .sidebar-nav { padding: .5rem; }
-
-/* User chip (bottom) */
-.user-chip {
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.25);
-  color: #fff;
-  border-radius: 999px;
-  padding: .45rem .6rem .45rem .45rem;
-  transition: background .2s ease, box-shadow .2s ease, transform .1s ease;
-}
-.user-chip:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
-.chip-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: #fff; color: var(--orenda-primary); font-weight: 800; font-size: .9rem;
-}
-.chip-text { font-weight: 600; max-width: 140px; }
-
-/* Make chip compact/centered when collapsed */
-html.sidebar-collapsed .user-chip {
-  justify-content: center !important;
-  gap: .4rem;
-}
-html.sidebar-collapsed .chip-text {
-  font-size: .72rem; max-width: 64px; text-align: center;
-}
-
-/* Clean up the (now removed) topbar gap if any */
-.topbar { display: none !important; } /* your empty sticky header; see it defined here: */
-/* (Reference existing .topbar at) */ /* site.css lines show sticky topbar */ /*  */
