@@ -1,0 +1,164 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.Form2Model
+@{
+    ViewData["Title"] = "Curriculum Alignment – Quadrant Breakdown (Form 2)";
+}
+
+@section Styles {
+<style>
+  /* === Quadrant theme (Orenda vibe; darker headers + matched borders) === */
+  .quad-card { border-radius:14px; overflow:hidden; box-shadow:none; }
+
+  /* Challenge = BLUE */
+  .quad-challenge { --q-head:#1e40af; --q-border:#1e3a8a; --q-bg:#e0e7ff; --q-fg:#ffffff; }
+  /* Benchmark = GREEN */
+  .quad-benchmark { --q-head:#16a34a; --q-border:#15803d; --q-bg:#dcfce7; --q-fg:#ffffff; }
+  /* Strategic = YELLOW */
+  .quad-strategic { --q-head:#FEC401; --q-border:#FEC401; --q-bg:#FEC401; --q-fg:#111827; }
+  /* Intensive = RED */
+  .quad-intensive { --q-head:#dc2626; --q-border:#b91c1c; --q-bg:#fecaca; --q-fg:#ffffff; }
+
+  /* Card border + header + body tint */
+  .quad-card { border:2px solid var(--q-border); }
+  .quad-card .quad-head { background:var(--q-head); color:var(--q-fg); padding:.9rem 1.25rem; font-weight:700; letter-spacing:.3px; }
+  .quad-card .quad-body { background:var(--q-bg); padding:0; }
+
+  /* Table outer border + clean corners */
+  .quad-card .orenda-table { 
+    border:2px solid var(--q-border); 
+    border-radius:12px; 
+    border-collapse:separate; 
+    border-spacing:0; 
+    overflow:hidden;
+  }
+
+  /* Table header + grid lines */
+  .quad-card .orenda-table thead th { 
+    background:rgba(255,255,255,0.70); 
+    color:#111827; 
+    border-bottom:2px solid var(--q-border);
+  }
+  .quad-card .orenda-table tbody td, 
+  .quad-card .orenda-table tbody th { 
+    border-top:1px solid rgba(0,0,0,0.06); 
+  }
+  .quad-card .orenda-table tbody tr:hover { background:rgba(255,255,255,0.45); }
+
+  /* Demographic highlights (kept) */
+  .hi-aa  { background:#d1fae5 !important; }   /* AA = soft green */
+  .hi-el  { background:#fce7f3 !important; }   /* EL = soft pink  */
+  .hi-swd { background:#fef9c3 !important; }   /* SWD = soft yellow */
+  /* Strong cell highlights for Form 2 (beat Bootstrap) */
+.quad-card .orenda-table td.hi-aa,
+.quad-card .orenda-table th.hi-aa {
+  background-color: #bbf7d0 !important; /* green */
+  background-image: none !important;
+}
+
+.quad-card .orenda-table td.hi-el,
+.quad-card .orenda-table th.hi-el {
+  background-color: #fbcfe8 !important; /* pink */
+  background-image: none !important;
+}
+
+.quad-card .orenda-table td.hi-swd,
+.quad-card .orenda-table th.hi-swd {
+  background-color: #fde68a !important; /* yellow */
+  background-image: none !important;
+}
+
+/* Keep the multi-flag name emphasis */
+.quad-card .orenda-table td.hi-name-multi,
+.quad-card .orenda-table th.hi-name-multi {
+  color: #9a3412 !important;
+  font-weight: 700 !important;
+}
+
+</style>
+}
+
+
+
+<div class="orenda-container">
+  <div class="orenda-header shadow-orenda">
+    <h2 class="mb-1">Quadrant Breakdown</h2>
+    <p class="mb-0">Challenge · Benchmark · Strategic · Intensive</p>
+  </div>
+
+  <!-- Filters (mirroring Form 1) -->
+  <div class="orenda-card mb-3">
+    <div class="orenda-card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">District</label>
+          <input class="form-control" value="@Model.DistrictId" name="DistrictId" placeholder="District Id" />
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Unit/Cycle</label>
+          <select name="UnitCycle" class="form-select orenda-select"
+                  onchange="this.form.submit()">
+            @foreach (var o in Model.AvailableUnitCycles) {
+              <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Assessment</label>
+          <select name="BatchId" class="form-select orenda-select"
+                  onchange="this.form.submit()">
+            @foreach (var o in Model.AvailableBatches) {
+              <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">School</label>
+          <select name="SchoolId" class="form-select orenda-select"
+                  onchange="this.form.submit()">
+            @foreach (var o in Model.AvailableSchools) {
+              <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option>
+            }
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Teacher</label>
+          <select name="TeacherId" class="form-select orenda-select"
+                  onchange="this.form.submit()">
+            @foreach (var o in Model.AvailableTeachers) {
+              <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option>
+            }
+          </select>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="orenda-card mb-3">
+    <div class="orenda-card-body d-flex flex-wrap gap-3">
+      <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African American</span></div>
+      <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
+      <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
+      <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+ flags</span></div>
+    </div>
+  </div>
+
+  @if (!Model.Students.Any())
+  {
+    <div class="orenda-card">
+      <div class="orenda-card-body text-muted">Select Unit/Cycle and Assessment to view quadrant breakdown.</div>
+    </div>
+  }
+  else
+  {
+    <!-- Four quadrant tables -->
+    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Challenge"))
+    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Benchmark"))
+    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Strategic"))
+    @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Intensive"))
+  }
+</div>
