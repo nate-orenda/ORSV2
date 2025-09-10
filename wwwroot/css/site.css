@@ -176,7 +176,7 @@ body {
     flex-grow: 1;
 }
 
-.topbar {
+/*.topbar {
     height: var(--topbar-height);
     background: #fff;
     border-bottom: 1px solid #dee2e6;
@@ -186,7 +186,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 1020;
-}
+}*/
 
 .sidebar-toggle-btn {
     background: transparent;
@@ -204,9 +204,10 @@ body {
     .main-content-wrapper {
         margin-left: 0;
     }
+    /*
     .topbar {
         justify-content: space-between;
-    }
+    }*/
     .sidebar-toggle-btn {
         display: block;
     }
@@ -1022,3 +1023,67 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color: var(--quad-benchmark-fg);
   font-weight: 600;
 }
+
+/* === Orenda: Sidebar compact & chip polish === */
+
+/* Slightly narrower default, still readable on desktop */
+:root { --sidebar-width: 220px; } /* was 260px; see existing var */
+
+/* Collapsed mode toggled on <html class="sidebar-collapsed"> */
+html.sidebar-collapsed .sidebar { width: 92px; min-width: 92px; }
+html.sidebar-collapsed .main-content-wrapper { margin-left: 92px; }
+
+/* Center icon, stack label under it and allow wrapping */
+html.sidebar-collapsed .sidebar-link {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  text-align: center;
+  padding: .75rem .5rem;
+}
+html.sidebar-collapsed .sidebar-link .bi { font-size: 1.3rem; min-width: 0; line-height: 1; }
+html.sidebar-collapsed .sidebar-link .me-2 { margin-right: 0 !important; }
+html.sidebar-collapsed .sidebar-link span {
+  font-size: .72rem;
+  line-height: 1.1;
+  white-space: normal; /* wrap to 2 lines e.g., "Guidance\nAlignment" */
+  max-width: 100%;
+}
+
+/* Hide submenu carets and nested items when collapsed */
+html.sidebar-collapsed .submenu,
+html.sidebar-collapsed .submenu-caret { display: none !important; }
+
+/* Optional: reduce left padding of nav container when collapsed */
+html.sidebar-collapsed .sidebar-nav { padding: .5rem; }
+
+/* User chip (bottom) */
+.user-chip {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.25);
+  color: #fff;
+  border-radius: 999px;
+  padding: .45rem .6rem .45rem .45rem;
+  transition: background .2s ease, box-shadow .2s ease, transform .1s ease;
+}
+.user-chip:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
+.chip-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--orenda-primary); font-weight: 800; font-size: .9rem;
+}
+.chip-text { font-weight: 600; max-width: 140px; }
+
+/* Make chip compact/centered when collapsed */
+html.sidebar-collapsed .user-chip {
+  justify-content: center !important;
+  gap: .4rem;
+}
+html.sidebar-collapsed .chip-text {
+  font-size: .72rem; max-width: 64px; text-align: center;
+}
+
+/* Clean up the (now removed) topbar gap if any */
+.topbar { display: none !important; } /* your empty sticky header; see it defined here: */
+/* (Reference existing .topbar at) */ /* site.css lines show sticky topbar */ /*  */
