@@ -5,251 +5,125 @@
 }
 
 @section Styles {
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/rowgroup/1.4.0/css/rowGroup.bootstrap5.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
     <style>
         /* =================================================================== */
-        /* 1. REDESIGNED SCREEN LAYOUT                                        */
+        /* QUADRANT-SPECIFIC STYLES (from site.css)                            */
         /* =================================================================== */
 
-        /* The new grid container for the quadrants */
-        .quadrant-grid {
-            display: grid;
-            gap: 1.5rem;
-            /* This now creates a single, full-width column for all screen sizes. */
-            grid-template-columns: 1fr;
+        /* Group Row Backgrounds */
+        .quadrant-challenge { background-color: var(--quad-challenge-bg) !important; }
+        .quadrant-benchmark { background-color: var(--quad-benchmark-bg) !important; }
+        .quadrant-strategic { background-color: var(--quad-strategic-bg) !important; }
+        .quadrant-intensive { background-color: var(--quad-intensive-bg) !important; }
+
+        /* Group Header Text/Background */
+        .dtrg-start.challenge td { --group-color: #1e40af; --group-color-dark: #1e3a8a; }
+        .dtrg-start.benchmark td { --group-color: #16a34a; --group-color-dark: #15803d; }
+        .dtrg-start.strategic td { --group-color: #FEC401; --group-color-dark: #F59E0B; color: #111827 !important; }
+        .dtrg-start.intensive td { --group-color: #dc2626; --group-color-dark: #b91c1c; }
+
+        /* Group Footer Backgrounds */
+        .dtrg-end.challenge td { --group-color: #1e40af; background-color: #ddd6fe !important; }
+        .dtrg-end.benchmark td { --group-color: #16a34a; background-color: #d1fae5 !important; }
+        .dtrg-end.strategic td { --group-color: #FEC401; background-color: #fef3c7 !important; }
+        .dtrg-end.intensive td { --group-color: #dc2626; background-color: #fee2e2 !important; }
+        
+        /* Student Attribute Highlights */
+        .hi-aa   { background-color: var(--quad-challenge-bg) !important; color: var(--quad-challenge-fg) !important; }
+        .hi-el   { background-color: #fbcfe8 !important; } /* Retaining unique color not in site.css */
+        .hi-swd  { background-color: var(--quad-strategic-bg) !important; color: var(--quad-strategic-fg) !important; }
+        .student-multi-flag { color: #c2410c !important; font-weight: 600; }
+
+        /* Generic Group Header/Footer styling (can be moved to site.css) */
+        .dtrg-start td {
+            background: linear-gradient(135deg, var(--group-color) 0%, var(--group-color-dark) 100%) !important;
+            color: white !important; font-weight: 600 !important; font-size: 0.95rem !important;
+            text-align: left !important; border: none !important; padding: 0.6rem 1rem !important;
+        }
+        .dtrg-end td {
+            border-top: 3px solid var(--group-color) !important; font-weight: 600 !important;
+            font-style: italic !important; padding: 0.75rem !important;
+        }
+        .dt-buttons {
+            margin-bottom: 1.5rem; /* Adjust this value as needed */
         }
 
-        /* Simplified Card and Table Styles */
-        .quad-card {
-            border-radius: 14px;
-            overflow: hidden;
-            border: 2px solid var(--q-border);
-            display: flex;
-            /* Make the card a flex container */
-            flex-direction: column;
+        /* Custom title for the table card */
+        .table-title {
+            padding: 0 1.5rem;
+            font-weight: 600;
+            color: #334155;
         }
-
-        .quad-head {
-            background: var(--q-head);
-            color: var(--q-fg);
-            padding: .9rem 1.25rem;
-            font-weight: 700;
+        .dataTables_wrapper {
+            padding: 1.5rem;
+            padding-top: 1rem;
         }
-
-        .quad-head .small {
-            font-size: 0.8rem !important;
-        }
-
-        .quad-body {
-            background: var(--q-bg);
-            overflow-x: auto;
-            /* Handle table scrolling if needed */
-            flex-grow: 1;
-            /* Allow body to grow and fill space */
-        }
-
-        .orenda-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        /* Table header + grid lines */
-        .orenda-table thead th {
-            background: rgba(255, 255, 255, 0.70);
-            color: #111827;
-            border-bottom: 2px solid var(--q-border);
-            padding: .75rem;
-        }
-
-        .orenda-table tbody td {
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
-            padding: .5rem .75rem;
-        }
-
-        .filter-container {
-            display: flex;
-            /* Turns the form into a flex container */
-            flex-wrap: wrap;
-            /* Allows items to wrap to the next line */
-            gap: 1rem;
-            /* Creates space between filters */
-            align-items: flex-end;
-            /* Aligns filters to the bottom */
-        }
-
-        .filter-item {
-            flex-grow: 1;
-            /* Allows items to grow and fill available space */
-            min-width: 200px;
-            /* Sets a minimum width before wrapping */
-        }
-
-        .filter-item-tight {
-            flex-grow: 0;
-            /* Prevent this item from growing */
-            min-width: 120px;
-            /* Give it a smaller, fixed minimum width */
-        }
-
-        /* Quadrant Colors & Highlights (no changes needed here) */
-        .quad-challenge {
-            --q-head: #1e40af;
-            --q-border: #1e3a8a;
-            --q-bg: #e0e7ff;
-            --q-fg: #ffffff;
-        }
-
-        .quad-benchmark {
-            --q-head: #16a34a;
-            --q-border: #15803d;
-            --q-bg: #dcfce7;
-            --q-fg: #ffffff;
-        }
-
-        .quad-strategic {
-            --q-head: #FEC401;
-            --q-border: #FEC401;
-            --q-bg: #FEC401;
-            --q-fg: #111827;
-        }
-
-        .quad-intensive {
-            --q-head: #dc2626;
-            --q-border: #b91c1c;
-            --q-bg: #fecaca;
-            --q-fg: #ffffff;
-        }
-
-        .hi-aa {
-            background-color: #bbf7d0 !important;
-        }
-
-        .hi-el {
-            background-color: #fbcfe8 !important;
-        }
-
-        .hi-swd {
-            background-color: #fde68a !important;
-        }
-
-        /* =================================================================== */
-        /* 2. REDESIGNED PRINT LOGIC (Print Reset)                            */
-        /* =================================================================== */
         @@media print {
-            @@page {
-                size: letter portrait;
-                margin: 0.5in;
+            /* Hide elements that shouldn't be printed */
+            .orenda-header,
+            .orenda-card,
+            .dataTables_wrapper .dt-buttons,
+            .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_info,
+            .dataTables_wrapper .dataTables_paginate {
+                display: none !important;
             }
 
-            /* 1. Hide everything on the page by default */
-            body * {
-                visibility: hidden;
+            /* Ensure the table container is visible and clean */
+            .orenda-table-wrapper {
+                display: block !important;
+                box-shadow: none !important;
+                border: none !important;
             }
 
-            /* 2. Make ONLY the quadrant grid and its contents visible */
-            .quadrant-grid,
-            .quadrant-grid * {
-                visibility: visible;
-            }
-
-            /* 3. Position the grid to take up the entire page */
-            .quadrant-grid {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-
-            /* 4. Reset the layout: no grid, just stack the cards */
-            .quadrant-grid {
-                display: block;
-            }
-
-            /* 5. Ensure each card starts on a new page */
-            .quad-card {
-                page-break-after: always;
-                border: 2px solid var(--q-border) !important;
-            }
-
-            /* 6. Ensure the table body does not scroll, but expands */
-            .quad-body {
-                overflow: visible !important;
-            }
-
-            /* Add this to your @@media print block */
-            .quad-head {
-                background-color: var(--q-head) !important;
-                /* Use the ORIGINAL dark background */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            /* Add page break before each quadrant group */
+            .dtrg-start {
+                page-break-before: always;
             }
         }
     </style>
 }
 
-<div class="orenda-header shadow-orenda">
+<div class="orenda-header">
     <h2 class="mb-1">Quadrant Breakdown</h2>
-
     @if (!string.IsNullOrEmpty(Model.DistrictName))
     {
         <h5 class="fw-normal mb-0 opacity-75">District: @Model.DistrictName</h5>
     }
-
     <p class="mb-0 mt-2">Challenge · Benchmark · Strategic · Intensive</p>
-</div>
-<div class="d-print-none my-3">
-    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-        <i class="fas fa-print"></i> Print Quadrants
-    </button>
 </div>
 
 <div class="orenda-card mb-3">
     <div class="orenda-card-body">
-        <form method="get" class="filter-container">
-
-            <!-- This hidden input ensures the DistrictId is always passed in the URL -->
+        <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
             <input type="hidden" asp-for="DistrictId" />
-
-            <!-- "Unit/Cycle" div now has the "filter-item-tight" class -->
-            <div class="filter-item filter-item-tight">
+            <div class="flex-grow-1" style="min-width: 120px;">
                 <label class="form-label fw-semibold">Unit/Cycle</label>
                 <select name="UnitCycle" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableUnitCycles)
-                    {
-                        <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
-                    }
+                    @foreach (var o in Model.AvailableUnitCycles) { <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option> }
                 </select>
             </div>
-
-            <div class="filter-item">
+            <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">Assessment</label>
                 <select name="BatchId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableBatches)
-                    {
-                        <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
-                    }
+                    @foreach (var o in Model.AvailableBatches) { <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option> }
                 </select>
             </div>
-
-            <div class="filter-item">
+            <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">School</label>
                 <select name="SchoolId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableSchools)
-                    {
-                        <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text
-                        </option>
-                    }
+                    @foreach (var o in Model.AvailableSchools) { <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option> }
                 </select>
             </div>
-
-            <div class="filter-item">
+            <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">Teacher</label>
                 <select name="TeacherId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableTeachers)
-                    {
-                        <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text
-                        </option>
-                    }
+                    @foreach (var o in Model.AvailableTeachers) { <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option> }
                 </select>
             </div>
         </form>
@@ -258,12 +132,9 @@
 
 <div class="orenda-card mb-3">
     <div class="orenda-card-body d-flex flex-wrap gap-3">
-        <div><span class="badge-compact" style="background:#d1fae5;color:#065f46;">Race/Ethnicity = Black or African
-                American</span></div>
-        <div><span class="badge-compact" style="background:#fce7f3;color:#9d174d;">Language Fluency = EL</span></div>
-        <div><span class="badge-compact" style="background:#fef9c3;color:#92400e;">SWD = true</span></div>
-        <div><span class="badge-compact" style="background:#ffedd5;color:#7c2d12;">Student name = orange when 2+
-                flags</span></div>
+        <div><span class="badge-compact" style="background-color: var(--quad-challenge-bg); color: var(--quad-challenge-fg);">Race/Ethnicity = Black or African American</span></div>
+        <div><span class="badge-compact" style="background-color: #fce7f3; color: #9d174d;">Language Fluency = EL</span></div>
+        <div><span class="badge-compact" style="background-color: var(--quad-strategic-bg); color: var(--quad-strategic-fg);">SWD = true</span></div>
     </div>
 </div>
 
@@ -275,14 +146,249 @@
 }
 else
 {
-    <div class="quadrant-grid">
-        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Challenge"))
-        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Benchmark"))
-        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Strategic"))
-        @await Html.PartialAsync("_Form2QuadrantTable", Model.GetQuadrantVm("Intensive"))
+    <div class="orenda-table-wrapper" id="quadrantExportRoot">
+        @if (!string.IsNullOrEmpty(Model.FormattedTitle))
+        {
+            <h4 class="table-title">@Model.FormattedTitle</h4>
+        }
+        <table id="quadrantTable" class="table orenda-table" style="width:100%">
+            <thead>
+                <tr>
+                    <th style="display:none;">Quadrant</th>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Race/Ethnicity</th>
+                    <th>Language Fluency</th>
+                    <th>SWD</th>
+                    <th>Total Passed</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var student in Model.FlattenedStudents.Where(s => !s.IsQuadrantTotal))
+                {
+                    <tr>
+                        <td style="display:none;">@student.QuadrantName</td>
+                        <td>@student.LastName</td>
+                        <td>@student.FirstName</td>
+                        <td class="@(student.IsAA ? "hi-aa" : "")">@student.RaceEthnicity</td>
+                        <td class="@(student.IsEL ? "hi-el" : "")">@student.LanguageFluency</td>
+                        <td class="@(student.IsSWD ? "hi-swd" : "")">@(student.SWD ? "True" : "False")</td>
+                        <td>@student.TotalPassed</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
-
 }
-</div>
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.4.0/js/dataTables.rowGroup.min.js"></script>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            const dynamicTitle = "@Html.Raw(Model.FormattedTitle)";
+            var totalsData = {
+                @foreach (var totalRow in Model.FlattenedStudents.Where(s => s.IsQuadrantTotal))
+                {
+                    <text>'@totalRow.QuadrantName': '@Html.Raw(totalRow.TotalsSummary)',</text>
+                }
+            };
+            
+            var table = $('#quadrantTable').DataTable({
+                responsive: true,
+                pageLength: 100,
+                lengthMenu: [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+                dom: 'Bfrtip',
+                orderFixed: [[0, 'asc']],
+                ordering: false,
+                columnDefs: [
+                    { targets: [0], visible: false }
+                ],
+                rowGroup: {
+                    dataSrc: 0,
+                    startRender: function(rows, group) {
+                        var groupClass = group.toLowerCase();
+                        return $('<tr class="dtrg-start ' + groupClass + '"></tr>')
+                            .append('<td colspan="6">' + group + ' (' + rows.count() + ' students)</td>');
+                    },
+                    endRender: function(rows, group) {
+                        var groupClass = group.toLowerCase();
+                        var totals = totalsData[group] || 'No data available';
+                        return $('<tr class="dtrg-end ' + groupClass + '"></tr>')
+                            .append('<td colspan="6" style="text-align:left;"><strong>Totals: ' + totals + '</strong></td>');
+                    }
+                },
+                buttons: [
+                    // ✅ Pass the title to the export functions
+                    { text: '<i class="fas fa-file-excel"></i> Export to Excel', className: 'btn-export', action: () => exactExcelExport(table, dynamicTitle) },
+                    { text: '<i class="fas fa-file-pdf"></i> Export to PDF', className: 'btn-export', action: () => exactPdfExport(table, dynamicTitle) },
+                    { text: '<i class="fas fa-print"></i> Print', className: 'btn-export', action: () => exactPrint(table, dynamicTitle) }
+                ],
+                language: { search: "", searchPlaceholder: 'Search students...', info: 'Showing _START_ to _END_ of _TOTAL_ students', infoFiltered: '(filtered from _MAX_ total students)' }
+            });
+
+             $('.dataTables_filter input').before('<i class="fas fa-search" style="padding-right: 5px;"></i>');
+        });
+
+        /* =================================================================== */
+        /* "EXACT LOOK" EXPORT AND PRINT FUNCTIONS                             */
+        /* =================================================================== */
+        
+        function withAllRows(datatable, callback) {
+            const originalPageLength = datatable.page.len();
+            datatable.page.len(-1).draw();
+            setTimeout(() => {
+                callback();
+                datatable.page.len(originalPageLength).draw();
+            }, 500);
+        }
+
+        // ✅ UPDATED EXCEL EXPORT WITH HEADER COLORS
+        async function exactExcelExport(datatable, title) {
+            withAllRows(datatable, async function() {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Quadrant Breakdown');
+                
+                // --- 1. Add Title ---
+                const titleRow = worksheet.addRow([title]);
+                titleRow.font = { size: 16, bold: true };
+                worksheet.mergeCells(1, 1, 1, 6); // Merge across 6 visible columns
+                worksheet.getRow(2).height = 10; // Add a spacer row
+
+                // --- 2. Add Header Row ---
+                const headerRow = document.querySelector('#quadrantTable thead tr');
+                const headerCells = Array.from(headerRow.querySelectorAll('th'))
+                    .filter(th => th.style.display !== 'none') // Exclude hidden columns
+                    .map(th => th.innerText);
+                
+                const excelHeaderRow = worksheet.addRow(headerCells);
+                excelHeaderRow.eachCell(cell => {
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // White, bold text
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0022C5' } }; // Orenda blue
+                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                    cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                });
+
+                // --- 3. Add Body Rows ---
+                const bodyRows = document.querySelectorAll('#quadrantTable tbody tr');
+                bodyRows.forEach(tr => {
+                    const excelRow = worksheet.addRow([]); // Create an empty row to populate
+                    const isGroupRow = tr.classList.contains('dtrg-start') || tr.classList.contains('dtrg-end');
+                    
+                    let excelCellIndex = 1;
+                    tr.querySelectorAll('td').forEach(td => {
+                        if (td.style.display === 'none') return; // Skip hidden columns
+
+                        const excelCell = excelRow.getCell(excelCellIndex++);
+                        excelCell.value = td.innerText;
+                        const computedStyle = getComputedStyle(td);
+                        
+                        // Apply background color
+                        const bgColor = computedStyle.backgroundColor;
+                        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                        const argb = 'FF' + bgColor.replace(/rgba?\(|\)|\s/g, '').split(',').map(c => parseInt(c).toString(16).padStart(2, '0')).join('').substring(0, 6);
+                        excelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb.toUpperCase() } };
+                        }
+
+                        // Apply font styles
+                        const fontColor = computedStyle.color;
+                        const fontArgb = 'FF' + fontColor.replace(/rgba?\(|\)|\s/g, '').split(',').map(c => parseInt(c).toString(16).padStart(2, '0')).join('').substring(0, 6);
+                        excelCell.font = {
+                            color: { argb: fontArgb.toUpperCase() },
+                            bold: parseInt(computedStyle.fontWeight, 10) >= 600,
+                            italic: computedStyle.fontStyle === 'italic'
+                        };
+                        
+                        excelCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                        excelCell.border = { top: {style:'thin', color:{argb:'FFD3D3D3'}}, left: {style:'thin', color:{argb:'FFD3D3D3'}}, bottom: {style:'thin', color:{argb:'FFD3D3D3'}}, right: {style:'thin', color:{argb:'FFD3D3D3'}} };
+                    });
+
+                    if (isGroupRow) {
+                        worksheet.mergeCells(excelRow.number, 1, excelRow.number, 6);
+                    }
+                });
+
+                worksheet.columns.forEach(column => { column.width = 25; });
+                
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `${title}.xlsx`);
+            });
+        }
+
+        // ✅ PDF EXPORT UPDATED WITH PAGE BREAKS
+        async function exactPdfExport(datatable, title) {
+            withAllRows(datatable, async function() {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'pt', 'a4');
+                const quadrantOrder = ['Challenge', 'Benchmark', 'Strategic', 'Intensive'];
+                const mainTable = document.getElementById('quadrantTable');
+
+                // Add main title to the first page
+                pdf.setFontSize(14).text(title, 40, 50);
+
+                for (let i = 0; i < quadrantOrder.length; i++) {
+                    const quadrant = quadrantOrder[i];
+                    const groupHeader = document.querySelector(`.dtrg-start.${quadrant.toLowerCase()}`);
+                    if (!groupHeader) continue;
+
+                    if (i > 0) {
+                        pdf.addPage();
+                    }
+                    
+                    const tempTable = document.createElement('table');
+                    tempTable.className = mainTable.className;
+                    tempTable.style.width = '100%';
+
+                    let currentRow = groupHeader;
+                    while (currentRow) {
+                        tempTable.appendChild(currentRow.cloneNode(true));
+                        if (currentRow.classList.contains('dtrg-end')) break;
+                        currentRow = currentRow.nextElementSibling;
+                    }
+                    
+                    document.body.appendChild(tempTable);
+
+                    await html2canvas(tempTable, { scale: 2, useCORS: true }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pdf.internal.pageSize.getWidth() - 80; // Margins
+                        const imgHeight = canvas.height * imgWidth / canvas.width;
+                        
+                        // ✅ FIX: Use a different Y position for the first page to leave room for the title.
+                        const startY = (i === 0) ? 70 : 40; 
+                        
+                        pdf.addImage(imgData, 'PNG', 40, startY, imgWidth, imgHeight);
+                    });
+                    
+                    document.body.removeChild(tempTable);
+                }
+
+                pdf.save(`${title}.pdf`);
+            });
+        }
+        
+        function exactPrint(datatable, title) {
+            withAllRows(datatable, function() {
+                const tableHtml = document.getElementById('quadrantTable').outerHTML;
+                let stylesHtml = '';
+                for (const node of [...document.querySelectorAll('link[rel="stylesheet"], style')]) {
+                    stylesHtml += node.outerHTML;
+                }
+                const printWindow = window.open('', '', 'height=800,width=1200');
+                printWindow.document.write(`<html><head><title>${title}</title>${stylesHtml}</head><body><h4 style="text-align: center;">${title}</h4>${tableHtml}</body></html>`);
+                printWindow.document.close();
+                setTimeout(() => { printWindow.focus(); printWindow.print(); printWindow.close(); }, 1000);
+            });
+        }
+
+    </script>
+}

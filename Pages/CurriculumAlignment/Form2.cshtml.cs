@@ -30,6 +30,40 @@ namespace ORSV2.Pages.CurriculumAlignment
                                 : "Intensive";
         }
 
+        // New flattened student view model for DataTable
+        public class FlatStudentVm
+        {
+            public string QuadrantName { get; set; } = "";
+            public string LastName { get; set; } = "";
+            public string FirstName { get; set; } = "";
+            public string RaceEthnicity { get; set; } = "";
+            public string LanguageFluency { get; set; } = "";
+            public bool SWD { get; set; }
+            public int TotalPassed { get; set; }
+            public bool IsQuadrantTotal { get; set; }
+            public string? TotalsSummary { get; set; }
+            
+            // Helper properties for CSS classes
+            public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
+            public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
+            public bool IsSWD => SWD;
+            public bool HasMultipleFlags => (IsAA ? 1 : 0) + (IsEL ? 1 : 0) + (IsSWD ? 1 : 0) >= 2;
+            public string QuadrantCssClass => QuadrantName.ToLowerInvariant();
+            
+            public FlatStudentVm() { }
+            
+            public FlatStudentVm(StudentVm student)
+            {
+                QuadrantName = student.Quadrant;
+                LastName = student.LastName;
+                FirstName = student.FirstName;
+                RaceEthnicity = student.RaceEthnicity;
+                LanguageFluency = student.LanguageFluency;
+                SWD = student.SWD;
+                TotalPassed = student.TotalPassed;
+                IsQuadrantTotal = false;
+            }
+        }
 
         public class TotalsBucket
         {
@@ -60,7 +94,8 @@ namespace ORSV2.Pages.CurriculumAlignment
         [BindProperty(SupportsGet = true)] public string? BatchId { get; set; }
         [BindProperty(SupportsGet = true)] public int? SchoolId { get; set; }
         [BindProperty(SupportsGet = true)] public int? TeacherId { get; set; }
-
+        public string? SelectedAssessmentName { get; private set; }
+        public string FormattedTitle { get; private set; } = "Quadrant Breakdown"; 
         // Shared dropdowns (mirroring Form 1)
         public List<SelectListItem> AvailableUnitCycles { get; private set; } = new();
         public List<SelectListItem> AvailableBatches { get; private set; } = new();
@@ -68,8 +103,11 @@ namespace ORSV2.Pages.CurriculumAlignment
         public List<SelectListItem> AvailableTeachers { get; private set; } = new();
         public string? DistrictName { get; private set; }
 
-        // Data
+        // Data - keeping original for backward compatibility
         public List<StudentVm> Students { get; private set; } = new();
+        
+        // New flattened data for DataTable
+        public List<FlatStudentVm> FlattenedStudents { get; private set; } = new();
 
         private readonly IConfiguration _config;
         public Form2Model(IConfiguration config) => _config = config;
@@ -121,6 +159,10 @@ namespace ORSV2.Pages.CurriculumAlignment
 
             if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
                 AvailableBatches = await GetAssessmentsByUnitCycleAsync(conn, DistrictId.Value, UnitCycle!);
+            if (!string.IsNullOrEmpty(BatchId))
+            {
+                SelectedAssessmentName = AvailableBatches.FirstOrDefault(b => b.Value == BatchId)?.Text;
+            }
 
             if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
                 AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId!), IsSchoolAdmin ? UserSchoolIds : null);
@@ -130,10 +172,83 @@ namespace ORSV2.Pages.CurriculumAlignment
 
             if (SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId) && Guid.TryParse(BatchId, out var bid))
             {
-                try { await LoadStudents(conn, bid); }
-                catch (SqlException) { ModelState.AddModelError("", "We couldn’t load data for this selection."); Students = new(); }
+                try
+                {
+                    await LoadStudents(conn, bid);
+                    var quadrantOrder = new Dictionary<string, int>
+                    {
+                        { "Challenge", 1 },
+                        { "Benchmark", 2 },
+                        { "Strategic", 3 },
+                        { "Intensive", 4 }
+                    };
+
+                    Students = Students.OrderBy(s => quadrantOrder.GetValueOrDefault(s.Quadrant, 99))
+                                    .ThenByDescending(s => s.TotalPassed)
+                                    .ToList();
+                    GenerateFlattenedData(); // New method to create DataTable data
+                }
+                catch (SqlException)
+                {
+                    ModelState.AddModelError("", "We couldn't load data for this selection.");
+                    Students = new();
+                    FlattenedStudents = new();
+                }
+            }
+            var titleParts = new List<string>();
+            if (!string.IsNullOrEmpty(SelectedAssessmentName))
+            {
+                titleParts.Add(SelectedAssessmentName);
+            }
+
+            var selectedSchool = AvailableSchools.FirstOrDefault(s => s.Value == SchoolId?.ToString());
+            titleParts.Add(selectedSchool != null && !string.IsNullOrEmpty(selectedSchool.Text) ? selectedSchool.Text : "All Schools");
+
+            var selectedTeacher = AvailableTeachers.FirstOrDefault(t => t.Value == TeacherId?.ToString());
+            titleParts.Add(selectedTeacher != null && !string.IsNullOrEmpty(selectedTeacher.Text) ? selectedTeacher.Text : "All Teachers");
+
+            if (titleParts.Any())
+            {
+                FormattedTitle = string.Join(" - ", titleParts);
             }
         }
+
+        // === New method to generate flattened data for DataTable ===
+        private void GenerateFlattenedData()
+        {
+            FlattenedStudents.Clear();
+            
+            var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" };
+            
+            foreach (var quadrantName in quadrantOrder)
+            {
+                var quadVm = GetQuadrantVm(quadrantName);
+                
+                // Add all students in this quadrant
+                foreach (var student in quadVm.Students)
+                {
+                    FlattenedStudents.Add(new FlatStudentVm(student));
+                }
+                
+                // Add totals row for this quadrant
+                FlattenedStudents.Add(new FlatStudentVm
+                {
+                    QuadrantName = quadrantName,
+                    LastName = $"{quadrantName} Totals",
+                    FirstName = "",
+                    RaceEthnicity = "",
+                    LanguageFluency = "",
+                    SWD = false,
+                    TotalPassed = 0,
+                    IsQuadrantTotal = true,
+                    TotalsSummary = $"AA: {quadVm.Totals.AA.PercentString} ({quadVm.Totals.AA.Passed}/{quadVm.Totals.AA.Total}) · " +
+                                  $"EL: {quadVm.Totals.EL.PercentString} ({quadVm.Totals.EL.Passed}/{quadVm.Totals.EL.Total}) · " +
+                                  $"SWD: {quadVm.Totals.SWD.PercentString} ({quadVm.Totals.SWD.Passed}/{quadVm.Totals.SWD.Total}) · " +
+                                  $"All: {quadVm.Totals.All.PercentString} ({quadVm.Totals.All.Passed}/{quadVm.Totals.All.Total})"
+                });
+            }
+        }
+
         // === Dropdown helpers (reused endpoints from Form 1) ===
         private async Task<List<SelectListItem>> GetUnitCyclesByDistrictAsync(SqlConnection conn, int districtId)
         {
@@ -183,8 +298,6 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
         // === Data load (ADO.NET; no EF) ===
-        // Pages/CurriculumAlignment/Form2.cshtml.cs
-
         private async Task LoadStudents(SqlConnection conn, Guid batchId)
         {
             Students.Clear();
@@ -194,10 +307,9 @@ namespace ORSV2.Pages.CurriculumAlignment
                 CommandType = CommandType.StoredProcedure
             };
 
-            // UI filters (same shape you’ve been using)
+            // UI filters (same shape you've been using)
             cmd.Parameters.AddWithValue("@BatchId", batchId);
             if (DistrictId.HasValue) cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
-            // If your read proc allows “All Schools,” leave @SchoolId out when null; otherwise include it.
             if (SchoolId.HasValue) cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
             if (TeacherId.HasValue) cmd.Parameters.AddWithValue("@TeacherId", TeacherId.Value);
 
@@ -223,9 +335,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        // === View helper: builds the VM for a given quadrant ===
-        // In Pages/CurriculumAlignment/Form2.cshtml.cs
-
+        // === View helper: builds the VM for a given quadrant (keeping for compatibility) ===
         public QuadVm GetQuadrantVm(string quadrant)
         {
             // Students in this specific quadrant
@@ -270,7 +380,6 @@ namespace ORSV2.Pages.CurriculumAlignment
             return vm;
         }
 
-
         // Add these helpers inside the Form2Model class (e.g., just above StudentVm)
         private static string Normalize(string? s)
         {
@@ -293,6 +402,5 @@ namespace ORSV2.Pages.CurriculumAlignment
             // support: EL, L (local code), ELL, LEP, and the full text
             return v == "el" || v == "L" || v == "ell" || v == "lep" || v.Contains("englishlearner");
         }
-
     }
 }
