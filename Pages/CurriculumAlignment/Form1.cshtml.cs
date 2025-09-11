@@ -246,15 +246,21 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
             }
         }
-
         private void BuildSummaries()
         {
-            if (!Rows.Any()) return; // Added guard clause
+            if (!Rows.Any()) return;
+
+            // --- NEW: Create a de-duplicated list of students for accurate grand totals. ---
+            // This groups all rows by a student's unique ID and takes the first record for each student.
+            var distinctStudentRows = Rows
+                .GroupBy(r => r.LocalId)
+                .Select(g => g.First())
+                .ToList();
 
             int m = Columns.Count;
             const decimal PASS_CUTOFF = 4m;
-            
-            // ... the rest of your BuildSummaries method is correct and remains here ...
+
+            // 1. Group Summaries (per class) - This part remains unchanged and uses the full 'Rows' list
             GroupSummaries = Rows
                 .GroupBy(r => new GroupKey(r.TeacherName, r.Period))
                 .Select(g =>
@@ -288,12 +294,14 @@ namespace ORSV2.Pages.CurriculumAlignment
                 .OrderBy(gs => gs.Key.TeacherName)
                 .ThenBy(gs => gs.Key.Period)
                 .ToList();
-            
+
+            // 2. Grand Totals - MODIFIED to use the 'distinctStudentRows' list
             {
                 var passed = new int[m];
                 var notPassed = new int[m];
                 var denom = new int[m];
-                foreach (var r in Rows)
+                // Use the de-duplicated list for calculations
+                foreach (var r in distinctStudentRows)
                 {
                     for (int i = 0; i < m; i++)
                     {
@@ -305,23 +313,26 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
                 GrandTotals = new GrandSummary
                 {
-                    StudentCount = Rows.Count,
+                    // Use the de-duplicated list for counts
+                    StudentCount = distinctStudentRows.Count,
                     PassedPerStd = passed,
                     NotPassedPerStd = notPassed,
                     DenomPerStd = denom,
-                    PassedByTotal = Rows.Count(r => r.TotalPassed >= 3),
-                    NotPassedByTotal = Rows.Count(r => r.TotalPassed < 3)
+                    PassedByTotal = distinctStudentRows.Count(r => r.TotalPassed >= 3),
+                    NotPassedByTotal = distinctStudentRows.Count(r => r.TotalPassed < 3)
                 };
             }
-            
+
+            // 3. Quadrants - MODIFIED to use the 'distinctStudentRows' list
             {
-                int challenge = Rows.Count(r => r.TotalPassed >= 4);
-                int benchmark = Rows.Count(r => r.TotalPassed == 3);
-                int strategic = Rows.Count(r => r.TotalPassed == 2);
-                int intensive = Rows.Count(r => r.TotalPassed <= 1);
+                // Use the de-duplicated list for counts
+                int challenge = distinctStudentRows.Count(r => r.TotalPassed >= 4);
+                int benchmark = distinctStudentRows.Count(r => r.TotalPassed == 3);
+                int strategic = distinctStudentRows.Count(r => r.TotalPassed == 2);
+                int intensive = distinctStudentRows.Count(r => r.TotalPassed <= 1);
                 Quadrants = new QuadrantSummary
                 {
-                    TotalTested = Rows.Count,
+                    TotalTested = distinctStudentRows.Count,
                     Challenge = challenge,
                     Benchmark = benchmark,
                     Strategic = strategic,
