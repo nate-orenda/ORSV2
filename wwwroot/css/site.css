@@ -792,3 +792,68 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color: var(--quad-benchmark-fg);
   font-weight: 600;
 }
+
+/* =========================================================
+   Sleek District Cards v2 (Index Page)
+   ========================================================= */
+
+.district-card-v2 {
+  display: flex;
+  flex-direction: column; /* Stacks header, body, and footer vertically */
+  transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+}
+
+.district-card-v2:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--orenda-shadow-lg);
+}
+
+.district-card-header {
+  /* The signature Orenda gradient for strong branding */
+  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
+  color: var(--orenda-text-white);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.district-card-header h4 {
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+.district-card-body {
+  padding: 1.5rem;
+  flex-grow: 1; /* This is key: it pushes the footer to the bottom */
+}
+
+.district-card-footer {
+  padding: .75rem;
+  background-color: var(--orenda-secondary);
+  border-top: 1px solid var(--orenda-border);
+}
+
+.action-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  color: var(--orenda-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .2s ease;
+}
+
+.action-link:hover {
+  background-color: rgba(0, 34, 197, .08); /* A subtle highlight */
+  color: var(--orenda-primary-hover);
+  transform: scale(1.02); /* Slight zoom for a modern feel */
+}
+
+.action-link .arrow {
+  transition: transform .2s ease;
+}
+
+.action-link:hover .arrow {
+  transform: translateX(4px); /* Arrow moves right on hover */
+}

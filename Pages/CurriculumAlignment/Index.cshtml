@@ -1,0 +1,44 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.IndexModel
+@{
+    ViewData["Title"] = "Select a Form";
+}
+
+<div class="orenda-container">
+    <div class="orenda-header shadow-orenda">
+        <h2 class="mb-1">Curriculum Alignment</h2>
+        <p class="mb-0">Select a form for @Model.DistrictName</p>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="@Url.Page("/CurriculumAlignment/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                <div class="orenda-card-body">
+                    <h5 class="text-orenda-primary">Form 1</h5>
+                    <p class="text-muted small">Enter and review foundational curriculum alignment data.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+            <a href="@Url.Page("/CurriculumAlignment/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                <div class="orenda-card-body">
+                    <h5 class="text-orenda-primary">Form 2</h5>
+                    <p class="text-muted small">Analyze and track alignment progress and outcomes.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="orenda-card h-100 is-disabled">
+                <div class="orenda-card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="text-orenda-primary mb-0">Form 3</h5>
+                        <span class="badge bg-light text-dark">Coming Soon</span>
+                    </div>
+                    <p class="text-muted small">Advanced reporting and strategic planning tools.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

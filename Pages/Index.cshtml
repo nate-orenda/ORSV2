@@ -7,7 +7,7 @@
 <div class="orenda-container">
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Welcome, @Model.UserName</h2>
-        <p class="mb-0">Choose a school to dive into!</p>
+        <p class="mb-0">Select a district to begin, or review the calendar for upcoming deadlines.</p>
     </div>
 
     @if (Model.DistrictBlocks == null || !Model.DistrictBlocks.Any())
@@ -20,118 +20,51 @@
     }
     else
     {
-        foreach (var district in Model.DistrictBlocks)
-        {
-            var bodyId = $"district-body-{district.DistrictId}";
+        <div class="row g-4 mb-5 justify-content-center">
+            @foreach (var district in Model.DistrictBlocks)
+            {
+                <div class="col-12 col-md-6 col-lg-4 d-flex">
+                    <div class="orenda-card district-card-v2 w-100">
+                        <div class="district-card-header">
+                            <h4 class="mb-0 text-truncate" title="@district.DistrictName">
+                                @district.DistrictName
+                            </h4>
+                        </div>
 
-            <section class="mb-4 ga-section visible">
-                <button class="district-header-toggle w-100 d-flex align-items-center justify-content-between"
-                        type="button"
-                        aria-expanded="true"
-                        aria-controls="@bodyId"
-                        data-target="#@bodyId">
-                    <h4 class="mb-0 text-truncate" title="@district.DistrictName">@district.DistrictName</h4>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge school-badge">
-                            @(district.Schools.Count) School@(district.Schools.Count == 1 ? "" : "s")
-                        </span>
-                        <span class="chevron" aria-hidden="true">▾</span>
-                    </div>
-                </button>
-
-                <div id="@bodyId" class="collapse-body mt-3">
-                    <div class="row g-3">
-                        @foreach (var s in district.Schools)
-                        {
-                            <div class="col-12 col-sm-6 col-lg-4">
-                                <div class="orenda-card shadow-orenda-hover smooth-transition h-100">
-                                    <div class="orenda-card-body py-3 position-relative" style="min-width:0;">
-
-                                    @{
-                                        var cpText = (s.CurrentCP.HasValue && s.CurrentCP.Value > 0)
-                                            ? s.CurrentCP.Value.ToString()
-                                            : "—";
-
-                                        var gaUpdatedText = s.GAResultsLastUpdated.HasValue
-                                            ? s.GAResultsLastUpdated.Value.ToString("MMM d, yyyy")
-                                            : "—";
-                                    }
-
-                                    <!-- Title -->
-                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap mb-2">
-                                        <h5 class="mb-0 text-orenda-primary text-truncate me-2"
-                                            title="@s.SchoolName"
-                                            style="font-weight:600; max-width:100%;">
-                                            @s.SchoolName
-                                        </h5>
-                                    </div>
-
-                                    <!-- Data box -->
-                                    <div class="d-flex flex-column gap-1 small text-muted">
-                                        <div class="orenda-summary-item">
-                                            <span class="orenda-summary-label">Enrollment:</span>
-                                            <span class="fw-semibold ms-1">@s.Enrollment</span>
-                                        </div>
-
-                                        <div class="orenda-summary-item">
-                                            <div class="d-flex align-items-center gap-2">
-                                                @if (s.GA)
-                                                {
-                                                    <a href="@Url.Page("/GuidanceAlignment/Overview", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
-                                                       class="orenda-link" style="text-decoration:none;">
-                                                        Guidance Alignment
-                                                    </a>
-                                                    <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
-                                                    <span class="visually-hidden">Enabled</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="orenda-summary-label">Guidance Alignment</span>
-                                                    <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
-                                                    <span class="visually-hidden">Not enabled</span>
-                                                }
-                                            </div>
-                                        </div>
-
-                                        <div class="small text-muted" style="margin-top:-.2rem;">
-                                            Checkpoint: @cpText
-                                        </div>
-
-                                        <div class="small text-muted" style="margin-top:-.2rem;">
-                                            Last Updated: @gaUpdatedText
-                                        </div>
-
-                                        <div class="orenda-summary-item">
-                                            <div class="d-flex align-items-center gap-2">
-                                                @if (s.CA)
-                                                {
-                                                    <a href="@Url.Page("/CurriculumAlignment/Form1", new { schoolId = s.SchoolId, districtId = district.DistrictId })"
-                                                       class="orenda-link" style="text-decoration:none;">
-                                                        Curriculum Alignment
-                                                    </a>
-                                                    <span class="text-success fs-6" title="Enabled" aria-hidden="true">✓</span>
-                                                    <span class="visually-hidden">Enabled</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="orenda-summary-label">Curriculum Alignment</span>
-                                                    <span class="text-danger fs-6" title="Not enabled" aria-hidden="true">✕</span>
-                                                    <span class="visually-hidden">Not enabled</span>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                    </div>
-                                </div>
+                        <div class="district-card-body">
+                            <div class="d-flex align-items-center text-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-building me-2" viewBox="0 0 16 16">
+                                  <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/>
+                                  <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3z"/>
+                                </svg>
+                                <span>@(district.Schools.Count) School@(district.Schools.Count == 1 ? "" : "s")</span>
                             </div>
-                        }
+                        </div>
+
+                        <div class="district-card-footer">
+                            <a href="@Url.Page("/GuidanceAlignment/Schools", new { DistrictId = district.DistrictId })" class="action-link">
+                                <span>Guidance Alignment</span>
+                                <span class="arrow" aria-hidden="true">&rarr;</span>
+                            </a>
+
+                            @{
+                                var hasCA = district.Schools.Any(s => s.CA);
+                            }
+                            @if (hasCA)
+                            {
+                                <a href="@Url.Page("/CurriculumAlignment/Index", new { districtId = district.DistrictId })" class="action-link">
+                                    <span>Curriculum Alignment</span>
+                                    <span class="arrow" aria-hidden="true">&rarr;</span>
+                                </a>
+                            }
+                        </div>
                     </div>
                 </div>
-            </section>
-        }
+            }
+        </div>
 
-        <!-- ===== Calendar (patched) ===== -->
-        <div class="orenda-card mt-4">
+
+        <div class="orenda-card">
             <div class="orenda-card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <h5 class="mb-0">Guidance Alignment Calendar</h5>
@@ -142,20 +75,18 @@
                         <button class="btn-orenda-ghost btn-sm" id="calToday">Today</button>
                     </div>
                 </div>
-
                 <div class="ga-calendar" id="gaCalendar" aria-label="Month calendar"></div>
-
                 @{
+                    // This C# block for JSON serialization remains exactly the same.
                     var clientItems = Model.CalendarItems.Select(it => new {
                         date = it.Date,
                         dateStr = it.Date.ToString("yyyy-MM-dd"),
                         label = it.Label,
                         schoolId = it.SchoolId,
                         districtId = it.DistrictId,
-                        districtName = it.DistrictName,   // ⬅️ NEW
+                        districtName = it.DistrictName,
                         cp = it.Cp
                     }).ToList();
-
                     var json = System.Text.Json.JsonSerializer.Serialize(
                         clientItems,
                         new System.Text.Json.JsonSerializerOptions {
@@ -164,125 +95,96 @@
                     );
                 }
                 <script>
-                (function(){
-                    // Data from server (camelCase + dateStr)
-                    const items = @Html.Raw(json);
+                    (function(){
+                        const items = @Html.Raw(json);
+                        const byDate = items.reduce((m, it) => {
+                            (m[it.dateStr] ||= []).push(it);
+                            return m;
+                        }, {});
 
-                    // Index by yyyy-MM-dd
-                    const byDate = items.reduce((m, it) => {
-                        (m[it.dateStr] ||= []).push(it);
-                        return m;
-                    }, {});
+                        const el = document.getElementById('gaCalendar');
+                        const titleEl = document.getElementById('calTitle');
+                        const prevBtn = document.getElementById('calPrev');
+                        const nextBtn = document.getElementById('calNext');
+                        const todayBtn = document.getElementById('calToday');
+                        let view = new Date();
 
-                    const el = document.getElementById('gaCalendar');
-                    const titleEl = document.getElementById('calTitle');
-                    const prevBtn = document.getElementById('calPrev');
-                    const nextBtn = document.getElementById('calNext');
-                    const todayBtn= document.getElementById('calToday');
-
-                    let view = new Date(); // today
-
-                    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-                    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-                    function toYmd(d){
-                        return [
-                            d.getFullYear(),
-                            String(d.getMonth()+1).padStart(2,"0"),
-                            String(d.getDate()).padStart(2,"0")
-                        ].join("-");
-                    }
-
-                    function render(){
-                        const s = startOfMonth(view);
-                        const e = endOfMonth(view);
-
-                        // US week: Sunday start
-                        const start = new Date(s);
-                        start.setDate(s.getDate() - s.getDay());
-                        const end = new Date(e);
-                        end.setDate(e.getDate() + (6 - e.getDay()));
-
-                        // Title
-                        titleEl.textContent = s.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-
-                        // Build day cells
-                        const days = [];
-                        for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate()+1)) {
-                            days.push(new Date(dt));
+                        function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+                        function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+                        function toYmd(d){
+                            return [
+                                d.getFullYear(),
+                                String(d.getMonth()+1).padStart(2,"0"),
+                                String(d.getDate()).padStart(2,"0")
+                            ].join("-");
                         }
 
-                        const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-                        let html = '<div class="ga-cal-grid">';
-                        // header
-                        for (const h of dow) html += `<div class="ga-cal-head">${h}</div>`;
-
-                        const todayIso = toYmd(new Date());
-
-                        // cells
-                        for (const d of days) {
-                        const inMonth = d.getMonth() === s.getMonth();
-                        const iso = toYmd(d);
-
-                        const dayEvents = byDate[iso] || [];
-                        let chipsHtml = '';
-
-                        if (dayEvents.length > 0) {
-                            // Group events by districtId -> { name, cps:Set }
-                            const grouped = {};
-                            for (const ev of dayEvents) {
-                            if (!grouped[ev.districtId]) {
-                                grouped[ev.districtId] = { name: ev.districtName, cps: new Set() };
-                            }
-                            grouped[ev.districtId].cps.add(ev.cp);
+                        function render(){
+                            const s = startOfMonth(view);
+                            const e = endOfMonth(view);
+                            const start = new Date(s);
+                            start.setDate(s.getDate() - s.getDay());
+                            const end = new Date(e);
+                            end.setDate(e.getDate() + (6 - e.getDay()));
+                            titleEl.textContent = s.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+                            const days = [];
+                            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate()+1)) {
+                                days.push(new Date(dt));
                             }
 
-                            // Build one chip per district: "District – CP1, CP2"
-                            const districtChips = Object.values(grouped).map(g => {
-                            const cpsJoined = Array.from(g.cps).join(', ');
-                            const text = `${cpsJoined}-${g.name}`;
-                            const title = text; // full tooltip
-                            return `<span class="ga-chip district-chip" title="${title}">${text}</span>`;
-                            });
+                            const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                            let html = '<div class="ga-cal-grid">';
+                            for (const h of dow) html += `<div class="ga-cal-head">${h}</div>`;
+                            const todayIso = toYmd(new Date());
 
-                            // Cap how many we show to keep rows tidy
-                            const MAX_CHIPS = 2;
-                            const visible = districtChips.slice(0, MAX_CHIPS);
-                            const hiddenCount = districtChips.length - visible.length;
-
-                            if (hiddenCount > 0) {
-                            visible.push(
-                                `<span class="ga-chip" title="${hiddenCount} more">+${hiddenCount} more</span>`
-                            );
+                            for (const d of days) {
+                                const inMonth = d.getMonth() === s.getMonth();
+                                const iso = toYmd(d);
+                                const dayEvents = byDate[iso] || [];
+                                let chipsHtml = '';
+                                if (dayEvents.length > 0) {
+                                    const grouped = {};
+                                    for (const ev of dayEvents) {
+                                        if (!grouped[ev.districtId]) {
+                                            grouped[ev.districtId] = { name: ev.districtName, cps: new Set() };
+                                        }
+                                        grouped[ev.districtId].cps.add(ev.cp);
+                                    }
+                                    const districtChips = Object.values(grouped).map(g => {
+                                        const cpsJoined = Array.from(g.cps).join(', ');
+                                        const text = `${cpsJoined}-${g.name}`;
+                                        const title = text;
+                                        return `<span class="ga-chip district-chip" title="${title}">${text}</span>`;
+                                    });
+                                    const MAX_CHIPS = 2;
+                                    const visible = districtChips.slice(0, MAX_CHIPS);
+                                    const hiddenCount = districtChips.length - visible.length;
+                                    if (hiddenCount > 0) {
+                                        visible.push(
+                                            `<span class="ga-chip" title="${hiddenCount} more">+${hiddenCount} more</span>`
+                                        );
+                                    }
+                                    chipsHtml = visible.join('');
+                                }
+                                const todayCls = (iso===todayIso) ? ' is-today' : '';
+                                const dimCls = inMonth ? '' : ' is-out';
+                                html += `<div class="ga-cal-cell${dimCls}${todayCls}">
+                                            <div class="ga-cal-date">${d.getDate()}</div>
+                                            <div class="ga-cal-chips">${chipsHtml}</div>
+                                         </div>`;
                             }
-
-                            chipsHtml = visible.join('');
+                            html += '</div>';
+                            el.innerHTML = html;
                         }
-
-                        const todayCls = (iso===todayIso)?' is-today':'';
-                        const dimCls = inMonth ? '' : ' is-out';
-
-                        html += `<div class="ga-cal-cell${dimCls}${todayCls}">
-                                    <div class="ga-cal-date">${d.getDate()}</div>
-                                    <div class="ga-cal-chips">${chipsHtml}</div>
-                                </div>`;
-                        }
-
-
-                        html += '</div>';
-                        el.innerHTML = html;
-                    }
-
-                    prevBtn.addEventListener('click', () => { view.setMonth(view.getMonth()-1); render(); });
-                    nextBtn.addEventListener('click', () => { view.setMonth(view.getMonth()+1); render(); });
-                    todayBtn.addEventListener('click', () => { view = new Date(); render(); });
-
-                    render();
-                })();
+                        prevBtn.addEventListener('click', () => { view.setMonth(view.getMonth()-1); render(); });
+                        nextBtn.addEventListener('click', () => { view.setMonth(view.getMonth()+1); render(); });
+                        todayBtn.addEventListener('click', () => { view = new Date(); render(); });
+                        render();
+                    })();
                 </script>
             </div>
         </div>
-        <!-- ===== /Calendar ===== -->
-    }
+        }
 </div>
 
 <script>
