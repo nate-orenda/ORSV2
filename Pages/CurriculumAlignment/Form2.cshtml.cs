@@ -23,6 +23,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
             public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
             public bool IsSWD => SWD;
+            public string SWDDisplay => SWD ? "True" : "";
 
             public string Quadrant => TotalPassed >= 4 ? "Challenge"
                                 : TotalPassed == 3 ? "Benchmark"
@@ -47,6 +48,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
             public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
             public bool IsSWD => SWD;
+            public string SWDDisplay => SWD ? "True" : "";
             public bool HasMultipleFlags => (IsAA ? 1 : 0) + (IsEL ? 1 : 0) + (IsSWD ? 1 : 0) >= 2;
             public string QuadrantCssClass => QuadrantName.ToLowerInvariant();
             

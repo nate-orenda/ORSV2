@@ -9,48 +9,114 @@
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/rowgroup/1.4.0/css/rowGroup.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    
+
     <style>
         /* =================================================================== */
         /* QUADRANT-SPECIFIC STYLES (from site.css)                            */
         /* =================================================================== */
 
         /* Group Row Backgrounds */
-        .quadrant-challenge { background-color: var(--quad-challenge-bg) !important; }
-        .quadrant-benchmark { background-color: var(--quad-benchmark-bg) !important; }
-        .quadrant-strategic { background-color: var(--quad-strategic-bg) !important; }
-        .quadrant-intensive { background-color: var(--quad-intensive-bg) !important; }
+        .quadrant-challenge {
+            background-color: var(--quad-challenge-bg) !important;
+        }
+
+        .quadrant-benchmark {
+            background-color: var(--quad-benchmark-bg) !important;
+        }
+
+        .quadrant-strategic {
+            background-color: var(--quad-strategic-bg) !important;
+        }
+
+        .quadrant-intensive {
+            background-color: var(--quad-intensive-bg) !important;
+        }
 
         /* Group Header Text/Background */
-        .dtrg-start.challenge td { --group-color: #1e40af; --group-color-dark: #1e3a8a; }
-        .dtrg-start.benchmark td { --group-color: #16a34a; --group-color-dark: #15803d; }
-        .dtrg-start.strategic td { --group-color: #FEC401; --group-color-dark: #F59E0B; color: #111827 !important; }
-        .dtrg-start.intensive td { --group-color: #dc2626; --group-color-dark: #b91c1c; }
+        .dtrg-start.challenge td {
+            --group-color: #1e40af;
+            --group-color-dark: #1e3a8a;
+        }
+
+        .dtrg-start.benchmark td {
+            --group-color: #16a34a;
+            --group-color-dark: #15803d;
+        }
+
+        .dtrg-start.strategic td {
+            --group-color: #FEC401;
+            --group-color-dark: #F59E0B;
+            color: #111827 !important;
+        }
+
+        .dtrg-start.intensive td {
+            --group-color: #dc2626;
+            --group-color-dark: #b91c1c;
+        }
 
         /* Group Footer Backgrounds */
-        .dtrg-end.challenge td { --group-color: #1e40af; background-color: #ddd6fe !important; }
-        .dtrg-end.benchmark td { --group-color: #16a34a; background-color: #d1fae5 !important; }
-        .dtrg-end.strategic td { --group-color: #FEC401; background-color: #fef3c7 !important; }
-        .dtrg-end.intensive td { --group-color: #dc2626; background-color: #fee2e2 !important; }
-        
+        .dtrg-end.challenge td {
+            --group-color: #1e40af;
+            background-color: #ddd6fe !important;
+        }
+
+        .dtrg-end.benchmark td {
+            --group-color: #16a34a;
+            background-color: #d1fae5 !important;
+        }
+
+        .dtrg-end.strategic td {
+            --group-color: #FEC401;
+            background-color: #fef3c7 !important;
+        }
+
+        .dtrg-end.intensive td {
+            --group-color: #dc2626;
+            background-color: #fee2e2 !important;
+        }
+
         /* Student Attribute Highlights */
-        .hi-aa   { background-color: var(--quad-challenge-bg) !important; color: var(--quad-challenge-fg) !important; }
-        .hi-el   { background-color: #fbcfe8 !important; } /* Retaining unique color not in site.css */
-        .hi-swd  { background-color: var(--quad-strategic-bg) !important; color: var(--quad-strategic-fg) !important; }
-        .student-multi-flag { color: #c2410c !important; font-weight: 600; }
+        .hi-aa {
+            background-color: var(--quad-challenge-bg) !important;
+            color: var(--quad-challenge-fg) !important;
+        }
+
+        .hi-el {
+            background-color: #fbcfe8 !important;
+        }
+
+        /* Retaining unique color not in site.css */
+        .hi-swd {
+            background-color: var(--quad-strategic-bg) !important;
+            color: var(--quad-strategic-fg) !important;
+        }
+
+        .student-multi-flag {
+            color: #c2410c !important;
+            font-weight: 600;
+        }
 
         /* Generic Group Header/Footer styling (can be moved to site.css) */
         .dtrg-start td {
             background: linear-gradient(135deg, var(--group-color) 0%, var(--group-color-dark) 100%) !important;
-            color: white !important; font-weight: 600 !important; font-size: 0.95rem !important;
-            text-align: left !important; border: none !important; padding: 0.6rem 1rem !important;
+            color: white !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            text-align: left !important;
+            border: none !important;
+            padding: 0.6rem 1rem !important;
         }
+
         .dtrg-end td {
-            border-top: 3px solid var(--group-color) !important; font-weight: 600 !important;
-            font-style: italic !important; padding: 0.75rem !important;
+            border-top: 3px solid var(--group-color) !important;
+            font-weight: 600 !important;
+            font-style: italic !important;
+            padding: 0.75rem !important;
         }
+
         .dt-buttons {
-            margin-bottom: 1.5rem; /* Adjust this value as needed */
+            margin-bottom: 1.5rem;
+            /* Adjust this value as needed */
         }
 
         /* Custom title for the table card */
@@ -59,11 +125,36 @@
             font-weight: 600;
             color: #334155;
         }
+
         .dataTables_wrapper {
             padding: 1.5rem;
             padding-top: 1rem;
         }
+
+        /* Add this CSS to your existing styles section */
+
+        /* Center all table headers */
+        #quadrantTable thead th {
+            text-align: center !important;
+        }
+
+        /* Center all table data cells */
+        #quadrantTable tbody td {
+            text-align: center !important;
+        }
+
+        /* Keep group headers left-aligned since they're descriptive */
+        .dtrg-start td {
+            text-align: left !important;
+        }
+
+        /* Keep totals footer left-aligned since it contains descriptive text */
+        .dtrg-end td {
+            text-align: left !important;
+        }
+
         @@media print {
+
             /* Hide elements that shouldn't be printed */
             .orenda-header,
             .orenda-card,
@@ -105,25 +196,39 @@
             <div class="flex-grow-1" style="min-width: 120px;">
                 <label class="form-label fw-semibold">Unit/Cycle</label>
                 <select name="UnitCycle" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableUnitCycles) { <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option> }
+                    @foreach (var o in Model.AvailableUnitCycles)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == Model.UnitCycle)">@o.Text</option>
+                    }
                 </select>
             </div>
             <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">Assessment</label>
                 <select name="BatchId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableBatches) { <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option> }
+                    @foreach (var o in Model.AvailableBatches)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == Model.BatchId)">@o.Text</option>
+                    }
                 </select>
             </div>
             <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">School</label>
                 <select name="SchoolId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableSchools) { <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text</option> }
+                    @foreach (var o in Model.AvailableSchools)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == (Model.SchoolId?.ToString() ?? ""))">@o.Text
+                        </option>
+                    }
                 </select>
             </div>
             <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label fw-semibold">Teacher</label>
                 <select name="TeacherId" class="form-select orenda-select" onchange="this.form.submit()">
-                    @foreach (var o in Model.AvailableTeachers) { <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text</option> }
+                    @foreach (var o in Model.AvailableTeachers)
+                    {
+                        <option value="@o.Value" selected="@(o.Value == (Model.TeacherId?.ToString() ?? ""))">@o.Text
+                        </option>
+                    }
                 </select>
             </div>
         </form>
@@ -132,9 +237,14 @@
 
 <div class="orenda-card mb-3">
     <div class="orenda-card-body d-flex flex-wrap gap-3">
-        <div><span class="badge-compact" style="background-color: var(--quad-challenge-bg); color: var(--quad-challenge-fg);">Race/Ethnicity = Black or African American</span></div>
-        <div><span class="badge-compact" style="background-color: #fce7f3; color: #9d174d;">Language Fluency = EL</span></div>
-        <div><span class="badge-compact" style="background-color: var(--quad-strategic-bg); color: var(--quad-strategic-fg);">SWD = true</span></div>
+        <div><span class="badge-compact"
+                style="background-color: var(--quad-challenge-bg); color: var(--quad-challenge-fg);">Race/Ethnicity =
+                Black or African American</span></div>
+        <div><span class="badge-compact" style="background-color: #fce7f3; color: #9d174d;">Language Fluency = EL</span>
+        </div>
+        <div><span class="badge-compact"
+                style="background-color: var(--quad-strategic-bg); color: var(--quad-strategic-fg);">SWD = true</span>
+        </div>
     </div>
 </div>
 
@@ -172,7 +282,7 @@ else
                         <td>@student.FirstName</td>
                         <td class="@(student.IsAA ? "hi-aa" : "")">@student.RaceEthnicity</td>
                         <td class="@(student.IsEL ? "hi-el" : "")">@student.LanguageFluency</td>
-                        <td class="@(student.IsSWD ? "hi-swd" : "")">@(student.SWD ? "True" : "False")</td>
+                        <td class="@(student.IsSWD ? "hi-swd" : "")">@student.SWDDisplay</td>
                         <td>@student.TotalPassed</td>
                     </tr>
                 }
@@ -195,55 +305,51 @@ else
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             const dynamicTitle = "@Html.Raw(Model.FormattedTitle)";
             var totalsData = {
-                @foreach (var totalRow in Model.FlattenedStudents.Where(s => s.IsQuadrantTotal))
+                                    @foreach (var totalRow in Model.FlattenedStudents.Where(s => s.IsQuadrantTotal))
                 {
                     <text>'@totalRow.QuadrantName': '@Html.Raw(totalRow.TotalsSummary)',</text>
-                }
-            };
-            
-            var table = $('#quadrantTable').DataTable({
-                responsive: true,
-                pageLength: 100,
-                lengthMenu: [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
-                dom: 'Bfrtip',
-                orderFixed: [[0, 'asc']],
-                ordering: false,
-                columnDefs: [
-                    { targets: [0], visible: false }
-                ],
-                rowGroup: {
-                    dataSrc: 0,
-                    startRender: function(rows, group) {
-                        var groupClass = group.toLowerCase();
-                        return $('<tr class="dtrg-start ' + groupClass + '"></tr>')
-                            .append('<td colspan="6">' + group + ' (' + rows.count() + ' students)</td>');
-                    },
-                    endRender: function(rows, group) {
-                        var groupClass = group.toLowerCase();
-                        var totals = totalsData[group] || 'No data available';
-                        return $('<tr class="dtrg-end ' + groupClass + '"></tr>')
-                            .append('<td colspan="6" style="text-align:left;"><strong>Totals: ' + totals + '</strong></td>');
-                    }
-                },
-                buttons: [
-                    // ✅ Pass the title to the export functions
-                    { text: '<i class="fas fa-file-excel"></i> Export to Excel', className: 'btn-export', action: () => exactExcelExport(table, dynamicTitle) },
-                    { text: '<i class="fas fa-file-pdf"></i> Export to PDF', className: 'btn-export', action: () => exactPdfExport(table, dynamicTitle) },
-                    { text: '<i class="fas fa-print"></i> Print', className: 'btn-export', action: () => exactPrint(table, dynamicTitle) }
-                ],
-                language: { search: "", searchPlaceholder: 'Search students...', info: 'Showing _START_ to _END_ of _TOTAL_ students', infoFiltered: '(filtered from _MAX_ total students)' }
-            });
+            }
+                                };
 
-             $('.dataTables_filter input').before('<i class="fas fa-search" style="padding-right: 5px;"></i>');
+        var table = $('#quadrantTable').DataTable({
+            responsive: true,
+            pageLength: 100,
+            lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "All"]],
+            dom: 'Bfrtip',
+            orderFixed: [[0, 'asc']],
+            ordering: false,
+            columnDefs: [
+                { targets: [0], visible: false }
+            ],
+            rowGroup: {
+                dataSrc: 0,
+                startRender: function (rows, group) {
+                    var groupClass = group.toLowerCase();
+                    return $('<tr class="dtrg-start ' + groupClass + '"></tr>')
+                        .append('<td colspan="6">' + group + ' (' + rows.count() + ' students)</td>');
+                },
+                endRender: function (rows, group) {
+                    var groupClass = group.toLowerCase();
+                    var totals = totalsData[group] || 'No data available';
+                    return $('<tr class="dtrg-end ' + groupClass + '"></tr>')
+                        .append('<td colspan="6" style="text-align:left;"><strong>Totals: ' + totals + '</strong></td>');
+                }
+            },
+            buttons: [
+                // ✅ Pass the title to the export functions
+                { text: '<i class="fas fa-file-excel"></i> Export to Excel', className: 'btn-export', action: () => exactExcelExport(table, dynamicTitle) },
+                { text: '<i class="fas fa-file-pdf"></i> Export to PDF', className: 'btn-export', action: () => exactPdfExport(table, dynamicTitle) },
+                { text: '<i class="fas fa-print"></i> Print', className: 'btn-export', action: () => exactPrint(table, dynamicTitle) }
+            ],
+            language: { search: "", searchPlaceholder: 'Search students...', info: 'Showing _START_ to _END_ of _TOTAL_ students', infoFiltered: '(filtered from _MAX_ total students)' }
         });
 
-        /* =================================================================== */
-        /* "EXACT LOOK" EXPORT AND PRINT FUNCTIONS                             */
-        /* =================================================================== */
-        
+        $('.dataTables_filter input').before('<i class="fas fa-search" style="padding-right: 5px;"></i>');
+                            });
+
         function withAllRows(datatable, callback) {
             const originalPageLength = datatable.page.len();
             datatable.page.len(-1).draw();
@@ -253,142 +359,397 @@ else
             }, 500);
         }
 
-        // ✅ UPDATED EXCEL EXPORT WITH HEADER COLORS
+        // ✅ DEBUGGED EXCEL EXPORT - Let's see what we're actually getting
         async function exactExcelExport(datatable, title) {
-            withAllRows(datatable, async function() {
+            withAllRows(datatable, async function () {
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet('Quadrant Breakdown');
-                
-                // --- 1. Add Title ---
+
+                // Add title
                 const titleRow = worksheet.addRow([title]);
-                titleRow.font = { size: 16, bold: true };
-                worksheet.mergeCells(1, 1, 1, 6); // Merge across 6 visible columns
-                worksheet.getRow(2).height = 10; // Add a spacer row
+                titleRow.font = { size: 16, bold: true, color: { argb: 'FF1e40af' } };
+                worksheet.mergeCells(1, 1, 1, 6);
+                titleRow.alignment = { horizontal: 'center' };
+                worksheet.addRow([]); // Spacer
 
-                // --- 2. Add Header Row ---
-                const headerRow = document.querySelector('#quadrantTable thead tr');
-                const headerCells = Array.from(headerRow.querySelectorAll('th'))
-                    .filter(th => th.style.display !== 'none') // Exclude hidden columns
-                    .map(th => th.innerText);
-                
-                const excelHeaderRow = worksheet.addRow(headerCells);
-                excelHeaderRow.eachCell(cell => {
-                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // White, bold text
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0022C5' } }; // Orenda blue
-                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                    cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                });
+                // Define colors matching your CSS
+                const colors = {
+                    challenge: { bg: 'FFddd6fe', header: 'FF1e40af', headerText: 'FFFFFFFF' },
+                    benchmark: { bg: 'FFd1fae5', header: 'FF16a34a', headerText: 'FFFFFFFF' },
+                    strategic: { bg: 'FFfef3c7', header: 'FFFEC401', headerText: 'FF111827' },
+                    intensive: { bg: 'FFfee2e2', header: 'FFdc2626', headerText: 'FFFFFFFF' },
+                    hiAA: 'FFddd6fe',
+                    hiEL: 'FFfbcfe8',
+                    hiSWD: 'FFfef3c7',
+                    tableHeader: 'FF0022C5'
+                };
 
-                // --- 3. Add Body Rows ---
-                const bodyRows = document.querySelectorAll('#quadrantTable tbody tr');
-                bodyRows.forEach(tr => {
-                    const excelRow = worksheet.addRow([]); // Create an empty row to populate
-                    const isGroupRow = tr.classList.contains('dtrg-start') || tr.classList.contains('dtrg-end');
-                    
-                    let excelCellIndex = 1;
-                    tr.querySelectorAll('td').forEach(td => {
-                        if (td.style.display === 'none') return; // Skip hidden columns
+                // Get all visible rows from DataTable
+                const tableRows = document.querySelectorAll('#quadrantTable tbody tr');
+                tableRows.forEach((row, index) => {
+                    if (row.classList.contains('dtrg-start')) {
+                        // This is a quadrant header
+                        const headerText = row.querySelector('td').textContent.trim();
+                        const quadrantName = headerText.split(' ')[0].toLowerCase();
 
-                        const excelCell = excelRow.getCell(excelCellIndex++);
-                        excelCell.value = td.innerText;
-                        const computedStyle = getComputedStyle(td);
-                        
-                        // Apply background color
-                        const bgColor = computedStyle.backgroundColor;
-                        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                        const argb = 'FF' + bgColor.replace(/rgba?\(|\)|\s/g, '').split(',').map(c => parseInt(c).toString(16).padStart(2, '0')).join('').substring(0, 6);
-                        excelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb.toUpperCase() } };
+                        const headerRow = worksheet.addRow([headerText]);
+                        worksheet.mergeCells(headerRow.number, 1, headerRow.number, 6);
+
+                        headerRow.eachCell(cell => {
+                            cell.font = { bold: true, size: 12, color: { argb: colors[quadrantName]?.headerText || 'FFFFFFFF' } };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[quadrantName]?.header || 'FF333333' } };
+                            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                            cell.border = {
+                                top: { style: 'thin' }, left: { style: 'thin' },
+                                bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                        });
+
+                        // Add column headers after each quadrant header
+                        const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'Total Passed'];
+                        const colHeaderRow = worksheet.addRow(columnHeaders);
+
+                        colHeaderRow.eachCell(cell => {
+                            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.tableHeader } };
+                            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                            cell.border = {
+                                top: { style: 'thin' }, left: { style: 'thin' },
+                                bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                        });
+                    }
+                    else if (row.classList.contains('dtrg-end')) {
+                        // This is a quadrant footer with totals
+                        const footerText = row.querySelector('td').textContent.trim();
+                        const quadrantName = Array.from(row.classList).find(cls => ['challenge', 'benchmark', 'strategic', 'intensive'].includes(cls));
+
+                        const footerRow = worksheet.addRow([footerText]);
+                        worksheet.mergeCells(footerRow.number, 1, footerRow.number, 6);
+
+                        footerRow.eachCell(cell => {
+                            cell.font = { bold: true, italic: true };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[quadrantName]?.bg || 'FFf0f0f0' } };
+                            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                            cell.border = {
+                                top: { style: 'medium', color: { argb: colors[quadrantName]?.header || 'FF333333' } },
+                                left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+                            };
+                        });
+
+                        worksheet.addRow([]); // Add spacer after each quadrant
+                    }
+                    else {
+                        // This is a regular student row - simplified approach
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        if (cells.length > 0) {
+                            // Try to extract data based on what we actually see
+                            let rowData = [];
+
+                            // If we have the hidden column, skip it (index 0)
+                            // Otherwise, start from index 0
+                            const startIndex = cells[0].style.display === 'none' || cells[0].textContent.trim() === cells[1]?.textContent.trim() ? 1 : 0;
+
+                            for (let i = startIndex; i < Math.min(startIndex + 6, cells.length); i++) {
+                                rowData.push(cells[i].textContent.trim());
+                            }
+                            if (rowData.length >= 6) {
+                                const dataRow = worksheet.addRow(rowData);
+
+                                // Apply cell highlighting
+                                for (let i = 0; i < rowData.length; i++) {
+                                    const cell = cells[startIndex + i];
+                                    const excelCell = dataRow.getCell(i + 1);
+
+                                    if (cell && cell.classList.contains('hi-aa')) {
+                                        excelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.hiAA } };
+                                    } else if (cell && cell.classList.contains('hi-el')) {
+                                        excelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.hiEL } };
+                                    } else if (cell && cell.classList.contains('hi-swd')) {
+                                        excelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.hiSWD } };
+                                    }
+
+                                    excelCell.alignment = { vertical: 'middle', horizontal: 'left' };
+                                    excelCell.border = {
+                                        top: { style: 'thin', color: { argb: 'FFe5e7eb' } },
+                                        left: { style: 'thin', color: { argb: 'FFe5e7eb' } },
+                                        bottom: { style: 'thin', color: { argb: 'FFe5e7eb' } },
+                                        right: { style: 'thin', color: { argb: 'FFe5e7eb' } }
+                                    };
+                                }
+                            }
                         }
-
-                        // Apply font styles
-                        const fontColor = computedStyle.color;
-                        const fontArgb = 'FF' + fontColor.replace(/rgba?\(|\)|\s/g, '').split(',').map(c => parseInt(c).toString(16).padStart(2, '0')).join('').substring(0, 6);
-                        excelCell.font = {
-                            color: { argb: fontArgb.toUpperCase() },
-                            bold: parseInt(computedStyle.fontWeight, 10) >= 600,
-                            italic: computedStyle.fontStyle === 'italic'
-                        };
-                        
-                        excelCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
-                        excelCell.border = { top: {style:'thin', color:{argb:'FFD3D3D3'}}, left: {style:'thin', color:{argb:'FFD3D3D3'}}, bottom: {style:'thin', color:{argb:'FFD3D3D3'}}, right: {style:'thin', color:{argb:'FFD3D3D3'}} };
-                    });
-
-                    if (isGroupRow) {
-                        worksheet.mergeCells(excelRow.number, 1, excelRow.number, 6);
                     }
                 });
 
-                worksheet.columns.forEach(column => { column.width = 25; });
-                
+                // Set column widths
+                worksheet.columns = [
+                    { width: 15 }, { width: 15 }, { width: 20 },
+                    { width: 18 }, { width: 8 }, { width: 12 }
+                ];
+
                 const buffer = await workbook.xlsx.writeBuffer();
                 saveAs(new Blob([buffer]), `${title}.xlsx`);
             });
         }
 
-        // ✅ PDF EXPORT UPDATED WITH PAGE BREAKS
+        // Replace your exactPdfExport function with this final corrected version
         async function exactPdfExport(datatable, title) {
-            withAllRows(datatable, async function() {
+            withAllRows(datatable, async function () {
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'pt', 'a4');
-                const quadrantOrder = ['Challenge', 'Benchmark', 'Strategic', 'Intensive'];
-                const mainTable = document.getElementById('quadrantTable');
 
-                // Add main title to the first page
-                pdf.setFontSize(14).text(title, 40, 50);
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 40;
+                const contentWidth = pageWidth - (margin * 2);
 
-                for (let i = 0; i < quadrantOrder.length; i++) {
-                    const quadrant = quadrantOrder[i];
-                    const groupHeader = document.querySelector(`.dtrg-start.${quadrant.toLowerCase()}`);
-                    if (!groupHeader) continue;
+                let yPosition = margin;
+                let currentQuadrant = '';
 
-                    if (i > 0) {
-                        pdf.addPage();
-                    }
-                    
-                    const tempTable = document.createElement('table');
-                    tempTable.className = mainTable.className;
-                    tempTable.style.width = '100%';
+                // Add main title
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(16);
+                pdf.setTextColor(30, 64, 175);
+                pdf.text(title, margin, yPosition);
+                yPosition += 30;
 
-                    let currentRow = groupHeader;
-                    while (currentRow) {
-                        tempTable.appendChild(currentRow.cloneNode(true));
-                        if (currentRow.classList.contains('dtrg-end')) break;
-                        currentRow = currentRow.nextElementSibling;
-                    }
-                    
-                    document.body.appendChild(tempTable);
+                const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'Total Passed'];
+                const columnWidths = [70, 70, 120, 90, 45, 95]; // Total: 490pts - expanded Race/Ethnicity column
 
-                    await html2canvas(tempTable, { scale: 2, useCORS: true }).then(canvas => {
-                        const imgData = canvas.toDataURL('image/png');
-                        const imgWidth = pdf.internal.pageSize.getWidth() - 80; // Margins
-                        const imgHeight = canvas.height * imgWidth / canvas.width;
-                        
-                        // ✅ FIX: Use a different Y position for the first page to leave room for the title.
-                        const startY = (i === 0) ? 70 : 40; 
-                        
-                        pdf.addImage(imgData, 'PNG', 40, startY, imgWidth, imgHeight);
+                const quadrantColors = {
+                    'challenge': { bg: [221, 214, 254], header: [30, 64, 175], text: [255, 255, 255] },
+                    'benchmark': { bg: [209, 250, 229], header: [22, 163, 74], text: [255, 255, 255] },
+                    'strategic': { bg: [254, 243, 199], header: [254, 196, 1], text: [17, 24, 39] },
+                    'intensive': { bg: [254, 226, 226], header: [220, 38, 38], text: [255, 255, 255] }
+                };
+
+                function drawColumnHeaders() {
+                    pdf.setFillColor(240, 240, 240);
+                    pdf.rect(margin, yPosition, contentWidth, 25, 'F');
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(9); // Increased from 8pt to 9pt
+                    pdf.setTextColor(0, 0, 0);
+
+                    let xPos = margin + 5;
+                    columnHeaders.forEach((header, i) => {
+                        // Center the header text within its column
+                        const headerX = xPos + (columnWidths[i] / 2);
+                        pdf.text(header, headerX, yPosition + 16, { align: 'center' });
+                        xPos += columnWidths[i];
                     });
-                    
-                    document.body.removeChild(tempTable);
+                    yPosition += 25;
                 }
+
+                // Process all table rows
+                const tableRows = document.querySelectorAll('#quadrantTable tbody tr');
+                console.log('PDF: Total rows found:', tableRows.length);
+                let isFirstQuadrant = true;
+
+                tableRows.forEach((row, rowIndex) => {
+                    if (row.classList.contains('dtrg-start')) {
+                        // Quadrant header
+                        const headerText = row.querySelector('td').textContent.trim();
+                        currentQuadrant = headerText.split(' ')[0].toLowerCase();
+
+                        if (!isFirstQuadrant) {
+                            pdf.addPage();
+                            yPosition = margin;
+                        }
+                        isFirstQuadrant = false;
+
+                        const colors = quadrantColors[currentQuadrant] || quadrantColors.challenge;
+                        pdf.setFillColor(colors.header[0], colors.header[1], colors.header[2]);
+                        pdf.rect(margin, yPosition, contentWidth, 30, 'F');
+
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(14);
+                        pdf.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+                        pdf.text(headerText, margin + 10, yPosition + 20);
+
+                        yPosition += 40;
+                        drawColumnHeaders();
+                    }
+                    else if (row.classList.contains('dtrg-end')) {
+                        // Quadrant footer
+                        const footerText = row.querySelector('td').textContent.trim();
+                        const colors = quadrantColors[currentQuadrant] || quadrantColors.challenge;
+
+                        yPosition += 10;
+                        pdf.setFillColor(colors.bg[0], colors.bg[1], colors.bg[2]);
+                        pdf.rect(margin, yPosition, contentWidth, 25, 'F');
+
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(10);
+                        pdf.setTextColor(0, 0, 0);
+                        pdf.text(footerText, margin + 10, yPosition + 16);
+
+                        yPosition += 35;
+                    }
+                    else {
+                        // Student row - simplified approach
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        console.log(`PDF Data row ${rowIndex} has ${cells.length} cells`);
+
+                        if (cells.length > 0) {
+                            if (yPosition + 20 > pageHeight - margin) {
+                                pdf.addPage();
+                                yPosition = margin;
+                                drawColumnHeaders();
+                            }
+
+                            if (rowIndex % 2 === 0) {
+                                pdf.setFillColor(249, 249, 249);
+                                pdf.rect(margin, yPosition, contentWidth, 20, 'F');
+                            }
+
+                            // Determine start index (skip hidden column if present)
+                            const startIndex = cells[0].style.display === 'none' ||
+                                (cells.length > 6 && cells[0].textContent.trim().length < 3) ? 1 : 0;
+
+                            let xPos = margin + 5;
+                            for (let i = 0; i < 6 && (startIndex + i) < cells.length; i++) {
+                                const cell = cells[startIndex + i];
+                                if (!cell) continue;
+
+                                // Apply highlighting
+                                if (cell.classList.contains('hi-aa')) {
+                                    pdf.setFillColor(209, 250, 229); // Green to match webpage
+                                    pdf.rect(xPos - 2, yPosition + 2, columnWidths[i] - 2, 16, 'F');
+                                } else if (cell.classList.contains('hi-el')) {
+                                    pdf.setFillColor(251, 207, 232);
+                                    pdf.rect(xPos - 2, yPosition + 2, columnWidths[i] - 2, 16, 'F');
+                                } else if (cell.classList.contains('hi-swd')) {
+                                    pdf.setFillColor(254, 243, 199);
+                                    pdf.rect(xPos - 2, yPosition + 2, columnWidths[i] - 2, 16, 'F');
+                                }
+
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setFontSize(9);
+                                pdf.setTextColor(0, 0, 0);
+
+                                // Center the text within its column
+                                const textX = xPos + (columnWidths[i] / 2);
+                                pdf.text(cell.textContent.trim(), textX, yPosition + 14, { align: 'center' });
+                                xPos += columnWidths[i];
+                            }
+
+                            yPosition += 20;
+                        }
+                    }
+                });
 
                 pdf.save(`${title}.pdf`);
             });
         }
-        
+        // Replace your exactPrint function with this corrected version
         function exactPrint(datatable, title) {
-            withAllRows(datatable, function() {
-                const tableHtml = document.getElementById('quadrantTable').outerHTML;
-                let stylesHtml = '';
-                for (const node of [...document.querySelectorAll('link[rel="stylesheet"], style')]) {
-                    stylesHtml += node.outerHTML;
-                }
+            withAllRows(datatable, function () {
+                const tableElement = document.getElementById('quadrantTable');
+                const tableHtml = tableElement.outerHTML;
+
+                const printStyles = `
+                <style>
+                    @@page { 
+                        size: A4; 
+                        margin: 1in; 
+                    }
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        font-size: 12px;
+                        line-height: 1.4;
+                        color: #333;
+                    }
+                    h4 { 
+                        text-align: center; 
+                        font-size: 18px;
+                        margin-bottom: 20px;
+                        color: #1e40af;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse;
+                        font-size: 11px;
+                    }
+                    th, td { 
+                        padding: 8px 6px;
+                        border: 1px solid #ddd;
+                        text-align: center; /* CENTER ALL TABLE CONTENT */
+                    }
+                    th { 
+                        background-color: #f8f9fa !important;
+                        font-weight: 600;
+                        border-bottom: 2px solid #dee2e6;
+                    }
+            
+                    /* Quadrant group headers - keep left aligned */
+                    .dtrg-start td {
+                        font-weight: 600 !important;
+                        font-size: 13px !important;
+                        padding: 12px !important;
+                        border: none !important;
+                        text-align: left !important; /* Keep descriptive headers left-aligned */
+                    }
+                    .dtrg-start.challenge td { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important; color: white !important; }
+                    .dtrg-start.benchmark td { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important; color: white !important; }
+                    .dtrg-start.strategic td { background: linear-gradient(135deg, #FEC401 0%, #F59E0B 100%) !important; color: #111827 !important; }
+                    .dtrg-start.intensive td { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important; color: white !important; }
+            
+                    /* Quadrant group footers - keep left aligned */
+                    .dtrg-end td {
+                        font-weight: 600 !important;
+                        font-style: italic !important;
+                        padding: 10px !important;
+                        border-top: 3px solid !important;
+                        text-align: left !important; /* Keep totals left-aligned */
+                    }
+                    .dtrg-end.challenge td { background-color: #ddd6fe !important; border-top-color: #1e40af !important; }
+                    .dtrg-end.benchmark td { background-color: #d1fae5 !important; border-top-color: #16a34a !important; }
+                    .dtrg-end.strategic td { background-color: #fef3c7 !important; border-top-color: #FEC401 !important; }
+                    .dtrg-end.intensive td { background-color: #fee2e2 !important; border-top-color: #dc2626 !important; }
+            
+                    /* Student highlights */
+                    .hi-aa { background-color: #d1fae5 !important; }
+                    .hi-el { background-color: #fbcfe8 !important; }
+                    .hi-swd { background-color: #fef3c7 !important; }
+            
+                    /* Page breaks */
+                    .dtrg-start { page-break-before: always; }
+                    .dtrg-start:first-of-type { page-break-before: avoid; }
+            
+                    /* Hide elements */
+                    .dataTables_wrapper .dt-buttons,
+                    .dataTables_wrapper .dataTables_filter,
+                    .dataTables_wrapper .dataTables_info,
+                    .dataTables_wrapper .dataTables_paginate {
+                        display: none !important;
+                    }
+                </style>
+            `;
+
                 const printWindow = window.open('', '', 'height=800,width=1200');
-                printWindow.document.write(`<html><head><title>${title}</title>${stylesHtml}</head><body><h4 style="text-align: center;">${title}</h4>${tableHtml}</body></html>`);
+                printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>${title}</title>
+                        ${printStyles}
+                    </head>
+                    <body>
+                        <h4>${title}</h4>
+                        ${tableHtml}
+                    </body>
+                </html>
+            `);
+
                 printWindow.document.close();
-                setTimeout(() => { printWindow.focus(); printWindow.print(); printWindow.close(); }, 1000);
+
+                setTimeout(() => {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                }, 1000);
             });
         }
-
     </script>
 }
