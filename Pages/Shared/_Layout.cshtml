@@ -22,11 +22,16 @@
     {
         <header class="main-header sticky-top">
             <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid px-lg-4"> <!-- Removed all vertical padding -->
+                <div class="container-fluid px-lg-4">
                     <!-- Logo/Brand -->
                     <a asp-page="/Index" class="navbar-brand d-flex align-items-center text-white text-decoration-none">
                         <img src="~/images/orenda-logo.png" alt="Orenda Logo" class="brand-logo me-2" />
                     </a>
+
+                    <!-- District Focus Indicator (for ALL authenticated users) -->
+                    <div class="focus-context-header d-none d-lg-flex align-items-center me-3" id="focusContextHeader">
+                        <!-- This will be populated by JavaScript from session/localStorage -->
+                    </div>
 
                     <!-- Mobile menu toggle -->
                     <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" 
@@ -43,7 +48,7 @@
                                 <a asp-page="/Index" class="nav-link">
                                     <i class="bi bi-house me-1"></i>Dashboard
                                 </a>
-                                <a asp-page="/GuidanceAlignment/Index" class="nav-link">
+                                <a href="#" class="nav-link" id="guidanceAlignmentLink">
                                     <i class="bi bi-compass me-1"></i>Guidance Alignment
                                 </a>
                                 
@@ -54,12 +59,12 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
-                                            <a class="dropdown-item" asp-page="/CurriculumAlignment/Form1">
+                                            <a class="dropdown-item ca-nav-link" href="#" data-page="Form1">
                                                 <i class="bi bi-file-text me-2"></i>Form 1
                                             </a>
                                         </li>
                                          <li>
-                                            <a class="dropdown-item" asp-page="/CurriculumAlignment/Form2">
+                                            <a class="dropdown-item ca-nav-link" href="#" data-page="Form2">
                                                 <i class="bi bi-file-text me-2"></i>Form 2
                                             </a>
                                         </li>
@@ -146,6 +151,9 @@
         </div>
     </footer>
 
+    <!-- Anti-forgery token for AJAX requests -->
+    @Html.AntiForgeryToken()
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -155,6 +163,129 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
+        // District Focus Context Management for ALL authenticated users
+        (function() {
+            // Check if user is authenticated
+            if (!@(User.Identity?.IsAuthenticated == true ? "true" : "false")) return;
+
+            // Get current user roles
+            const isOrendaUser = @(User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser") ? "true" : "false");
+            const isDistrictAdmin = @(User.IsInRole("DistrictAdmin") ? "true" : "false");
+            const isCounselor = @(User.IsInRole("Counselor") ? "true" : "false");
+            const isSchoolAdmin = @(User.IsInRole("SchoolAdmin") ? "true" : "false");
+            
+            // Get focus district from multiple sources
+            function getFocusDistrict() {
+                // First check ViewData (from current page)
+                const serverFocusId = '@ViewData["FocusDistrictId"]';
+                const serverFocusName = '@ViewData["FocusDistrictName"]';
+                
+                if (serverFocusId && serverFocusName && serverFocusId !== '') {
+                    return { id: parseInt(serverFocusId), name: serverFocusName };
+                }
+                
+                // Fall back to localStorage
+                const stored = localStorage.getItem('focusDistrict');
+                return stored ? JSON.parse(stored) : null;
+            }
+
+            // Set focus district in localStorage and update UI
+            function setFocusDistrict(district) {
+                if (district && district.id && district.name) {
+                    localStorage.setItem('focusDistrict', JSON.stringify(district));
+                    updateFocusContextHeader(district);
+                    updateNavigationLinks(district.id);
+                }
+            }
+
+            // Update the header focus indicator
+            function updateFocusContextHeader(district) {
+                const headerEl = document.getElementById('focusContextHeader');
+                if (!headerEl || !district) {
+                    if (headerEl) headerEl.style.display = 'none';
+                    return;
+                }
+
+                headerEl.style.display = 'flex';
+                headerEl.innerHTML = `
+                    <div class="focus-context-badge">
+                        <i class="bi bi-building me-1"></i>
+                        <span class="focus-district-name">${district.name}</span>
+                    </div>
+                `;
+            }
+
+            // Update navigation links to include focus district
+            function updateNavigationLinks(districtId) {
+                if (!districtId) return;
+
+                // Update Guidance Alignment link
+                const gaLink = document.getElementById('guidanceAlignmentLink');
+                if (gaLink) {
+                    gaLink.href = `/GuidanceAlignment/Schools?DistrictId=${districtId}`;
+                }
+
+                // Update Curriculum Alignment links
+                document.querySelectorAll('.ca-nav-link').forEach(link => {
+                    const page = link.dataset.page;
+                    link.href = `/CurriculumAlignment/${page}?districtId=${districtId}`;
+                });
+            }
+
+            // Fetch focus district from server for non-Orenda users
+            async function fetchFocusDistrictFromServer() {
+                try {
+                    const response = await fetch('/api/user/focus-district', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.focusDistrictId && data.focusDistrictName) {
+                            return { id: data.focusDistrictId, name: data.focusDistrictName };
+                        }
+                    }
+                } catch (error) {
+                    console.debug('Could not fetch focus district from server:', error);
+                }
+                return null;
+            }
+
+            // Initialize focus district
+            async function initializeFocusDistrict() {
+                let focusDistrict = getFocusDistrict();
+                
+                // For non-Orenda users, try to get from server if not in localStorage
+                if (!focusDistrict && !isOrendaUser) {
+                    focusDistrict = await fetchFocusDistrictFromServer();
+                }
+                
+                if (focusDistrict) {
+                    setFocusDistrict(focusDistrict);
+                } else {
+                    // Hide focus header if no district
+                    const headerEl = document.getElementById('focusContextHeader');
+                    if (headerEl) headerEl.style.display = 'none';
+                }
+            }
+
+            // Listen for focus district changes from other parts of the app
+            window.addEventListener('focusDistrictChanged', (event) => {
+                setFocusDistrict(event.detail);
+            });
+
+            // Expose global functions for other scripts
+            window.setOrendaFocusDistrict = setFocusDistrict;
+            window.getOrendaFocusDistrict = getFocusDistrict;
+
+            // Initialize on page load
+            initializeFocusDistrict();
+        })();
+
         // Auto-close mobile menu when clicking nav links
         document.querySelectorAll('.nav-main .nav-link').forEach(link => {
             link.addEventListener('click', () => {

@@ -1,5 +1,5 @@
 /* =========================================================
-   ORSV2 – Global Styles (cleaned + unified)
+   ORSV2 — Global Styles (cleaned + unified)
    - Brand tokens + shadows
    - Gradient buttons as default (login-button look)
    - Header, cards, tables, students page specifics
@@ -96,7 +96,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 }
 
 /* =========================================================
-   Buttons – DEFAULT = Gradient (matches login page)
+   Buttons — DEFAULT = Gradient (matches login page)
    ========================================================= */
 
 /* Base (shared) */
@@ -335,7 +335,8 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,34,197,.3);
 }
-/* Cancel = outline */
+
+/* Delete = outline (same as cancel) */
 .btn-action-delete {
   background: transparent;
   color: var(--orenda-primary);
@@ -378,7 +379,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(0,0,0,.2);
 }
-
 
 /* =========================================================
    Header / Nav
@@ -466,10 +466,40 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .main-header, .main-header .navbar, .main-header .container-fluid{ min-height:55px; }
 }
 
+/* Focus Context Header in Navigation */
+.focus-context-header {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: .5rem;
+  padding: .5rem .75rem;
+  backdrop-filter: blur(10px);
+}
+
+.focus-context-badge {
+  display: flex;
+  align-items: center;
+  color: white;
+  font-size: .85rem;
+  font-weight: 500;
+  gap: .25rem;
+}
+
+.focus-district-name {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Dropdown (global) */
 .dropdown-menu{ border:none; box-shadow:var(--orenda-shadow-lg); border-radius:.5rem; overflow:hidden; }
 .dropdown-item{ padding:.75rem 1.25rem; font-weight:500; transition:all .2s ease; }
 .dropdown-item:hover{ background:var(--orenda-primary); color:var(--orenda-text-white); }
+
+/* Dropdown enhancements for district switching */
+.dropdown-menu .dropdown-item:hover .bi-building {
+  color: white;
+}
 
 /* =========================================================
    Containers / Cards
@@ -525,26 +555,32 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   white-space: nowrap;
 }
 
-/* Responsive tweaks */
-@media (max-width:768px){
-  .orenda-header{ padding:1.5rem; }
-  .orenda-card-body{ padding:1.5rem; }
-  .orenda-summary-item{ flex-direction:column; align-items:flex-start; }
-  .orenda-summary-label{ min-width:auto; margin-bottom:.25rem; }
-  .orenda-container, .orenda-container-sm{ margin:0 1rem; max-width:none; }
-  .protocols-header{ padding:1.5rem; }
-  .protocols-table th, .protocols-table td{ padding:.75rem .5rem; }
+/* Compact badge variant */
+.badge-compact {
+  font-weight: 600;
+  padding: .2rem .5rem;
+  font-size: .75rem;
+  border-radius: .375rem;
+  line-height: 1.1;
 }
 
-/* Utilities */
-.text-orenda-primary{ color:var(--orenda-primary) !important; }
-.bg-orenda-primary{ background:var(--orenda-primary) !important; }
-.border-orenda-primary{ border-color:var(--orenda-primary) !important; }
-.shadow-orenda{ box-shadow:0 4px 20px var(--orenda-shadow) !important; }
-.shadow-orenda-hover:hover{ box-shadow:0 4px 20px var(--orenda-shadow-hover) !important; transition:box-shadow .3s ease; }
-.smooth-transition{ transition:all .3s ease; }
-@media (max-width:991.98px){
-  .navbar-collapse.collapsing{ transition:height .35s ease; }
+/* Calendar Badge for Focus Context */
+.orenda-card .badge.bg-light.text-dark {
+  background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  padding: .35em .75em;
+  border-radius: 999px;
+  border: none;
+}
+
+/* Active filter badge to look more tag-like */
+.orenda-badge-filter,
+.badge.bg-light.text-dark {
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+  border-radius: 999px;
+  padding: 0.35em 0.75em;
 }
 
 /* =========================================================
@@ -635,15 +671,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   margin-top:0 !important;
 }
 
-/* Compact badge variant */
-.badge-compact {
-  font-weight: 600;
-  padding: .2rem .5rem;
-  font-size: .75rem;
-  border-radius: .375rem;
-  line-height: 1.1;
-}
-
 /* Modal polish */
 .modal-content.shadow-orenda { border-radius: 12px; }
 .modal-header.bg-orenda-primary { border-bottom: none; }
@@ -683,6 +710,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   transform: translateY(-1px); /* Subtle lift effect, matches your buttons */
   border-bottom-color: var(--orenda-primary-hover); /* Reveals border on hover */
 }
+
 /* Make the select feel lighter but still clickable */
 .orenda-select {
   min-width: 220px;
@@ -697,21 +725,13 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .25);
 }
 
-/* Active filter badge to look more tag-like */
-.orenda-badge-filter,
-.badge.bg-light.text-dark {
-  font-weight: 600;
-  border: 1px solid #dee2e6;
-  border-radius: 999px;
-  padding: 0.35em 0.75em;
-}
-
 /* ===== GA Calendar ===== */
 .ga-calendar { width:100%; }
 .ga-cal-grid {
   display:grid;
   grid-template-columns: repeat(7, 1fr);
   gap:.5rem;
+  grid-auto-rows: 120px; /* equal-height day boxes */
 }
 .ga-cal-head {
   font-weight:700;
@@ -729,6 +749,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   box-shadow:0 1px 6px rgba(0,0,0,.04);
   display:flex;
   flex-direction:column;
+  overflow: hidden; /* prevent overflow growth */
 }
 .ga-cal-cell.is-out { opacity:.45; }
 .ga-cal-cell.is-today {
@@ -741,7 +762,12 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color:#343a40;
   margin-bottom:.25rem;
 }
-.ga-cal-chips { display:flex; flex-wrap:wrap; gap:.25rem; }
+.ga-cal-chips { 
+  display: flex; 
+  flex-direction: column; /* stack chips vertically */
+  gap: .25rem; 
+  overflow: hidden;
+}
 
 /* Chips by CP */
 .ga-chip {
@@ -755,6 +781,10 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   background: #f8f9fb;
   color:#495057;
   transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  max-width: 100%;
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis;
 }
 .ga-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 
@@ -768,44 +798,33 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   background: var(--quad-benchmark-bg);
   color: var(--quad-benchmark-fg);
   font-weight: 600;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-/* === GA Calendar alignment + chip truncation === */
-.ga-cal-grid{ grid-auto-rows: 120px; }        /* equal-height day boxes */
-.ga-cal-cell{
-  overflow: hidden;                            /* prevent overflow growth */
-  display: flex; flex-direction: column;
-}
-.ga-cal-chips{
-  display: flex; flex-direction: column;       /* stack chips vertically */
-  gap: .25rem; overflow: hidden;
-}
-.ga-chip{
-  max-width: 100%;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ga-chip.district-chip{
-  background: var(--quad-benchmark-bg);
-  color: var(--quad-benchmark-fg);
-  font-weight: 600;
 }
 
 /* =========================================================
-   Sleek District Cards v2 (Index Page)
+   District Cards & Focus UI
    ========================================================= */
 
 .district-card-v2 {
   display: flex;
   flex-direction: column; /* Stacks header, body, and footer vertically */
-  transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+  transition: all .3s ease;
+  position: relative;
 }
 
-.district-card-v2:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--orenda-shadow-lg);
+.district-card-v2:not(.focused-district):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,.1);
+}
+
+.district-card-v2.focused-district {
+  border: 2px solid var(--orenda-primary);
+  box-shadow: 0 4px 20px rgba(0,34,197,.15);
+  transform: scale(1.02);
+}
+
+.district-card-v2.focused-district:hover {
+  transform: scale(1.02) translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,34,197,.2);
 }
 
 .district-card-header {
@@ -814,6 +833,28 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color: var(--orenda-text-white);
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.district-card-v2.focused-district .district-card-header {
+  background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.district-card-v2.focused-district .district-card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
 }
 
 .district-card-header h4 {
@@ -826,10 +867,19 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   flex-grow: 1; /* This is key: it pushes the footer to the bottom */
 }
 
+.district-card-v2.focused-district .district-card-body {
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+}
+
 .district-card-footer {
   padding: .75rem;
   background-color: var(--orenda-secondary);
   border-top: 1px solid var(--orenda-border);
+}
+
+.district-card-v2.focused-district .district-card-footer {
+  background: linear-gradient(135deg, var(--orenda-secondary) 0%, #f0f4ff 100%);
+  border-top-color: rgba(0,34,197,.1);
 }
 
 .action-link {
@@ -856,4 +906,175 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 
 .action-link:hover .arrow {
   transform: translateX(4px); /* Arrow moves right on hover */
+}
+
+/* District Focus Header */
+.district-focus-header {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+  border: 1px solid var(--orenda-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,34,197,.06);
+}
+
+.focus-indicator {
+  background: var(--orenda-primary);
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Focus Badge */
+.focus-badge {
+  background: rgba(255,255,255,.2);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  flex-shrink: 0;
+}
+
+/* Focus Button on District Cards */
+.btn-focus-district {
+  background: rgba(255,255,255,.25); /* More opaque */
+  border: 2px solid rgba(255,255,255,.6); /* Thicker, more visible border */
+  color: white;
+  border-radius: 50%;
+  width: 34px; /* Slightly larger */
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem; /* Larger icon */
+  font-weight: 700; /* Bolder */
+  transition: all .2s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15); /* More noticeable shadow */
+}
+
+.btn-focus-district:hover {
+  background: rgba(255,223,0,.9); /* Golden on hover */
+  border-color: rgba(255,223,0,1);
+  color: #8B4513; /* Dark brown text on golden background */
+  transform: scale(1.15); /* More dramatic scale */
+  box-shadow: 0 4px 12px rgba(255,223,0,.4); /* Golden glow on hover */
+}
+
+/* Loading States */
+.btn-focus-district[aria-busy="true"] {
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-focus-district[aria-busy="true"]::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  top: 50%;
+  left: 50%;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.6);
+  border-right-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* District Selection Modal */
+.district-option {
+  cursor: pointer;
+  margin-bottom: .75rem;
+  transition: all .2s ease;
+}
+
+.district-option:last-child {
+  margin-bottom: 0;
+}
+
+.district-option:hover .border {
+  border-color: var(--orenda-primary) !important;
+  background: rgba(0,34,197,.02);
+}
+
+.district-option:hover .bi-chevron-right {
+  color: var(--orenda-primary) !important;
+  transform: translateX(4px);
+}
+
+.district-option .bi-chevron-right {
+  transition: all .2s ease;
+}
+
+/* Focus indicator in navigation breadcrumbs */
+.breadcrumb .focus-context {
+  background: var(--orenda-primary);
+  color: white;
+  padding: .25rem .5rem;
+  border-radius: .375rem;
+  font-size: .8rem;
+  font-weight: 500;
+  margin-left: .5rem;
+}
+
+/* =========================================================
+   Utilities
+   ========================================================= */
+.text-orenda-primary{ color:var(--orenda-primary) !important; }
+.bg-orenda-primary{ background:var(--orenda-primary) !important; }
+.border-orenda-primary{ border-color:var(--orenda-primary) !important; }
+.shadow-orenda{ box-shadow:0 4px 20px var(--orenda-shadow) !important; }
+.shadow-orenda-hover:hover{ box-shadow:0 4px 20px var(--orenda-shadow-hover) !important; transition:box-shadow .3s ease; }
+.smooth-transition{ transition:all .3s ease; }
+
+/* =========================================================
+   Responsive tweaks
+   ========================================================= */
+@media (max-width:768px){
+  .orenda-header{ padding:1.5rem; }
+  .orenda-card-body{ padding:1.5rem; }
+  .orenda-summary-item{ flex-direction:column; align-items:flex-start; }
+  .orenda-summary-label{ min-width:auto; margin-bottom:.25rem; }
+  .orenda-container, .orenda-container-sm{ margin:0 1rem; max-width:none; }
+  .protocols-header{ padding:1.5rem; }
+  .protocols-table th, .protocols-table td{ padding:.75rem .5rem; }
+  
+  .district-focus-header {
+    padding: 1rem;
+  }
+  
+  .district-focus-header .d-flex {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start !important;
+  }
+  
+  .district-card-v2.focused-district {
+    transform: none;
+  }
+  
+  .district-card-v2.focused-district:hover {
+    transform: translateY(-2px);
+  }
+  
+  .focus-context-header {
+    display: none !important;
+  }
+}
+
+@media (max-width:991.98px){
+  .navbar-collapse.collapsing{ transition:height .35s ease; }
 }

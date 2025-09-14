@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 using ORSV2.Models.ViewModels;
+using ORSV2.Services;
 
 namespace ORSV2.Pages
 {
@@ -14,15 +15,24 @@ namespace ORSV2.Pages
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IDistrictFocusService _districtFocusService;
 
-        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IDistrictFocusService districtFocusService)
         {
             _context = context;
             _userManager = userManager;
+            _districtFocusService = districtFocusService;
         }
 
-        // Greeting
+        // User context
         public string UserName { get; set; } = string.Empty;
+        public bool IsOrendaUser { get; set; }
+        
+        // Focus district
+        public int? FocusDistrictId { get; set; }
+        public string FocusDistrictName { get; set; } = string.Empty;
+        public List<District> AvailableDistricts { get; set; } = new();
+        public bool ShowDistrictSelector { get; set; }
 
         // View model for the cards
         public List<DistrictBlock> DistrictBlocks { get; set; } = new();
@@ -32,6 +42,7 @@ namespace ORSV2.Pages
             public int DistrictId { get; set; }
             public string DistrictName { get; set; } = string.Empty;
             public List<SchoolCard> Schools { get; set; } = new();
+            public bool IsFocused { get; set; }
         }
 
         public class SchoolCard
@@ -53,13 +64,13 @@ namespace ORSV2.Pages
             public string Label { get; set; } = string.Empty;
             public int SchoolId { get; set; }
             public int DistrictId { get; set; }
-            public string DistrictName { get; set; } = string.Empty;   // ⬅️ NEW
+            public string DistrictName { get; set; } = string.Empty;
             public string Cp { get; set; } = string.Empty;
         }
 
         public List<CalendarItem> CalendarItems { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync()
+        public async Task<IActionResult> OnGetAsync(int? setFocus = null)
         {
             var user = await _userManager.Users
                 .Include(u => u.UserSchools)
@@ -71,11 +82,42 @@ namespace ORSV2.Pages
 
             UserName = user.FirstName ?? user.UserName ?? "User";
             var roles = await _userManager.GetRolesAsync(user);
+            IsOrendaUser = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager") || roles.Contains("OrendaUser");
+
+            // Handle focus district setting for Orenda users
+            if (setFocus.HasValue && IsOrendaUser)
+            {
+                if (await _districtFocusService.ValidateFocusDistrictAsync(user.Id, setFocus.Value, IsOrendaUser))
+                {
+                    await _districtFocusService.SetFocusDistrictIdAsync(user.Id, setFocus.Value);
+                }
+            }
+
+            // Get available districts and focus district
+            AvailableDistricts = await _districtFocusService.GetAvailableDistrictsAsync(user.Id, IsOrendaUser);
+            FocusDistrictId = await _districtFocusService.GetFocusDistrictIdAsync(user.Id, IsOrendaUser);
+            
+            // IMPORTANT FIX: Auto-set focus district for ALL users with single district access
+            if (!FocusDistrictId.HasValue && AvailableDistricts.Count == 1)
+            {
+                var singleDistrict = AvailableDistricts.First();
+                await _districtFocusService.SetFocusDistrictIdAsync(user.Id, singleDistrict.Id);
+                FocusDistrictId = singleDistrict.Id;
+            }
+            
+            if (FocusDistrictId.HasValue)
+            {
+                var focusDistrict = AvailableDistricts.FirstOrDefault(d => d.Id == FocusDistrictId.Value);
+                FocusDistrictName = focusDistrict?.Name ?? "";
+            }
+
+            // Show district selector for Orenda users if no focus is set or on first visit
+            ShowDistrictSelector = IsOrendaUser && !FocusDistrictId.HasValue && AvailableDistricts.Count > 1;
 
             // ===== Determine scope =====
             IQueryable<School> scopedSchools;
 
-            if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager") || roles.Contains("OrendaUser"))
+            if (IsOrendaUser)
             {
                 scopedSchools = _context.Schools
                     .AsNoTracking()
@@ -143,6 +185,7 @@ namespace ORSV2.Pages
                 {
                     DistrictId = g.Key.DistrictId,
                     DistrictName = g.Key.Name,
+                    IsFocused = FocusDistrictId == g.Key.DistrictId,
                     Schools = g.Select(s => new SchoolCard
                     {
                         SchoolId = s.Id,
@@ -154,12 +197,23 @@ namespace ORSV2.Pages
                         CA = s.CA
                     }).ToList()
                 })
-                .OrderBy(b => b.DistrictName)
+                .OrderByDescending(b => b.IsFocused) // Focus district first
+                .ThenBy(b => b.DistrictName)
                 .ToList();
 
-            // ===== Checkpoint schedule rows =====
+            // ===== Calendar logic (focus district only for focused view) =====
+            var calendarSchoolIds = schoolIds;
+            if (FocusDistrictId.HasValue)
+            {
+                // For both Orenda and non-Orenda users, show calendar for focus district only if one is set
+                calendarSchoolIds = schools
+                    .Where(s => s.DistrictId == FocusDistrictId.Value)
+                    .Select(s => s.Id)
+                    .ToList();
+            }
+
             var scheduleRows = await _context.GACheckpointSchedule
-                .Where(x => schoolIds.Contains(x.SchoolId))
+                .Where(x => calendarSchoolIds.Contains(x.SchoolId))
                 .Join(_context.Schools, g => g.SchoolId, s => s.Id,
                     (g, s) => new GACheckpointScheduleViewModel
                     {
@@ -180,30 +234,52 @@ namespace ORSV2.Pages
 
             var districtNameBySchoolId = schools.ToDictionary(s => s.Id, s => s.District!.Name);
 
-            // ===== Build calendar items (stable dates) =====
+            // ===== Build calendar items =====
             CalendarItems = CheckpointSchedules
-            .SelectMany(r => new[]
-            {
-                (Date:r.Checkpoint1Date, Cp:"CP1"),
-                (Date:r.Checkpoint2Date, Cp:"CP2"),
-                (Date:r.Checkpoint3Date, Cp:"CP3"),
-                (Date:r.Checkpoint4Date, Cp:"CP4"),
-                (Date:r.Checkpoint5Date, Cp:"CP5"),
-            }
-            .Where(t => t.Date.HasValue)
-            .Select(t => new CalendarItem
-            {
-                Date = t.Date!.Value.Date,
-                Label = $"{t.Cp} – {r.SchoolName}",
-                SchoolId = r.SchoolId,
-                DistrictId = r.DistrictId,
-                DistrictName = districtNameBySchoolId.TryGetValue(r.SchoolId, out var dn) ? dn : "",
-                Cp = t.Cp
-            }))
-            .OrderBy(x => x.Date)
-            .ToList();
+                .SelectMany(r => new[]
+                {
+                    (Date:r.Checkpoint1Date, Cp:"CP1"),
+                    (Date:r.Checkpoint2Date, Cp:"CP2"),
+                    (Date:r.Checkpoint3Date, Cp:"CP3"),
+                    (Date:r.Checkpoint4Date, Cp:"CP4"),
+                    (Date:r.Checkpoint5Date, Cp:"CP5"),
+                }
+                .Where(t => t.Date.HasValue)
+                .Select(t => new CalendarItem
+                {
+                    Date = t.Date!.Value.Date,
+                    Label = $"{t.Cp} — {r.SchoolName}",
+                    SchoolId = r.SchoolId,
+                    DistrictId = r.DistrictId,
+                    DistrictName = districtNameBySchoolId.TryGetValue(r.SchoolId, out var dn) ? dn : "",
+                    Cp = t.Cp
+                }))
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            // Add ViewData for the layout to use
+            ViewData["FocusDistrictId"] = FocusDistrictId?.ToString() ?? "";
+            ViewData["FocusDistrictName"] = FocusDistrictName;
 
             return Page();
+        }
+
+        // AJAX handler for setting focus district
+        public async Task<IActionResult> OnPostSetFocusAsync(int districtId)
+        {
+            var user = await _userManager.FindByNameAsync(User.Identity!.Name!);
+            if (user == null) return BadRequest();
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var isOrendaUser = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager") || roles.Contains("OrendaUser");
+
+            if (await _districtFocusService.ValidateFocusDistrictAsync(user.Id, districtId, isOrendaUser))
+            {
+                await _districtFocusService.SetFocusDistrictIdAsync(user.Id, districtId);
+                return new JsonResult(new { success = true });
+            }
+
+            return BadRequest(new { success = false, message = "Invalid district" });
         }
     }
 }
