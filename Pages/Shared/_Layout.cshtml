@@ -46,7 +46,7 @@
                                 <a asp-page="/Index" class="nav-link">
                                     <i class="bi bi-house me-1"></i>Dashboard
                                 </a>
-                                <a asp-page="/GuidanceAlignment/Index" class="nav-link" id="guidanceAlignmentLink">
+                                <a asp-page="/GuidanceAlignment/Schools" class="nav-link" id="guidanceAlignmentLink">
                                     <i class="bi bi-compass me-1"></i>Guidance Alignment
                                 </a>
                                 
@@ -275,12 +275,20 @@
                     // Set focus district
                     setFocusDistrict({ id: district.Id, name: district.Name });
                     
-                    // Call server to update
+                    // Update dropdown immediately
+                    populateDistrictDropdown();
+                    
+                    // Dispatch event for other components
+                    window.dispatchEvent(new CustomEvent('focusDistrictChanged', { 
+                        detail: currentFocusDistrict 
+                    }));
+                    
+                    // Optional: Call server to persist the change (only if you have the endpoint)
                     updateFocusDistrictOnServer(district.Id);
                 }
             }
 
-            // Update focus district on server
+            // Update focus district on server and reload page
             async function updateFocusDistrictOnServer(districtId) {
                 try {
                     const response = await fetch('/Index?handler=SetFocus', {
@@ -295,17 +303,16 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
-                            // Dispatch event for other components
-                            window.dispatchEvent(new CustomEvent('focusDistrictChanged', { 
-                                detail: currentFocusDistrict 
-                            }));
-                            
-                            // Update dropdown
-                            populateDistrictDropdown();
+                            // Successfully updated on server, reload the page to show changes
+                            window.location.reload();
+                            return;
                         }
                     }
+                    
+                    // If server update failed, at least the localStorage is updated
+                    console.log('Server update failed, but localStorage updated');
                 } catch (error) {
-                    console.error('Error updating focus district:', error);
+                    console.log('Server update failed, using localStorage only');
                 }
             }
 
@@ -317,7 +324,7 @@
                 const gaLink = document.getElementById('guidanceAlignmentLink');
                 if (gaLink) {
                     // Check if it already has a base href, if not use the asp-page value as base
-                    const basePage = '/GuidanceAlignment/Index';
+                    const basePage = '/GuidanceAlignment/Schools';
                     gaLink.href = `${basePage}?DistrictId=${districtId}`;
                 }
 
