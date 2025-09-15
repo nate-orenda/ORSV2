@@ -223,75 +223,72 @@
                 }
             }
 
-            // Populate dropdown menu with available districts
             function populateDistrictDropdown() {
-                if (!dropdownMenu || availableDistricts.length <= 1) return;
-                
-                dropdownMenu.innerHTML = '';
-                
-                // Add current district at top (disabled)
-                if (currentFocusDistrict) {
-                    const currentItem = document.createElement('li');
-                    currentItem.innerHTML = `
-                        <span class="dropdown-item-text">
-                            <i class="bi bi-star-fill me-2 text-warning"></i>
-                            ${currentFocusDistrict.name}
-                        </span>
-                    `;
-                    dropdownMenu.appendChild(currentItem);
-                    
-                    const divider = document.createElement('li');
-                    divider.innerHTML = '<hr class="dropdown-divider">';
-                    dropdownMenu.appendChild(divider);
-                }
-                
-                // Add other available districts
-                availableDistricts
-                    .filter(d => !currentFocusDistrict || d.Id !== currentFocusDistrict.id)
-                    .forEach(district => {
-                        const item = document.createElement('li');
-                        item.innerHTML = `
-                            <a class="dropdown-item district-switch-option" href="#" data-district-id="${district.Id}">
-                                <i class="bi bi-building me-2"></i>
-                                ${district.Name}
-                            </a>
-                        `;
-                        dropdownMenu.appendChild(item);
-                    });
-                
-                // Add event listeners to new items
-                dropdownMenu.querySelectorAll('.district-switch-option').forEach(item => {
-                    item.addEventListener('click', handleDistrictSwitch);
-                });
-            }
+    if (!dropdownMenu || availableDistricts.length <= 1) return;
+    dropdownMenu.innerHTML = '';
+    
+    // Add current district at top (disabled)
+    if (currentFocusDistrict) {
+        const currentItem = document.createElement('li');
+        currentItem.innerHTML = `
+            <span class="dropdown-item-text">
+                <i class="bi bi-star-fill me-2 text-warning"></i>
+                ${currentFocusDistrict.name} 
+            </span>
+        `;
+        dropdownMenu.appendChild(currentItem);
+        
+        const divider = document.createElement('li');
+        divider.innerHTML = '<hr class="dropdown-divider">';
+        dropdownMenu.appendChild(divider);
+    }
+    
+    // Add other available districts
+    availableDistricts
+        .filter(d => !currentFocusDistrict || d.id !== currentFocusDistrict.id)
+        .forEach(district => 
+        {
+            const item = document.createElement('li');
+            item.innerHTML = `
+                <a class="dropdown-item district-switch-option" href="#" data-district-id="${district.id}">
+                    <i class="bi bi-building me-2"></i>
+                    ${district.name}
+                </a>
+        `;
+            dropdownMenu.appendChild(item);
+        });
+    // Add event listeners to new items
+    dropdownMenu.querySelectorAll('.district-switch-option').forEach(item => {
+        item.addEventListener('click', handleDistrictSwitch);
+    });
+}
 
-            // Handle district switching
-            function handleDistrictSwitch(e) {
-                e.preventDefault();
-                const districtId = parseInt(e.currentTarget.dataset.districtId);
-                const district = availableDistricts.find(d => d.Id === districtId);
-                
-                if (district) {
-                    // Set focus district
-                    setFocusDistrict({ id: district.Id, name: district.Name });
-                    
-                    // Update dropdown immediately
-                    populateDistrictDropdown();
-                    
-                    // Dispatch event for other components
-                    window.dispatchEvent(new CustomEvent('focusDistrictChanged', { 
-                        detail: currentFocusDistrict 
-                    }));
-                    
-                    // Optional: Call server to persist the change (only if you have the endpoint)
-                    updateFocusDistrictOnServer(district.Id);
-                }
-            }
+// Handle district switching
+function handleDistrictSwitch(e) {
+    e.preventDefault();
+    const districtId = parseInt(e.currentTarget.dataset.districtId);
+    // 👇 CHANGE HERE: d.Id -> d.id
+    const district = availableDistricts.find(d => d.id === districtId);
+    if (district) {
+        // Set focus district
+        // 👇 CHANGE HERE: district.Id -> district.id, district.Name -> district.name
+        setFocusDistrict({ id: district.id, name: district.name });
+        // Update dropdown immediately
+        populateDistrictDropdown();
+        // Dispatch event for other components
+        window.dispatchEvent(new CustomEvent('focusDistrictChanged', { 
+            detail: currentFocusDistrict 
+        }));
+        // Optional: Call server to persist the change
+        updateFocusDistrictOnServer(district.id);
+    }
+}
 
             // Update focus district on server and reload page
             async function updateFocusDistrictOnServer(districtId) {
                 try {
-                    const response = await fetch('/Index?handler=SetFocus', {
+                    // Try the Index handler first (if we're on the Index page)
+                    let response = await fetch('/Index?handler=SetFocus', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -304,6 +301,25 @@
                         const data = await response.json();
                         if (data.success) {
                             // Successfully updated on server, reload the page to show changes
+                            window.location.reload();
+                            return;
+                        }
+                    }
+
+                    // Fallback to API if Index handler failed
+                    response = await fetch('/api/district/focus', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        },
+                        body: JSON.stringify({ districtId: districtId })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            // Successfully updated via API, reload the page
                             window.location.reload();
                             return;
                         }
@@ -339,26 +355,29 @@
             // Fetch available districts and focus district from server
             async function fetchDistrictDataFromServer() {
                 try {
-                    // Get data from ViewData (passed from pages that have district logic)
+                    // First try to get data from ViewData (if the page provides it)
                     const serverFocusId = '@ViewData["FocusDistrictId"]';
                     const serverFocusName = '@ViewData["FocusDistrictName"]';
-                    const serverAvailableDistricts = '@Html.Raw(ViewData["AvailableDistricts"] ?? "[]")';
+                    const serverAvailableDistricts = '@Html.Raw(ViewData["AvailableDistricts"] ?? "null")';
                     
-                    // Parse available districts if provided
-                    if (serverAvailableDistricts && serverAvailableDistricts !== '[]') {
+                    // Parse available districts if provided by the page
+                    if (serverAvailableDistricts && serverAvailableDistricts !== 'null' && serverAvailableDistricts !== '[]') {
                         try {
                             availableDistricts = JSON.parse(serverAvailableDistricts);
                         } catch (e) {
-                            console.debug('Could not parse available districts:', e);
+                            console.debug('Could not parse available districts from ViewData:', e);
                         }
                     }
                     
                     if (serverFocusId && serverFocusName && serverFocusId !== '') {
-                        return { id: parseInt(serverFocusId), name: serverFocusName };
+                        // If ViewData provided the info and we got districts, we're good
+                        if (availableDistricts.length > 0) {
+                            return { id: parseInt(serverFocusId), name: serverFocusName };
+                        }
                     }
 
-                    // Fallback: try the API endpoint if ViewData not available
-                    const response = await fetch('/api/user/focus-district', {
+                    // Fallback: Use the API endpoint to get district context
+                    const response = await fetch('/api/district/context', {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',
@@ -369,12 +388,14 @@
                     if (response.ok) {
                         const data = await response.json();
                         
-                        if (data.availableDistricts) {
-                            availableDistricts = data.availableDistricts;
-                        }
-                        
-                        if (data.focusDistrictId && data.focusDistrictName) {
-                            return { id: data.focusDistrictId, name: data.focusDistrictName };
+                        if (data.success) {
+                            if (data.availableDistricts) {
+                                availableDistricts = data.availableDistricts;
+                            }
+                            
+                            if (data.focusDistrictId && data.focusDistrictName) {
+                                return { id: data.focusDistrictId, name: data.focusDistrictName };
+                            }
                         }
                     }
                 } catch (error) {

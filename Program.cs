@@ -170,16 +170,16 @@ app.MapGet("/api/user/focus-district", async (
     {
         var focusDistrictId = await districtFocusService.GetFocusDistrictIdAsync(user.Id, isOrendaUser);
         var availableDistricts = await districtFocusService.GetAvailableDistrictsAsync(user.Id, isOrendaUser);
-        
+
         string? focusDistrictName = null;
         if (focusDistrictId.HasValue)
         {
             var focusDistrict = availableDistricts.FirstOrDefault(d => d.Id == focusDistrictId.Value);
             focusDistrictName = focusDistrict?.Name;
         }
-        
-        return Results.Ok(new 
-        { 
+
+        return Results.Ok(new
+        {
             focusDistrictId = focusDistrictId,
             focusDistrictName = focusDistrictName,
             availableDistricts = availableDistricts.Select(d => new { d.Id, d.Name }).ToList()
@@ -187,14 +187,16 @@ app.MapGet("/api/user/focus-district", async (
     }
     catch
     {
-        return Results.Ok(new 
-        { 
-            focusDistrictId = (int?)null, 
+        return Results.Ok(new
+        {
+            focusDistrictId = (int?)null,
             focusDistrictName = (string?)null,
             availableDistricts = new List<object>()
         });
     }
 }).RequireAuthorization();
+
+app.MapControllers();
 
 app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
 

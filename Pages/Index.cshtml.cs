@@ -250,10 +250,16 @@ namespace ORSV2.Pages
                 .ToList();
 
             // Add ViewData for the layout to use
+            // ... inside OnGetAsync method in Index.cshtml.cs
+
+            // Add ViewData for the layout to use
             ViewData["FocusDistrictId"] = FocusDistrictId?.ToString() ?? "";
             ViewData["FocusDistrictName"] = FocusDistrictName;
             ViewData["AvailableDistricts"] = System.Text.Json.JsonSerializer.Serialize(
-                AvailableDistricts.Select(d => new { Id = d.Id, Name = d.Name }).ToList()
+                AvailableDistricts.Select(d => new { d.Id, d.Name }).ToList(),
+                new System.Text.Json.JsonSerializerOptions {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                }
             );
             ViewData["IsOrendaUser"] = IsOrendaUser;
 
