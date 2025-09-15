@@ -149,6 +149,9 @@ else
 // Add this to your Program.cs before app.Run()
 
 // API endpoint to get current user's focus district
+// Add this to your Program.cs before app.Run()
+
+// API endpoint to get current user's focus district and available districts
 app.MapGet("/api/user/focus-district", async (
     HttpContext context,
     IDistrictFocusService districtFocusService,
@@ -166,27 +169,30 @@ app.MapGet("/api/user/focus-district", async (
     try
     {
         var focusDistrictId = await districtFocusService.GetFocusDistrictIdAsync(user.Id, isOrendaUser);
+        var availableDistricts = await districtFocusService.GetAvailableDistrictsAsync(user.Id, isOrendaUser);
         
+        string? focusDistrictName = null;
         if (focusDistrictId.HasValue)
         {
-            var availableDistricts = await districtFocusService.GetAvailableDistrictsAsync(user.Id, isOrendaUser);
             var focusDistrict = availableDistricts.FirstOrDefault(d => d.Id == focusDistrictId.Value);
-            
-            if (focusDistrict != null)
-            {
-                return Results.Ok(new 
-                { 
-                    focusDistrictId = focusDistrict.Id, 
-                    focusDistrictName = focusDistrict.Name 
-                });
-            }
+            focusDistrictName = focusDistrict?.Name;
         }
         
-        return Results.Ok(new { focusDistrictId = (int?)null, focusDistrictName = (string?)null });
+        return Results.Ok(new 
+        { 
+            focusDistrictId = focusDistrictId,
+            focusDistrictName = focusDistrictName,
+            availableDistricts = availableDistricts.Select(d => new { d.Id, d.Name }).ToList()
+        });
     }
     catch
     {
-        return Results.Ok(new { focusDistrictId = (int?)null, focusDistrictName = (string?)null });
+        return Results.Ok(new 
+        { 
+            focusDistrictId = (int?)null, 
+            focusDistrictName = (string?)null,
+            availableDistricts = new List<object>()
+        });
     }
 }).RequireAuthorization();
 

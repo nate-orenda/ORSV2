@@ -1078,3 +1078,126 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 @media (max-width:991.98px){
   .navbar-collapse.collapsing{ transition:height .35s ease; }
 }
+
+/* Add this to your site.css file */
+
+/* =========================================================
+   Compact District Focus Selector in Navbar
+   ========================================================= */
+
+.district-focus-selector {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: .375rem;
+  padding: .25rem .5rem;
+  backdrop-filter: blur(10px);
+  margin: 0;
+}
+
+.district-focus-selector .dropdown-toggle {
+  border: none;
+  background: transparent;
+  color: var(--orenda-text-white);
+  font-weight: 500;
+  font-size: .8rem;
+  padding: .25rem .5rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.district-focus-selector .dropdown-toggle:focus {
+  box-shadow: 0 0 0 .2rem rgba(255,255,255,.25);
+}
+
+.district-focus-selector .dropdown-toggle::after {
+  margin-left: .5rem;
+  font-size: .7rem;
+}
+
+.district-focus-selector .district-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+  display: inline-block;
+}
+
+/* Dropdown menu styling */
+.district-focus-selector .dropdown-menu {
+  background: #fff;
+  border: none;
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+  border-radius: .375rem;
+  padding: .5rem 0;
+  margin-top: .25rem;
+  min-width: 200px;
+}
+
+.district-focus-selector .dropdown-item {
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  color: #495057;
+  transition: all .2s ease;
+  border: none;
+  background: none;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.district-focus-selector .dropdown-item:hover {
+  background: var(--orenda-primary);
+  color: #fff;
+}
+
+.district-focus-selector .dropdown-item i {
+  width: 1.25rem;
+}
+
+.district-focus-selector .dropdown-item-text {
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.district-focus-selector .dropdown-item-text i.text-warning {
+  color: #ffc107 !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 991.98px) {
+  .district-focus-selector {
+    background: rgba(255,255,255,.15);
+    border-radius: .375rem;
+    margin-top: .5rem;
+    padding: .5rem;
+    width: 100%;
+  }
+  
+  .district-focus-selector .dropdown-toggle {
+    font-size: .9rem;
+    padding: .5rem;
+    text-align: left;
+    width: 100%;
+    max-width: none;
+  }
+  
+  .district-focus-selector .district-name {
+    max-width: none;
+  }
+}
+
+/* Small mobile screens */
+@media (max-width: 575.98px) {
+  .district-focus-selector .dropdown-toggle {
+    font-size: .85rem;
+    padding: .375rem .5rem;
+  }
+  
+  .district-focus-selector .district-name {
+    font-size: .85rem;
+  }
+}

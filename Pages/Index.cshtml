@@ -5,46 +5,6 @@
 }
 
 <div class="orenda-container">
-    <!-- District Focus Header for ALL users with focus district -->
-    @if (Model.FocusDistrictId.HasValue)
-    {
-        <div class="district-focus-header mb-4">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="focus-indicator">
-                        <svg width="20" height="20" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
-                            <path d="M8 2a.5.5 0 0 1 .5.5v2.793l1.146-1.147a.5.5 0 0 1 .708.708L8.707 6.5H11.5a.5.5 0 0 1 0 1H8.707l1.647 1.646a.5.5 0 0 1-.708.708L8.5 8.207V11.5a.5.5 0 0 1-1 0V8.207L6.354 9.354a.5.5 0 1 1-.708-.708L7.293 7.5H4.5a.5.5 0 0 1 0-1h2.793L5.646 5.354a.5.5 0 1 1 .708-.708L7.5 5.793V2.5A.5.5 0 0 1 8 2z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <span class="text-muted small">@(Model.IsOrendaUser ? "Currently focused on:" : "Working with:")</span>
-                        <h6 class="mb-0 fw-bold text-primary">@Model.FocusDistrictName</h6>
-                    </div>
-                </div>
-                @if (Model.IsOrendaUser && Model.AvailableDistricts.Count > 1)
-                {
-                    <div class="dropdown">
-                        <button class="btn-orenda-soft btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-arrow-repeat me-1"></i>
-                            Switch District
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            @foreach (var district in Model.AvailableDistricts.Where(d => d.Id != Model.FocusDistrictId))
-                            {
-                                <li>
-                                    <a class="dropdown-item district-switch-btn" href="#" data-district-id="@district.Id">
-                                        <i class="bi bi-building me-2"></i>
-                                        @district.Name
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
     <!-- Welcome Header -->
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Welcome, @Model.UserName</h2>
@@ -133,14 +93,11 @@
                         Guidance Alignment Calendar
                         @if (Model.IsOrendaUser)
                         {
-                            @if (Model.FocusDistrictId.HasValue)
-                            {
-                                <span class="badge bg-light text-dark ms-2">@Model.FocusDistrictName</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-light text-dark ms-2">All Districts</span>
-                            }
+                            <span class="badge bg-light text-dark ms-2">All Districts</span>
+                        }
+                        else if (Model.AvailableDistricts.Count > 1)
+                        {
+                            <span class="badge bg-light text-dark ms-2">All My Districts</span>
                         }
                         else if (Model.FocusDistrictId.HasValue)
                         {

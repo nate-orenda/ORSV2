@@ -201,17 +201,9 @@ namespace ORSV2.Pages
                 .ThenBy(b => b.DistrictName)
                 .ToList();
 
-            // ===== Calendar logic (focus district only for focused view) =====
-            var calendarSchoolIds = schoolIds;
-            if (FocusDistrictId.HasValue)
-            {
-                // For both Orenda and non-Orenda users, show calendar for focus district only if one is set
-                calendarSchoolIds = schools
-                    .Where(s => s.DistrictId == FocusDistrictId.Value)
-                    .Select(s => s.Id)
-                    .ToList();
-            }
-
+            // ===== Calendar logic (show all accessible districts) =====
+            var calendarSchoolIds = schoolIds; // Always use all schools the user has access to
+            
             var scheduleRows = await _context.GACheckpointSchedule
                 .Where(x => calendarSchoolIds.Contains(x.SchoolId))
                 .Join(_context.Schools, g => g.SchoolId, s => s.Id,
@@ -260,6 +252,10 @@ namespace ORSV2.Pages
             // Add ViewData for the layout to use
             ViewData["FocusDistrictId"] = FocusDistrictId?.ToString() ?? "";
             ViewData["FocusDistrictName"] = FocusDistrictName;
+            ViewData["AvailableDistricts"] = System.Text.Json.JsonSerializer.Serialize(
+                AvailableDistricts.Select(d => new { Id = d.Id, Name = d.Name }).ToList()
+            );
+            ViewData["IsOrendaUser"] = IsOrendaUser;
 
             return Page();
         }
