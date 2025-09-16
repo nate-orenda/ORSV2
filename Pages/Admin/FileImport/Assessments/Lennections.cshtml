@@ -1,135 +1,581 @@
 @page
 @model ORSV2.Pages.Admin.FileImport.Assessments.LennectionsModel
 @{
-    ViewData["Title"] = "Lennections Import";
+    ViewData["Title"] = "Enhanced Lennections Import";
 }
 
-<h2 class="mb-3">Lennections Import</h2>
+<div class="container my-4">
+    <h2 class="mb-3">
+        <i class="fas fa-file-upload text-primary me-2"></i>
+        Enhanced Lennections Import
+    </h2>
 
-<form method="post" enctype="multipart/form-data">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label">District</label>
-            <select asp-for="DistrictId" class="form-select" asp-items="Model.DistrictOptions"></select>
-            <span class="text-danger" asp-validation-for="DistrictId"></span>
+    <!-- Step 1: File Upload & Auto-Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-cloud-upload-alt me-2"></i>
+                Step 1: Upload & Analyze File
+            </h5>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Subject</label>
-            <input asp-for="Subject" class="form-control" placeholder="ELA / Math / Science / Social Science" />
-            <span class="text-danger" asp-validation-for="Subject"></span>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Unit Cycle (1–5)</label>
-            <input asp-for="UnitCycle" type="number" class="form-control" min="1" max="5" />
-            <span class="text-danger" asp-validation-for="UnitCycle"></span>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Test Id</label>
-            <input asp-for="TestId" class="form-control" placeholder="Auto-detected from first data row" />
-            @if (!string.IsNullOrWhiteSpace(Model.AutoDetectedTestId))
-            {
-                <div class="form-text">Auto-detected: <strong>@Model.AutoDetectedTestId</strong></div>
-            }
-        </div>
-        <div class="col-md-5">
-            <label class="form-label">Upload Lennections CSV</label>
-            <input asp-for="Upload" type="file" class="form-control" />
-            <span class="text-danger" asp-validation-for="Upload"></span>
-            <div class="form-text">Student local id must be in a column named <code>StudentId</code>.</div>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Delimiter</label>
-            <select asp-for="Delimiter" class="form-select">
-                <option value="comma">Comma (,)</option>
-                <option value="tab">Tab (\t)</option>
-            </select>
-        </div>
-        <div class="col-12">
-            <button type="submit" class="btn btn-primary" asp-page-handler="Preview">Preview</button>
-            @if (Model.HasPreview)
-            {
-                <button type="submit" class="btn btn-success" asp-page-handler="Import">Import</button>
-            }
+        <div class="card-body position-relative">
+            <div id="loadingOverlay" class="loading-overlay d-none">
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <div>Analyzing file...</div>
+                </div>
+            </div>
+
+            <form id="uploadForm" method="post" enctype="multipart/form-data" asp-page-handler="AnalyzeFile">
+                @Html.AntiForgeryToken()
+                
+                <div class="upload-zone" id="uploadZone">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Drop your CSV file here or click to browse</h5>
+                    <p class="text-muted mb-3">
+                        Student local ID must be in a column named <code>StudentId</code> or <code>Local Student ID</code>
+                    </p>
+                    <input asp-for="Upload" type="file" id="fileInput" class="d-none" accept=".csv,.tsv,.txt">
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open me-2"></i>
+                        Choose File
+                    </button>
+                </div>
+
+                <div id="fileInfo" class="mt-3 d-none">
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file me-2"></i>
+                            <strong id="fileName"></strong> 
+                            (<span id="fileSize"></span>)
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="analyzeBtn">
+                            <i class="fas fa-search me-1"></i>
+                            Analyze File
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">File Format</label>
+                        <select asp-for="Delimiter" class="form-select">
+                            <option value="comma">Comma Separated (CSV)</option>
+                            <option value="tab">Tab Separated (TSV)</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-</form>
 
-@if (Model.HasPreview)
-{
-    <hr />
+    <!-- Step 2: Import Configuration Form -->
+    <div class="card" id="configCard">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-cog me-2"></i>
+                Step 2: Import Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="detectionSummary" class="detection-summary d-none">
+                <h6><i class="fas fa-magic me-2"></i>Auto-Detection Results</h6>
+                <div id="detectionResults"></div>
+            </div>
 
-    <div class="card mb-3">
-        <div class="card-header">Detected Standards</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-sm table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th>Standard ID (from file)</th>
-                            <th>HumanCodingScheme (from DB)</th>
-                            <th>Exists in Standards?</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in Model.Preview)
-                        {
+            <form method="post" enctype="multipart/form-data" id="importForm">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                <!-- Store analyzed file data -->
+                <input type="hidden" asp-for="TempPath" />
+                <input type="hidden" asp-for="Delimiter" />
+                <!-- Keep the file input but make it optional since we'll use TempPath -->
+                <input type="file" name="Upload" id="hiddenFileInput" style="display: none;" />
+                
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="field-group">
+                            <label class="form-label">District</label>
+                            <select asp-for="DistrictId" class="form-select" asp-items="Model.DistrictOptions">
+                                <option value="">Select a district...</option>
+                            </select>
+                            <span class="text-danger" asp-validation-for="DistrictId"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="field-group">
+                            <label class="form-label">Subject</label>
+                            <input asp-for="Subject" class="form-control" placeholder="ELA / Math / Science / Social Science" />
+                            <div class="form-text">Auto-detected from file content</div>
+                            <span class="text-danger" asp-validation-for="Subject"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="field-group">
+                            <label class="form-label">Unit Cycle (1-5)</label>
+                            <input asp-for="UnitCycle" type="number" class="form-control" min="1" max="5" />
+                            <span class="text-danger" asp-validation-for="UnitCycle"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="field-group">
+                            <label class="form-label">Test ID</label>
+                            <input asp-for="TestId" class="form-control" placeholder="Auto-detected from Assessment Name column" />
+                            @if (!string.IsNullOrWhiteSpace(Model.AutoDetectedTestId))
+                            {
+                                <div class="form-text text-success">Auto-detected: <strong>@Model.AutoDetectedTestId</strong></div>
+                            }
+                            <div class="form-text" id="testIdHint">Will be detected from Assessment Name column</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" asp-page-handler="Preview" id="previewBtn">
+                                <i class="fas fa-eye me-2"></i>
+                                Preview Import
+                            </button>
+                            @if (Model.HasPreview)
+                            {
+                                <button type="submit" class="btn btn-success" asp-page-handler="Import">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Import Data
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Step 3: Preview Results -->
+    @if (Model.HasPreview)
+    {
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Preview Results
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
                             <tr>
-                                <td>@p.StandardId</td>
-                                <td>@p.HumanCodingScheme</td>
-                                <td>
-                                    @if (p.ExistsInStandards) { <span class="text-success">Yes</span> }
-                                    else { <span class="text-danger fw-bold">No</span> }
-                                </td>
+                                <th>Standard ID (from file)</th>
+                                <th>HumanCodingScheme (from DB)</th>
+                                <th>Exists in Standards?</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.Preview)
+                            {
+                                <tr>
+                                    <td>@p.StandardId</td>
+                                    <td>@p.HumanCodingScheme</td>
+                                    <td>
+                                        @if (p.ExistsInStandards) 
+                                        { 
+                                            <span class="text-success"><i class="fas fa-check"></i> Yes</span> 
+                                        }
+                                        else 
+                                        { 
+                                            <span class="text-danger fw-bold"><i class="fas fa-times"></i> No</span> 
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-    @if (Model.MissingIds.Any())
-    {
-        <div class="alert alert-warning">
-            <strong>Validation:</strong> The following Standard IDs from the file were not found in the <code>Standards</code> table:
-            <div class="small mt-2">
-                @string.Join(", ", Model.MissingIds.OrderBy(x => x))
-            </div>
-            <div class="mt-2">You can still import; rows with these Standard IDs will be skipped.</div>
-        </div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(Model.StudentValidationSummary))
-    {
-        <div class="alert alert-info">@Model.StudentValidationSummary</div>
-    }
-
-    <form method="post" class="mb-5">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="TempPath" value="@Model.TempPath" />
-        <input type="hidden" name="Delimiter" value="@Model.Delimiter" />
-        <input type="hidden" name="DistrictId" value="@Model.DistrictId" />
-        <input type="hidden" name="TestId" value="@Model.TestId" />
-        <input type="hidden" name="Subject" value="@Model.Subject" />
-        <input type="hidden" name="UnitCycle" value="@Model.UnitCycle" />
-        <button type="submit" class="btn btn-success" asp-page-handler="Import">Import to Database</button>
-    </form>
-}
-
-@* ***FIXED***: This now correctly displays the detailed success message after an import. *@
-@if (TempData["ImportSuccessMessage"] is string msg)
-{
-    <div class="alert alert-success">
-        @msg
-        @if (TempData["ImportBatchId"] is string batchId && !string.IsNullOrEmpty(batchId))
+        @if (Model.MissingIds.Any())
         {
-            <a class="ms-2" asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@batchId">View results</a>
+            <div class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Validation:</strong> The following Standard IDs from the file were not found in the <code>Standards</code> table:
+                <div class="small mt-2">
+                    @string.Join(", ", Model.MissingIds.OrderBy(x => x))
+                </div>
+                <div class="mt-2">You can still import; rows with these Standard IDs will be skipped.</div>
+            </div>
         }
-    </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.StudentValidationSummary))
+        {
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                @Model.StudentValidationSummary
+            </div>
+        }
+    }
+
+    <!-- Success Message -->
+    @if (TempData["ImportSuccessMessage"] is string msg)
+    {
+        <div class="alert alert-success mt-4">
+            <i class="fas fa-check-circle me-2"></i>
+            @msg
+            @if (TempData["ImportBatchId"] is string batchId && !string.IsNullOrEmpty(batchId))
+            {
+                <a class="btn btn-sm btn-outline-success ms-2" asp-page="/Admin/FileImport/Assessments/Results" asp-route-BatchId="@batchId">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    View Results
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Styles {
+<style>
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.375rem;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-zone:hover {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+    }
+    .upload-zone.dragover {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+    }
+    .auto-populated {
+        background: linear-gradient(45deg, #e8f5e8, #f0f8f0);
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    .auto-populated .form-label::after {
+        content: " ✓";
+        color: #28a745;
+        font-weight: bold;
+    }
+    .detection-summary {
+        background: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0.375rem;
+    }
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 0.375rem;
+    }
+    .field-group {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    .field-group.auto-populated {
+        background: linear-gradient(45deg, #e8f5e8, #f0f8f0);
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        border: 1px solid #28a745;
+    }
+</style>
 }
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+<partial name="_ValidationScriptsPartial" />
+<script>
+class EnhancedFileImporter {
+    constructor() {
+        this.setupEventListeners();
+        this.detectedData = {};
+        this.fileUploaded = false;
+    }
+
+    setupEventListeners() {
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        // Drag and drop functionality
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleFile(e.target.files[0]);
+            }
+        });
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', () => {
+            this.analyzeFile();
+        });
+
+        // Auto-detect delimiter from file extension
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const delimiterSelect = document.querySelector('[name="Delimiter"]');
+                if (file.name.toLowerCase().endsWith('.tsv')) {
+                    delimiterSelect.value = 'tab';
+                } else {
+                    delimiterSelect.value = 'comma';
+                }
+            }
+        });
+    }
+
+    handleFile(file) {
+        this.selectedFile = file;
+        this.fileUploaded = true;
+        
+        // Update UI
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = this.formatFileSize(file.size);
+        document.getElementById('fileInfo').classList.remove('d-none');
+
+        // Auto-detect delimiter
+        const delimiterSelect = document.querySelector('[name="Delimiter"]');
+        if (file.name.toLowerCase().endsWith('.tsv')) {
+            delimiterSelect.value = 'tab';
+        } else {
+            delimiterSelect.value = 'comma';
+        }
+
+        // Enable analyze button
+        document.getElementById('analyzeBtn').disabled = false;
+        
+        // Enable preview button since we have a file now
+        document.getElementById('previewBtn').disabled = false;
+        
+        // Update file input for form submission
+        this.updateFileInput(file);
+    }
+
+    updateFileInput(file) {
+        // Create a new DataTransfer object to set the file
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        
+        // Update both file inputs
+        document.getElementById('fileInput').files = dt.files;
+        document.getElementById('hiddenFileInput').files = dt.files;
+    }
+
+    async analyzeFile() {
+        if (!this.selectedFile) return;
+
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        
+        loadingOverlay.classList.remove('d-none');
+        analyzeBtn.disabled = true;
+
+        try {
+            const formData = new FormData();
+            formData.append('Upload', this.selectedFile);
+            formData.append('Delimiter', document.querySelector('[name="Delimiter"]').value);
+            
+            // Get anti-forgery token
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const response = await fetch('?handler=AnalyzeFile', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.populateFields(result.analysis);
+                this.showDetectionSummary(result.analysis);
+                this.enablePreview();
+                
+                // Store temp path for preview/import
+                if (result.tempPath) {
+                    document.querySelector('input[name="TempPath"]').value = result.tempPath;
+                }
+            } else {
+                this.showError(result.message || 'Analysis failed');
+            }
+        } catch (error) {
+            console.error('Analysis failed:', error);
+            this.showError('Failed to analyze file: ' + error.message);
+        } finally {
+            loadingOverlay.classList.add('d-none');
+            analyzeBtn.disabled = false;
+        }
+    }
+
+    populateFields(analysis) {
+        // Auto-populate detected fields with visual feedback
+        if (analysis.detectedTestId) {
+            this.setFieldValue('TestId', analysis.detectedTestId, true);
+            document.getElementById('testIdHint').innerHTML = 
+                `<span class="text-success">✓ Auto-detected from ${analysis.testIdSource}</span>`;
+        }
+
+        if (analysis.detectedSubject) {
+            this.setFieldValue('Subject', analysis.detectedSubject, true);
+        }
+
+        if (analysis.detectedUnitCycle) {
+            this.setFieldValue('UnitCycle', analysis.detectedUnitCycle, true);
+        }
+
+        this.detectedData = analysis;
+    }
+
+    setFieldValue(fieldName, value, autoPopulated = false) {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+        if (field) {
+            field.value = value;
+            
+            if (autoPopulated) {
+                field.classList.add('auto-populated');
+                const fieldGroup = field.closest('.field-group');
+                if (fieldGroup) {
+                    fieldGroup.classList.add('auto-populated');
+                }
+            }
+        }
+    }
+
+    showDetectionSummary(analysis) {
+        const summary = document.getElementById('detectionSummary');
+        const results = document.getElementById('detectionResults');
+        
+        let html = '<div class="row">';
+        
+        // Left column - Detection results
+        html += '<div class="col-md-8"><ul class="mb-0">';
+        
+        if (analysis.detectedTestId) {
+            html += `<li><strong>Test ID:</strong> "${analysis.detectedTestId}" <span class="text-muted">(from ${analysis.testIdSource})</span></li>`;
+        }
+        
+        if (analysis.detectedSubject) {
+            html += `<li><strong>Subject:</strong> ${analysis.detectedSubject}</li>`;
+        }
+        
+        if (analysis.detectedUnitCycle) {
+            html += `<li><strong>Unit Cycle:</strong> ${analysis.detectedUnitCycle}</li>`;
+        }
+        
+        html += `<li><strong>Data Rows:</strong> ${analysis.totalRows.toLocaleString()}</li>`;
+        html += `<li><strong>Standards Columns:</strong> ${analysis.standardsColumns}</li>`;
+        
+        html += '</ul></div>';
+        
+        // Right column - Validation status
+        html += '<div class="col-md-4">';
+        
+        if (analysis.hasStudentId) {
+            html += `<div class="alert alert-success py-2 mb-2">
+                <i class="fas fa-check me-2"></i>
+                <strong>Student ID Column:</strong><br>
+                <small>Found: ${analysis.studentIdColumn}</small>
+            </div>`;
+        } else {
+            html += `<div class="alert alert-danger py-2 mb-2">
+                <i class="fas fa-times me-2"></i>
+                <strong>Missing StudentId Column</strong><br>
+                <small>Required column not found</small>
+            </div>`;
+        }
+        
+        if (analysis.validationMessages && analysis.validationMessages.length > 0) {
+            html += '<div class="alert alert-warning py-2">';
+            html += '<i class="fas fa-exclamation-triangle me-2"></i>';
+            html += '<strong>Issues:</strong><br>';
+            html += '<small>' + analysis.validationMessages.join('<br>') + '</small>';
+            html += '</div>';
+        }
+        
+        html += '</div></div>';
+        
+        results.innerHTML = html;
+        summary.classList.remove('d-none');
+    }
+
+    enablePreview() {
+        const previewBtn = document.getElementById('previewBtn');
+        previewBtn.disabled = false;
+        previewBtn.classList.remove('btn-secondary');
+        previewBtn.classList.add('btn-primary');
+        
+        // Show a hint that the form is ready for preview
+        const hint = document.createElement('div');
+        hint.className = 'alert alert-success mt-2';
+        hint.innerHTML = '<i class="fas fa-check me-2"></i>File analyzed! You can now preview the import.';
+        
+        const existing = document.querySelector('.analysis-ready-hint');
+        if (existing) existing.remove();
+        
+        hint.classList.add('analysis-ready-hint');
+        document.getElementById('detectionSummary').appendChild(hint);
+    }
+
+    showError(message) {
+        const alertHtml = `
+            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        const container = document.querySelector('.card-body');
+        container.insertAdjacentHTML('afterbegin', alertHtml);
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+}
+
+// Initialize the enhanced file importer
+document.addEventListener('DOMContentLoaded', () => {
+    new EnhancedFileImporter();
+});
+</script>
 }

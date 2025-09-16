@@ -13,19 +13,20 @@ using System.Text.RegularExpressions;
 namespace ORSV2.Pages.Admin.FileImport.Assessments
 {
     [Authorize(Roles = "OrendaAdmin,DistrictAdmin")]
-    public class EnhancedLennectionsModel : PageModel
+    public class LennectionsModel : PageModel
     {
         // --- UI state ---
-        [BindProperty, Required] public int DistrictId { get; set; }
+        [BindProperty] public int DistrictId { get; set; }
         [BindProperty] public string TestId { get; set; } = "";
         [BindProperty] public string Delimiter { get; set; } = "comma";
         [BindProperty] public IFormFile? Upload { get; set; }
         [BindProperty] public string? TempPath { get; set; }
-        [BindProperty, Required] public string Subject { get; set; } = "";
+        [BindProperty] public string Subject { get; set; } = "";
         [BindProperty, Range(1, 5)] public int UnitCycle { get; set; } = 1;
 
         public bool HasPreview => Preview.Count > 0;
         public List<SelectListItem> DistrictOptions { get; private set; } = new();
+        public string? ImportBatchId { get; private set; }
 
         // --- PREVIEW STRUCTURES ---
         public record StandardPreview(Guid StandardId, string? HumanCodingScheme, bool ExistsInStandards);
@@ -34,7 +35,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public string? AutoDetectedTestId { get; private set; }
         public string? StudentValidationSummary { get; private set; }
 
-        // --- FILE ANALYSIS RESULTS ---
+        // --- NEW: FILE ANALYSIS RESULTS ---
         public class FileAnalysisResult
         {
             public string? DetectedTestId { get; set; }
@@ -51,7 +52,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         }
 
         private readonly IConfiguration _config;
-        public EnhancedLennectionsModel(IConfiguration config) => _config = config;
+        public LennectionsModel(IConfiguration config) => _config = config;
 
         private static readonly string[] PossibleTestHeaders = { "Assessment Name", "Assessment", "Test Name", "Test" };
         private static readonly Regex UnitCyclePattern = new(@"(?:unit|cycle|quarter|q)\s*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -62,7 +63,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         }
 
         /// <summary>
-        /// New AJAX endpoint for file analysis without full form submission
+        /// NEW: AJAX endpoint for file analysis without full form submission
         /// </summary>
         public async Task<IActionResult> OnPostAnalyzeFile()
         {
@@ -73,21 +74,20 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             try
             {
-                // Save temp file
-                var temp = Path.Combine(Path.GetTempPath(), $"analysis_{Guid.NewGuid():N}.csv");
+                // Save temp file for later use in preview/import
+                var temp = Path.Combine(Path.GetTempPath(), $"lenx_{Guid.NewGuid():N}.csv");
                 using (var fs = System.IO.File.Create(temp))
                     await Upload.CopyToAsync(fs);
 
                 // Analyze file
                 var analysis = await AnalyzeFileContents(temp, Delimiter);
 
-                // Clean up temp file
-                TryDelete(temp);
-
+                // Return analysis results with temp path for later use
                 return new JsonResult(new
                 {
                     success = true,
-                    analysis = analysis
+                    analysis = analysis,
+                    tempPath = temp  // Include temp path so frontend can store it
                 });
             }
             catch (Exception ex)
@@ -100,64 +100,66 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             }
         }
 
-        /// <summary>
-        /// Enhanced preview that can work with pre-analyzed file data
-        /// </summary>
         public async Task<IActionResult> OnPostPreview()
         {
-            // Clear any lingering success messages from previous imports
+            // ***FIX***: Clear any lingering success messages from previous imports
             TempData.Remove("ImportSuccessMessage");
             TempData.Remove("ImportBatchId");
 
             await LoadDistrictOptionsAsync();
 
-            // Allow empty Subject and DistrictId for preview (they can be auto-populated)
+            // Remove validation for fields that can be auto-detected
             ModelState.Remove(nameof(Subject));
             ModelState.Remove(nameof(DistrictId));
+            ModelState.Remove(nameof(TestId));
 
+            string tempFilePath;
+
+            // Check if we have a file upload OR a temp path from previous analysis
             if (Upload == null || Upload.Length == 0)
             {
-                ModelState.AddModelError("", "Please upload a CSV file.");
-                return Page();
+                if (string.IsNullOrWhiteSpace(TempPath) || !System.IO.File.Exists(TempPath))
+                {
+                    ModelState.AddModelError("", "Please upload a CSV file.");
+                    return Page();
+                }
+
+                // Use existing temp file - no need to recreate
+                tempFilePath = TempPath;
+            }
+            else
+            {
+                // New file uploaded, create temp file
+                tempFilePath = Path.Combine(Path.GetTempPath(), $"lenx_{Guid.NewGuid():N}.csv");
+                using (var fs = System.IO.File.Create(tempFilePath))
+                    await Upload.CopyToAsync(fs);
+                TempPath = tempFilePath;
             }
 
-            var temp = Path.Combine(Path.GetTempPath(), $"lenx_{Guid.NewGuid():N}.csv");
-            using (var fs = System.IO.File.Create(temp))
-                await Upload.CopyToAsync(fs);
-            TempPath = temp;
+            // Auto-populate fields from file analysis
+            var analysis = await AnalyzeFileContents(tempFilePath, Delimiter);
 
-            var analysis = await AnalyzeFileContents(temp, Delimiter);
-
-            // Auto-populate fields if they're empty
+            // Auto-fill TestId if blank
             if (string.IsNullOrWhiteSpace(TestId) && !string.IsNullOrWhiteSpace(analysis.DetectedTestId))
             {
                 TestId = AutoDetectedTestId = analysis.DetectedTestId;
             }
 
+            // Auto-fill Subject if blank
             if (string.IsNullOrWhiteSpace(Subject) && !string.IsNullOrWhiteSpace(analysis.DetectedSubject))
             {
                 Subject = analysis.DetectedSubject;
             }
 
+            // Auto-fill UnitCycle if it's the default value
             if (UnitCycle == 1 && analysis.DetectedUnitCycle.HasValue)
             {
                 UnitCycle = analysis.DetectedUnitCycle.Value;
             }
 
-            // Validate analysis results
-            if (!analysis.IsValid)
-            {
-                foreach (var msg in analysis.ValidationMessages)
-                {
-                    ModelState.AddModelError("", msg);
-                }
-                return Page();
-            }
-
-            // Continue with existing preview logic...
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
 
-            using var sr = new StreamReader(System.IO.File.OpenRead(temp), Encoding.UTF8, true);
+            using var sr = new StreamReader(System.IO.File.OpenRead(tempFilePath), Encoding.UTF8, true);
             var header = await sr.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(header))
             {
@@ -171,20 +173,34 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             try { colLocalId = FindStudentIdColumnOrThrow(headers); }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", ex.Message);
-                return Page();
+                ModelState.AddModelError("", ex.Message); return Page();
+            }
+
+            // ***FIX***: Read the first data row to find the Assessment Name
+            string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
+            if (!string.IsNullOrWhiteSpace(firstDataLine))
+            {
+                var firstDataCells = firstDataLine.Split(delimiterChar);
+                int? testNameCol = FindFirst(headers, PossibleTestHeaders);
+                if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
+                {
+                    var detectedTestId = firstDataCells[testNameCol.Value].Trim();
+                    if (!string.IsNullOrWhiteSpace(detectedTestId))
+                    {
+                        AutoDetectedTestId = TestId = detectedTestId;
+                    }
+                }
             }
 
             var maps = FindItemColumnBlocks(headers);
             if (maps.Count == 0)
             {
-                ModelState.AddModelError("", "Couldn't find any question columns.");
-                return Page();
+                ModelState.AddModelError("", "Couldn't find any question columns."); return Page();
             }
 
-            // Process file for standards preview
             var seenStandardIds = new HashSet<Guid>();
             string? line;
+            // The stream reader is already past the first data row, so the loop starts on the second
             while ((line = await sr.ReadLineAsync()) != null)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
@@ -205,11 +221,244 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 .OrderBy(p => p.HumanCodingScheme).ToList();
             MissingIds = Preview.Where(r => !r.ExistsInStandards).Select(r => r.StandardId).ToList();
 
-            // Student validation (reuse existing logic)
-            await ValidateStudentsInFile(temp, delimiterChar, colLocalId);
+            // Rewind stream to validate student IDs from the beginning (skipping header)
+            sr.BaseStream.Seek(0, SeekOrigin.Begin);
+            sr.DiscardBufferedData();
+            await sr.ReadLineAsync(); // Skip header
+
+            // Read the first data line again to include it in validation
+            firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
+
+            var localIds = new HashSet<int>();
+            int scannedCount = 0;
+
+            // Process the first line for validation
+            if (!string.IsNullOrWhiteSpace(firstDataLine))
+            {
+                var cells = firstDataLine.Split(delimiterChar);
+                if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
+                    localIds.Add(lid);
+                scannedCount++;
+            }
+
+            while ((line = await sr.ReadLineAsync()) != null && scannedCount < 2000)
+            {
+                var cells = line.Split(delimiterChar);
+                if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
+                    localIds.Add(lid);
+                scannedCount++;
+            }
+            if (localIds.Count > 0)
+            {
+                var (found, sampleMissing) = await ValidateLocalStudents(DistrictId, localIds);
+                StudentValidationSummary = $"{found}/{localIds.Count} StudentId values match students in district {DistrictId}"
+                                           + (sampleMissing.Count > 0 ? $". Missing sample: {string.Join(", ", sampleMissing)}" : "");
+            }
 
             return Page();
         }
+
+        public async Task<IActionResult> OnPostImport()
+        {
+            await LoadDistrictOptionsAsync();
+
+            // Only validate required fields for import (not preview)
+            if (DistrictId == 0)
+            {
+                ModelState.AddModelError(nameof(DistrictId), "District is required for import.");
+            }
+            if (string.IsNullOrWhiteSpace(Subject))
+            {
+                ModelState.AddModelError(nameof(Subject), "Subject is required for import.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return await OnPostPreview();
+            }
+            if (string.IsNullOrWhiteSpace(TempPath) || !System.IO.File.Exists(TempPath))
+            {
+                ModelState.AddModelError("", "Temp file not found. Please re-run Preview."); return Page();
+            }
+
+            var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
+            var tvp = new DataTable();
+            tvp.Columns.Add("local_student_id", typeof(int));
+            tvp.Columns.Add("test_id", typeof(string));
+            tvp.Columns.Add("human_coding_scheme", typeof(string));
+            tvp.Columns.Add("points", typeof(decimal));
+            tvp.Columns.Add("max_points", typeof(decimal));
+
+            var agg = new Dictionary<(int localId, Guid standardId), (decimal points, int count)>();
+            var allIds = new HashSet<Guid>();
+
+            using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, true))
+            {
+                var header = await sr.ReadLineAsync() ?? string.Empty;
+                var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
+                int colLocalId;
+                try { colLocalId = FindStudentIdColumnOrThrow(headers); }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", ex.Message); return Page();
+                }
+
+                var maps = FindItemColumnBlocks(headers);
+                if (maps.Count == 0)
+                {
+                    ModelState.AddModelError("", "Could not find any question columns."); return Page();
+                }
+
+                // Local function to process a single data row to avoid duplicate code.
+                void ProcessLine(string? line)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) return;
+                    var cells = line.Split(delimiterChar);
+                    if (colLocalId >= cells.Length || !int.TryParse(cells[colLocalId].Trim(), out var localId)) return;
+
+                    foreach (var m in maps)
+                    {
+                        if (m.ScoreCol >= cells.Length || m.StdCol >= cells.Length) continue;
+                        var rawPts = (cells[m.ScoreCol] ?? "").Trim();
+                        var idString = (cells[m.StdCol] ?? "").Trim();
+
+                        if (!string.IsNullOrEmpty(idString) && Guid.TryParse(idString, out var standardId) &&
+                            decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out var pts))
+                        {
+                            allIds.Add(standardId);
+                            var key = (localId, standardId);
+                            if (agg.TryGetValue(key, out var cur))
+                            {
+                                agg[key] = (cur.points + pts, cur.count + 1);
+                            }
+                            else
+                            {
+                                agg[key] = (pts, 1);
+                            }
+                        }
+                    }
+                }
+
+                // Read the first data line.
+                string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
+
+                // If TestId is blank, try to detect it from this first line.
+                if (string.IsNullOrWhiteSpace(TestId) && !string.IsNullOrWhiteSpace(firstDataLine))
+                {
+                    var firstDataCells = firstDataLine.Split(delimiterChar);
+                    int? testNameCol = FindFirst(headers, PossibleTestHeaders);
+                    if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
+                    {
+                        TestId = firstDataCells[testNameCol.Value].Trim();
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(TestId))
+                {
+                    ModelState.AddModelError("", "Could not detect Test ID. Please enter one manually."); return Page();
+                }
+
+                // CRITICAL: Process the first data line that was just read.
+                ProcessLine(firstDataLine);
+
+                // Loop through the REST of the file.
+                string? currentLine;
+                while ((currentLine = await sr.ReadLineAsync()) != null)
+                {
+                    ProcessLine(currentLine);
+                }
+            }
+
+            if (agg.Count == 0)
+            {
+                ModelState.AddModelError("", "No valid student rows were found to import. Please check that the 'StudentId' column contains the correct integer-based Local Student IDs, not GUIDs.");
+                return await OnPostPreview();
+            }
+
+            var schemesMap = await LoadSchemesForIds(allIds);
+            foreach (var kvp in agg)
+            {
+                var standardId = kvp.Key.standardId;
+                if (schemesMap.TryGetValue(standardId, out var scheme))
+                {
+                    var r = tvp.NewRow();
+                    r["local_student_id"] = kvp.Key.localId;
+                    r["test_id"] = TestId;
+                    r["human_coding_scheme"] = scheme;
+                    r["points"] = kvp.Value.points;
+                    r["max_points"] = (decimal)kvp.Value.count;
+                    tvp.Rows.Add(r);
+                }
+            }
+
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+
+            // Start transaction for all operations
+            using var transaction = conn.BeginTransaction();
+
+            try
+            {
+                // Step 1: Import assessment results
+                using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                cmd.Parameters.AddWithValue("@TestId", TestId);
+                cmd.Parameters.AddWithValue("@SourceFile", Path.GetFileName(TempPath!));
+                cmd.Parameters.AddWithValue("@Subject", Subject);
+                cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);
+                var p = cmd.Parameters.AddWithValue("@Rows", tvp);
+                p.SqlDbType = SqlDbType.Structured;
+                p.TypeName = "dbo.AssessmentResultImportType";
+
+                var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
+
+                if (string.IsNullOrWhiteSpace(batchId))
+                {
+                    throw new InvalidOperationException("Import failed - no batch ID returned");
+                }
+
+                // Step 2: Update student totals
+                using var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                totalsCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
+                await totalsCmd.ExecuteNonQueryAsync();
+
+                // Step 3: Update student roster
+                using var rosterCmd = new SqlCommand("dbo.UpsertAssessmentStudentRoster", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                rosterCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
+                rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                await rosterCmd.ExecuteNonQueryAsync();
+
+                // Commit all operations
+                transaction.Commit();
+
+                // Success message
+                TempData["ImportSuccessMessage"] = $"Import complete! Batch ID: {batchId}. Processed {tvp.Rows.Count} student-standard result rows. Student totals and roster updated.";
+                TempData["ImportBatchId"] = batchId;
+            }
+            catch (Exception ex)
+            {
+                // Rollback on any error
+                transaction.Rollback();
+                ModelState.AddModelError("", $"Import failed: {ex.Message}");
+                return Page();
+            }
+
+            TryDelete(TempPath);
+            TempPath = null;
+            return Page();
+        }
+
+        // ---------- NEW ANALYSIS METHODS ----------
 
         /// <summary>
         /// Analyzes file contents and extracts metadata
@@ -369,231 +618,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             return -1;
         }
 
-        /// <summary>
-        /// Validates student IDs in uploaded file
-        /// </summary>
-        private async Task ValidateStudentsInFile(string filePath, char delimiter, int studentIdColumn)
-        {
-            using var sr = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true);
-            await sr.ReadLineAsync(); // Skip header
-
-            var localIds = new HashSet<int>();
-            int scannedCount = 0;
-            const int maxScanRows = 2000;
-
-            string? line;
-            while ((line = await sr.ReadLineAsync()) != null && scannedCount < maxScanRows)
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-
-                var cells = line.Split(delimiter);
-                if (studentIdColumn < cells.Length && int.TryParse(cells[studentIdColumn].Trim(), out var localId))
-                {
-                    localIds.Add(localId);
-                }
-                scannedCount++;
-            }
-
-            if (localIds.Count > 0 && DistrictId > 0)
-            {
-                var (found, sampleMissing) = await ValidateLocalStudents(DistrictId, localIds);
-                StudentValidationSummary = $"{found}/{localIds.Count} StudentId values match students in district {DistrictId}"
-                                         + (sampleMissing.Count > 0 ? $". Missing sample: {string.Join(", ", sampleMissing)}" : "");
-            }
-        }
-
-        // Keep existing import method with transaction support
-        public async Task<IActionResult> OnPostImport()
-        {
-            await LoadDistrictOptionsAsync();
-            if (!ModelState.IsValid)
-            {
-                return await OnPostPreview();
-            }
-            if (string.IsNullOrWhiteSpace(TempPath) || !System.IO.File.Exists(TempPath))
-            {
-                ModelState.AddModelError("", "Temp file not found. Please re-run Preview.");
-                return Page();
-            }
-
-            var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
-            var tvp = new DataTable();
-            tvp.Columns.Add("local_student_id", typeof(int));
-            tvp.Columns.Add("test_id", typeof(string));
-            tvp.Columns.Add("human_coding_scheme", typeof(string));
-            tvp.Columns.Add("points", typeof(decimal));
-            tvp.Columns.Add("max_points", typeof(decimal));
-
-            var agg = new Dictionary<(int localId, Guid standardId), (decimal points, int count)>();
-            var allIds = new HashSet<Guid>();
-
-            using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, true))
-            {
-                var header = await sr.ReadLineAsync() ?? string.Empty;
-                var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-                int colLocalId;
-                try { colLocalId = FindStudentIdColumnOrThrow(headers); }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", ex.Message);
-                    return Page();
-                }
-
-                var maps = FindItemColumnBlocks(headers);
-                if (maps.Count == 0)
-                {
-                    ModelState.AddModelError("", "Could not find any question columns.");
-                    return Page();
-                }
-
-                // Process all data rows
-                void ProcessLine(string? line)
-                {
-                    if (string.IsNullOrWhiteSpace(line)) return;
-                    var cells = line.Split(delimiterChar);
-                    if (colLocalId >= cells.Length || !int.TryParse(cells[colLocalId].Trim(), out var localId)) return;
-
-                    foreach (var m in maps)
-                    {
-                        if (m.ScoreCol >= cells.Length || m.StdCol >= cells.Length) continue;
-                        var rawPts = (cells[m.ScoreCol] ?? "").Trim();
-                        var idString = (cells[m.StdCol] ?? "").Trim();
-
-                        if (!string.IsNullOrEmpty(idString) && Guid.TryParse(idString, out var standardId) &&
-                            decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out var pts))
-                        {
-                            allIds.Add(standardId);
-                            var key = (localId, standardId);
-                            if (agg.TryGetValue(key, out var cur))
-                            {
-                                agg[key] = (cur.points + pts, cur.count + 1);
-                            }
-                            else
-                            {
-                                agg[key] = (pts, 1);
-                            }
-                        }
-                    }
-                }
-
-                // Process first data row
-                string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
-
-                // Auto-detect TestId if still blank
-                if (string.IsNullOrWhiteSpace(TestId) && !string.IsNullOrWhiteSpace(firstDataLine))
-                {
-                    var firstDataCells = firstDataLine.Split(delimiterChar);
-                    int? testNameCol = FindFirst(headers, PossibleTestHeaders);
-                    if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
-                    {
-                        TestId = firstDataCells[testNameCol.Value].Trim();
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(TestId))
-                {
-                    ModelState.AddModelError("", "Could not detect Test ID. Please enter one manually.");
-                    return Page();
-                }
-
-                ProcessLine(firstDataLine);
-
-                // Process remaining rows
-                string? currentLine;
-                while ((currentLine = await sr.ReadLineAsync()) != null)
-                {
-                    ProcessLine(currentLine);
-                }
-            }
-
-            if (agg.Count == 0)
-            {
-                ModelState.AddModelError("", "No valid student rows were found to import.");
-                return await OnPostPreview();
-            }
-
-            var schemesMap = await LoadSchemesForIds(allIds);
-            foreach (var kvp in agg)
-            {
-                var standardId = kvp.Key.standardId;
-                if (schemesMap.TryGetValue(standardId, out var scheme))
-                {
-                    var r = tvp.NewRow();
-                    r["local_student_id"] = kvp.Key.localId;
-                    r["test_id"] = TestId;
-                    r["human_coding_scheme"] = scheme;
-                    r["points"] = kvp.Value.points;
-                    r["max_points"] = (decimal)kvp.Value.count;
-                    tvp.Rows.Add(r);
-                }
-            }
-
-            var connStr = _config.GetConnectionString("DefaultConnection");
-            using var conn = new SqlConnection(connStr);
-            await conn.OpenAsync();
-
-            // Transaction for all operations
-            using var transaction = conn.BeginTransaction();
-
-            try
-            {
-                // Step 1: Import assessment results
-                using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn, transaction)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
-                cmd.Parameters.AddWithValue("@TestId", TestId);
-                cmd.Parameters.AddWithValue("@SourceFile", Path.GetFileName(TempPath!));
-                cmd.Parameters.AddWithValue("@Subject", Subject);
-                cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);
-                var p = cmd.Parameters.AddWithValue("@Rows", tvp);
-                p.SqlDbType = SqlDbType.Structured;
-                p.TypeName = "dbo.AssessmentResultImportType";
-
-                var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
-
-                if (string.IsNullOrWhiteSpace(batchId))
-                {
-                    throw new InvalidOperationException("Import failed - no batch ID returned");
-                }
-
-                // Step 2: Update student totals
-                using var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                totalsCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
-                await totalsCmd.ExecuteNonQueryAsync();
-
-                // Step 3: Update student roster
-                using var rosterCmd = new SqlCommand("dbo.UpsertAssessmentStudentRoster", conn, transaction)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                rosterCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
-                rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
-                await rosterCmd.ExecuteNonQueryAsync();
-
-                // Commit all operations
-                transaction.Commit();
-
-                TempData["ImportSuccessMessage"] = $"Import complete! Batch ID: {batchId}. Processed {tvp.Rows.Count} student-standard result rows. Student totals and roster updated.";
-                TempData["ImportBatchId"] = batchId;
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                ModelState.AddModelError("", $"Import failed: {ex.Message}");
-                return Page();
-            }
-
-            TryDelete(TempPath);
-            TempPath = null;
-            return Page();
-        }
-
-        // ---------- Existing Helper Methods ----------
+        // ---------- EXISTING HELPER METHODS ----------
 
         private record QuestionMap(int Q, string ScoreHeader, int ScoreCol, string StdHeader, int StdCol);
 
@@ -671,7 +696,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (i > 0) sb.Append(',');
                 var paramName = $"@p{i}";
                 sb.Append(paramName);
-                parameters.Add(new SqlParameter(paramName, list[i]));
+                parameters.Add(new SqlParameter(paramName, list[i].ToString())); // Convert GUID to string for parameter
             }
             sb.Append(')');
 
@@ -685,7 +710,24 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
-                result[rdr.GetGuid(0)] = rdr.GetString(1);
+                // Try to parse the id column as either GUID or string
+                Guid guidId;
+                var idValue = rdr.GetValue(0);
+
+                if (idValue is Guid directGuid)
+                {
+                    guidId = directGuid;
+                }
+                else if (idValue is string stringId && Guid.TryParse(stringId, out guidId))
+                {
+                    // Successfully parsed string as GUID
+                }
+                else
+                {
+                    continue; // Skip this row if we can't parse the ID
+                }
+
+                result[guidId] = rdr.GetString(1);
             }
             return result;
         }
@@ -698,7 +740,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
-            // Use temp table for better performance
+            // Use a temp table for better performance with large ID sets
             await using (var createTempCmd = new SqlCommand("CREATE TABLE #LocalIds (Id NVARCHAR(64) PRIMARY KEY);", conn))
             {
                 await createTempCmd.ExecuteNonQueryAsync();
@@ -764,3 +806,4 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         }
     }
 }
+
