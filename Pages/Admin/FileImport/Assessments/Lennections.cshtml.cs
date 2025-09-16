@@ -175,7 +175,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             }
             if (string.IsNullOrWhiteSpace(TempPath) || !System.IO.File.Exists(TempPath))
             {
-                ModelState.AddModelError("", "Temp file not found. Please re-run Preview."); return Page();
+                ModelState.AddModelError("", "Temp file not found. Please re-run Preview."); 
+                return Page();
             }
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
@@ -197,16 +198,16 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 try { colLocalId = FindStudentIdColumnOrThrow(headers); }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError("", ex.Message); return Page();
+                    ModelState.AddModelError("", ex.Message); 
+                    return Page();
                 }
 
                 var maps = FindItemColumnBlocks(headers);
                 if (maps.Count == 0)
                 {
-                    ModelState.AddModelError("", "Could not find any question columns."); return Page();
+                    ModelState.AddModelError("", "Could not find any question columns."); 
+                    return Page();
                 }
-
-                // --- START: PATCHED LOGIC ---
 
                 // Local function to process a single data row to avoid duplicate code.
                 void ProcessLine(string? line)
@@ -254,10 +255,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
                 if (string.IsNullOrWhiteSpace(TestId))
                 {
-                    ModelState.AddModelError("", "Could not detect Test ID. Please enter one manually."); return Page();
+                    ModelState.AddModelError("", "Could not detect Test ID. Please enter one manually."); 
+                    return Page();
                 }
 
-                // CRITICAL: Process the first data line that was just read.
+                // Process the first data line that was just read.
                 ProcessLine(firstDataLine);
 
                 // Loop through the REST of the file.
@@ -266,8 +268,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 {
                     ProcessLine(currentLine);
                 }
-
-                // --- END: PATCHED LOGIC ---
             }
 
             if (agg.Count == 0)
@@ -295,23 +295,64 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
-            using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-            cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
-            cmd.Parameters.AddWithValue("@TestId", TestId);
-            cmd.Parameters.AddWithValue("@SourceFile", Path.GetFileName(TempPath!));
-            cmd.Parameters.AddWithValue("@Subject", Subject);
-            cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);
-            var p = cmd.Parameters.AddWithValue("@Rows", tvp);
-            p.SqlDbType = SqlDbType.Structured;
-            p.TypeName = "dbo.AssessmentResultImportType";
-            var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
             
-            // ***FIX***: Use TempData for the success message
-            TempData["ImportSuccessMessage"] = $"Import complete! Batch ID: {batchId}. Processed {tvp.Rows.Count} student-standard result rows.";
-            TempData["ImportBatchId"] = batchId;
+            // Start transaction for all operations
+            using var transaction = conn.BeginTransaction();
+            
+            try
+            {
+                // Step 1: Import assessment results
+                using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                cmd.Parameters.AddWithValue("@TestId", TestId);
+                cmd.Parameters.AddWithValue("@SourceFile", Path.GetFileName(TempPath!));
+                cmd.Parameters.AddWithValue("@Subject", Subject);
+                cmd.Parameters.AddWithValue("@UnitCycle", UnitCycle);
+                var p = cmd.Parameters.AddWithValue("@Rows", tvp);
+                p.SqlDbType = SqlDbType.Structured;
+                p.TypeName = "dbo.AssessmentResultImportType";
+                
+                var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
+                
+                if (string.IsNullOrWhiteSpace(batchId))
+                {
+                    throw new InvalidOperationException("Import failed - no batch ID returned");
+                }
+
+                // Step 2: Update student totals
+                using var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                totalsCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
+                await totalsCmd.ExecuteNonQueryAsync();
+
+                // Step 3: Update student roster
+                using var rosterCmd = new SqlCommand("dbo.UpsertAssessmentStudentRoster", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                rosterCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
+                rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                await rosterCmd.ExecuteNonQueryAsync();
+
+                // Commit all operations
+                transaction.Commit();
+                
+                // Success message
+                TempData["ImportSuccessMessage"] = $"Import complete! Batch ID: {batchId}. Processed {tvp.Rows.Count} student-standard result rows. Student totals and roster updated.";
+                TempData["ImportBatchId"] = batchId;
+            }
+            catch (Exception ex)
+            {
+                // Rollback on any error
+                transaction.Rollback();
+                ModelState.AddModelError("", $"Import failed: {ex.Message}");
+                return Page();
+            }
 
             TryDelete(TempPath);
             TempPath = null;
