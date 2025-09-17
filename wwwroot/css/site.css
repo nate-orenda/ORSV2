@@ -1168,10 +1168,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   border: 1px solid #e9ecef;
 }
 
-.district-stats-compact {
-  /* Container for compact stats and toggle button */
-}
-
 .compact-stat {
   display: flex;
   align-items: center;
@@ -1287,10 +1283,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.school-info {
-  /* Container for school information */
 }
 
 .school-name {
