@@ -1,44 +1,167 @@
 @page
 @model ORSV2.Pages.CurriculumAlignment.IndexModel
 @{
-    ViewData["Title"] = "Select a Form";
+    ViewData["Title"] = "Curriculum Alignment";
 }
 
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
 <div class="orenda-container">
+    <!-- Header -->
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Curriculum Alignment</h2>
-        <p class="mb-0">Select a form for @Model.DistrictName</p>
+        <p class="mb-0">Select a district below to view schools and access curriculum alignment forms.</p>
     </div>
 
-    <div class="row g-4 mt-4">
-        <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/CurriculumAlignment/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
-                <div class="orenda-card-body">
-                    <h5 class="text-orenda-primary">Form 1</h5>
-                    <p class="text-muted small">Enter and review foundational curriculum alignment data.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/CurriculumAlignment/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
-                <div class="orenda-card-body">
-                    <h5 class="text-orenda-primary">Form 2</h5>
-                    <p class="text-muted small">Analyze and track alignment progress and outcomes.</p>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="orenda-card h-100 is-disabled">
-                <div class="orenda-card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="text-orenda-primary mb-0">Form 3</h5>
-                        <span class="badge bg-light text-dark">Coming Soon</span>
-                    </div>
-                    <p class="text-muted small">Advanced reporting and strategic planning tools.</p>
+    @if (Model.DistrictBlocks == null || !Model.DistrictBlocks.Any())
+    {
+        <div class="orenda-card shadow-orenda">
+            <div class="orenda-card-body">
+                <div class="text-center py-4">
+                    <i class="bi bi-book text-muted mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted">No Curriculum Alignment Schools Available</h5>
+                    <p class="text-muted mb-0">
+                        No schools in your scope have Curriculum Alignment enabled. 
+                        Contact your administrator to enable CA for schools.
+                    </p>
                 </div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var district in Model.DistrictBlocks)
+            {
+                var totalEnrollment = district.Schools.Sum(s => s.Enrollment);
+                var caEnabledCount = district.Schools.Count; // All schools here are CA-enabled
+                var districtId = $"ca-district-{district.DistrictId}";
+                
+                <div class="col-12 col-md-6 col-lg-4 d-flex">
+                    <div class="orenda-card district-card-v2 w-100">
+                        <div class="district-card-header">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h4 class="mb-0 text-truncate flex-grow-1" title="@district.DistrictName">
+                                    @district.DistrictName
+                                </h4>
+                                <i class="bi bi-book text-white opacity-75"></i>
+                            </div>
+                        </div>
+
+                        <div class="district-card-body">
+                            <!-- Quick Stats Row -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <div class="district-stat">
+                                        <div class="district-stat-number">@district.Schools.Count</div>
+                                        <div class="district-stat-label">CA School@(district.Schools.Count == 1 ? "" : "s")</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="district-stat">
+                                        <div class="district-stat-number">@totalEnrollment.ToString("N0")</div>
+                                        <div class="district-stat-label">Students</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- School List Preview -->
+                            <div class="district-schools-preview">
+                                @{
+                                    var schoolsToShow = district.Schools.Take(3).ToList();
+                                    var remainingSchools = district.Schools.Skip(3).ToList();
+                                }
+                                
+                                <!-- Always visible schools -->
+                                <div class="schools-visible">
+                                    @foreach (var school in schoolsToShow)
+                                    {
+                                        <div class="school-preview-item">
+                                            <span class="school-name">@school.SchoolName</span>
+                                            <span class="school-enrollment">@school.Enrollment.ToString("N0")</span>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <!-- Expandable additional schools -->
+                                @if (remainingSchools.Any())
+                                {
+                                    <div class="schools-expandable" id="@($"{districtId}-schools")" style="display: none;">
+                                        @foreach (var school in remainingSchools)
+                                        {
+                                            <div class="school-preview-item">
+                                                <span class="school-name">@school.SchoolName</span>
+                                                <span class="school-enrollment">@school.Enrollment.ToString("N0")</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    
+                                    <!-- Toggle button -->
+                                    <div class="school-preview-toggle">
+                                        <button type="button" 
+                                                class="school-expand-btn" 
+                                                data-target="@($"{districtId}-schools")"
+                                                data-expanded="false">
+                                            <span class="expand-text">+@remainingSchools.Count more school@(remainingSchools.Count == 1 ? "" : "s")</span>
+                                            <span class="collapse-text" style="display: none;">Show less</span>
+                                            <i class="bi bi-chevron-down expand-icon ms-1"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- CA Program Badge -->
+                            <div class="district-programs mt-3">
+                                <span class="program-badge program-ca">
+                                    <i class="bi bi-book me-1"></i>
+                                    Curriculum Alignment (@caEnabledCount)
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="district-card-footer">
+                            <a href="@Url.Page("/CurriculumAlignment/Forms", new { districtId = district.DistrictId })" class="action-link">
+                                <span>Access Forms</span>
+                                <i class="bi bi-arrow-right arrow"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
+
+<!-- School Expansion JavaScript -->
+<script>
+    (function() {
+        // Handle school list expansion
+        document.querySelectorAll('.school-expand-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const targetElement = document.getElementById(targetId);
+                const isExpanded = this.dataset.expanded === 'true';
+                
+                const expandText = this.querySelector('.expand-text');
+                const collapseText = this.querySelector('.collapse-text');
+                const icon = this.querySelector('.expand-icon');
+                
+                if (isExpanded) {
+                    // Collapse
+                    targetElement.style.display = 'none';
+                    expandText.style.display = 'inline';
+                    collapseText.style.display = 'none';
+                    icon.style.transform = 'rotate(0deg)';
+                    this.dataset.expanded = 'false';
+                } else {
+                    // Expand
+                    targetElement.style.display = 'block';
+                    expandText.style.display = 'none';
+                    collapseText.style.display = 'inline';
+                    icon.style.transform = 'rotate(180deg)';
+                    this.dataset.expanded = 'true';
+                }
+            });
+        });
+    })();
+</script>

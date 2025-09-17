@@ -33,19 +33,6 @@ builder.Services.Configure<SmtpSettings>(options =>
 // Register email service
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 
-// Register District Focus Service
-builder.Services.AddScoped<IDistrictFocusService, DistrictFocusService>();
-
-// Add session support for district focus
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromHours(2);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-});
-
 // Add HttpContextAccessor for session access in services
 builder.Services.AddHttpContextAccessor();
 
@@ -146,56 +133,6 @@ else
     app.UseDeveloperExceptionPage();
 }
 
-// Add this to your Program.cs before app.Run()
-
-// API endpoint to get current user's focus district
-// Add this to your Program.cs before app.Run()
-
-// API endpoint to get current user's focus district and available districts
-app.MapGet("/api/user/focus-district", async (
-    HttpContext context,
-    IDistrictFocusService districtFocusService,
-    UserManager<ApplicationUser> userManager) =>
-{
-    if (!context.User.Identity?.IsAuthenticated ?? true)
-        return Results.Unauthorized();
-
-    var user = await userManager.FindByNameAsync(context.User.Identity!.Name!);
-    if (user == null) return Results.Unauthorized();
-
-    var roles = await userManager.GetRolesAsync(user);
-    var isOrendaUser = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager") || roles.Contains("OrendaUser");
-
-    try
-    {
-        var focusDistrictId = await districtFocusService.GetFocusDistrictIdAsync(user.Id, isOrendaUser);
-        var availableDistricts = await districtFocusService.GetAvailableDistrictsAsync(user.Id, isOrendaUser);
-
-        string? focusDistrictName = null;
-        if (focusDistrictId.HasValue)
-        {
-            var focusDistrict = availableDistricts.FirstOrDefault(d => d.Id == focusDistrictId.Value);
-            focusDistrictName = focusDistrict?.Name;
-        }
-
-        return Results.Ok(new
-        {
-            focusDistrictId = focusDistrictId,
-            focusDistrictName = focusDistrictName,
-            availableDistricts = availableDistricts.Select(d => new { d.Id, d.Name }).ToList()
-        });
-    }
-    catch
-    {
-        return Results.Ok(new
-        {
-            focusDistrictId = (int?)null,
-            focusDistrictName = (string?)null,
-            availableDistricts = new List<object>()
-        });
-    }
-}).RequireAuthorization();
-
 app.MapControllers();
 
 app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
@@ -203,9 +140,6 @@ app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
-// Use session before authentication
-app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

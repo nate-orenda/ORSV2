@@ -46,12 +46,12 @@
                                 <a asp-page="/Index" class="nav-link">
                                     <i class="bi bi-house me-1"></i>Dashboard
                                 </a>
-                                <a asp-page="/GuidanceAlignment/Schools" class="nav-link" id="guidanceAlignmentLink">
+                                <a asp-page="/GuidanceAlignment/Index" class="nav-link">
                                     <i class="bi bi-compass me-1"></i>Guidance Alignment
                                 </a>
                                 
                                 <!-- Curriculum Alignment as direct link -->
-                                <a asp-page="/CurriculumAlignment/Index" class="nav-link" id="curriculumAlignmentLink">
+                                <a asp-page="/CurriculumAlignment/Index" class="nav-link">
                                     <i class="bi bi-book me-1"></i>Curriculum Alignment
                                 </a>
 
@@ -85,21 +85,8 @@
                                 </div>
                             </nav>
 
-                            <!-- Right side: District Focus + User Profile -->
+                            <!-- Right side: User Profile -->
                             <div class="d-flex align-items-center gap-2">
-                                
-                                <!-- District Focus Selector (for all authenticated users) -->
-                                <div class="district-focus-selector dropdown" id="districtFocusSelector" style="display: none;">
-                                    <button class="btn dropdown-toggle d-flex align-items-center" type="button" 
-                                            data-bs-toggle="dropdown" aria-expanded="false" id="districtFocusButton">
-                                        <i class="bi bi-building me-1 fs-6"></i>
-                                        <span class="district-name" id="focusDistrictName">Select District</span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end" id="districtDropdownMenu">
-                                        <!-- Populated by JavaScript -->
-                                    </ul>
-                                </div>
-
                                 <!-- User Profile Section -->
                                 <div class="user-profile dropdown">
                                     <button class="btn dropdown-toggle d-flex align-items-center" type="button" 
@@ -128,7 +115,6 @@
                                         </li>
                                     </ul>
                                 </div>
-
                             </div>
 
                         </div>
@@ -164,287 +150,6 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
-        // District Focus Context Management for ALL authenticated users
-        (function() {
-            // Check if user is authenticated
-            if (!@(User.Identity?.IsAuthenticated == true ? "true" : "false")) return;
-
-            // Get current user roles
-            const isOrendaUser = @(User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser") ? "true" : "false");
-            
-            // DOM elements
-            const districtSelector = document.getElementById('districtFocusSelector');
-            const districtNameEl = document.getElementById('focusDistrictName');
-            const dropdownMenu = document.getElementById('districtDropdownMenu');
-            
-            let availableDistricts = [];
-            let currentFocusDistrict = null;
-            
-            // Get focus district from multiple sources
-            function getFocusDistrict() {
-                // First check ViewData (from current page)
-                const serverFocusId = '@ViewData["FocusDistrictId"]';
-                const serverFocusName = '@ViewData["FocusDistrictName"]';
-                
-                if (serverFocusId && serverFocusName && serverFocusId !== '') {
-                    return { id: parseInt(serverFocusId), name: serverFocusName };
-                }
-                
-                // Fall back to localStorage
-                const stored = localStorage.getItem('focusDistrict');
-                return stored ? JSON.parse(stored) : null;
-            }
-
-            // Set focus district and update UI
-            function setFocusDistrict(district) {
-                if (district && district.id && district.name) {
-                    currentFocusDistrict = district;
-                    localStorage.setItem('focusDistrict', JSON.stringify(district));
-                    updateDistrictSelector(district);
-                    updateNavigationLinks(district.id);
-                }
-            }
-
-            // Update district selector display
-            function updateDistrictSelector(district) {
-                if (!districtSelector || !districtNameEl) return;
-                
-                if (district) {
-                    districtSelector.style.display = 'block';
-                    districtNameEl.textContent = district.name;
-                    
-                    // Truncate long names for display
-                    if (district.name.length > 15) {
-                        districtNameEl.textContent = district.name.substring(0, 15) + '...';
-                        districtNameEl.title = district.name;
-                    }
-                } else {
-                    districtSelector.style.display = 'none';
-                }
-            }
-
-            function populateDistrictDropdown() {
-    if (!dropdownMenu || availableDistricts.length <= 1) return;
-    dropdownMenu.innerHTML = '';
-    
-    // Add current district at top (disabled)
-    if (currentFocusDistrict) {
-        const currentItem = document.createElement('li');
-        currentItem.innerHTML = `
-            <span class="dropdown-item-text">
-                <i class="bi bi-star-fill me-2 text-warning"></i>
-                ${currentFocusDistrict.name} 
-            </span>
-        `;
-        dropdownMenu.appendChild(currentItem);
-        
-        const divider = document.createElement('li');
-        divider.innerHTML = '<hr class="dropdown-divider">';
-        dropdownMenu.appendChild(divider);
-    }
-    
-    // Add other available districts
-    availableDistricts
-        .filter(d => !currentFocusDistrict || d.id !== currentFocusDistrict.id)
-        .forEach(district => 
-        {
-            const item = document.createElement('li');
-            item.innerHTML = `
-                <a class="dropdown-item district-switch-option" href="#" data-district-id="${district.id}">
-                    <i class="bi bi-building me-2"></i>
-                    ${district.name}
-                </a>
-        `;
-            dropdownMenu.appendChild(item);
-        });
-    // Add event listeners to new items
-    dropdownMenu.querySelectorAll('.district-switch-option').forEach(item => {
-        item.addEventListener('click', handleDistrictSwitch);
-    });
-}
-
-// Handle district switching
-function handleDistrictSwitch(e) {
-    e.preventDefault();
-    const districtId = parseInt(e.currentTarget.dataset.districtId);
-    // 👇 CHANGE HERE: d.Id -> d.id
-    const district = availableDistricts.find(d => d.id === districtId);
-    if (district) {
-        // Set focus district
-        // 👇 CHANGE HERE: district.Id -> district.id, district.Name -> district.name
-        setFocusDistrict({ id: district.id, name: district.name });
-        // Update dropdown immediately
-        populateDistrictDropdown();
-        // Dispatch event for other components
-        window.dispatchEvent(new CustomEvent('focusDistrictChanged', { 
-            detail: currentFocusDistrict 
-        }));
-        // Optional: Call server to persist the change
-        updateFocusDistrictOnServer(district.id);
-    }
-}
-
-            // Update focus district on server and reload page
-            async function updateFocusDistrictOnServer(districtId) {
-                try {
-                    // Try the Index handler first (if we're on the Index page)
-                    let response = await fetch('/Index?handler=SetFocus', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                        },
-                        body: `districtId=${districtId}`
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            // Successfully updated on server, reload the page to show changes
-                            window.location.reload();
-                            return;
-                        }
-                    }
-
-                    // Fallback to API if Index handler failed
-                    response = await fetch('/api/district/focus', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                        },
-                        body: JSON.stringify({ districtId: districtId })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            // Successfully updated via API, reload the page
-                            window.location.reload();
-                            return;
-                        }
-                    }
-                    
-                    // If server update failed, at least the localStorage is updated
-                    console.log('Server update failed, but localStorage updated');
-                } catch (error) {
-                    console.log('Server update failed, using localStorage only');
-                }
-            }
-
-            // Update navigation links to include focus district
-            function updateNavigationLinks(districtId) {
-                if (!districtId) return;
-
-                // Update Guidance Alignment link
-                const gaLink = document.getElementById('guidanceAlignmentLink');
-                if (gaLink) {
-                    // Check if it already has a base href, if not use the asp-page value as base
-                    const basePage = '/GuidanceAlignment/Schools';
-                    gaLink.href = `${basePage}?DistrictId=${districtId}`;
-                }
-
-                // Update Curriculum Alignment link
-                const caLink = document.getElementById('curriculumAlignmentLink');
-                if (caLink) {
-                    const basePage = '/CurriculumAlignment/Index';
-                    caLink.href = `${basePage}?districtId=${districtId}`;
-                }
-            }
-
-            // Fetch available districts and focus district from server
-            async function fetchDistrictDataFromServer() {
-                try {
-                    // First try to get data from ViewData (if the page provides it)
-                    const serverFocusId = '@ViewData["FocusDistrictId"]';
-                    const serverFocusName = '@ViewData["FocusDistrictName"]';
-                    const serverAvailableDistricts = '@Html.Raw(ViewData["AvailableDistricts"] ?? "null")';
-                    
-                    // Parse available districts if provided by the page
-                    if (serverAvailableDistricts && serverAvailableDistricts !== 'null' && serverAvailableDistricts !== '[]') {
-                        try {
-                            availableDistricts = JSON.parse(serverAvailableDistricts);
-                        } catch (e) {
-                            console.debug('Could not parse available districts from ViewData:', e);
-                        }
-                    }
-                    
-                    if (serverFocusId && serverFocusName && serverFocusId !== '') {
-                        // If ViewData provided the info and we got districts, we're good
-                        if (availableDistricts.length > 0) {
-                            return { id: parseInt(serverFocusId), name: serverFocusName };
-                        }
-                    }
-
-                    // Fallback: Use the API endpoint to get district context
-                    const response = await fetch('/api/district/context', {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                        }
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            if (data.availableDistricts) {
-                                availableDistricts = data.availableDistricts;
-                            }
-                            
-                            if (data.focusDistrictId && data.focusDistrictName) {
-                                return { id: data.focusDistrictId, name: data.focusDistrictName };
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.debug('Could not fetch district data from server:', error);
-                }
-                return null;
-            }
-
-            // Initialize focus district and dropdown
-            async function initializeDistrictSelector() {
-                let focusDistrict = getFocusDistrict();
-                
-                // Always try to get district data from server to populate availableDistricts
-                const serverData = await fetchDistrictDataFromServer();
-                if (serverData && !focusDistrict) {
-                    focusDistrict = serverData;
-                }
-                
-                if (focusDistrict) {
-                    setFocusDistrict(focusDistrict);
-                    
-                    // Show dropdown for Orenda users with multiple districts
-                    if (isOrendaUser && availableDistricts.length > 1) {
-                        populateDistrictDropdown();
-                    }
-                } else {
-                    // Hide the selector if no focus district
-                    if (districtSelector) {
-                        districtSelector.style.display = 'none';
-                    }
-                }
-            }
-
-            // Listen for focus district changes from other parts of the app
-            window.addEventListener('focusDistrictChanged', (event) => {
-                setFocusDistrict(event.detail);
-                if (isOrendaUser && availableDistricts.length > 1) {
-                    populateDistrictDropdown();
-                }
-            });
-
-            // Expose global functions for other scripts
-            window.setOrendaFocusDistrict = setFocusDistrict;
-            window.getOrendaFocusDistrict = getFocusDistrict;
-
-            // Initialize on page load
-            initializeDistrictSelector();
-        })();
-
         // Auto-close mobile menu when clicking nav links
         document.querySelectorAll('.nav-main .nav-link').forEach(link => {
             link.addEventListener('click', () => {

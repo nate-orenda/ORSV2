@@ -323,25 +323,14 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   box-shadow: 0 2px 6px rgba(0,34,197,.3);
 }
 
-/* Cancel = outline */
-.btn-action-cancel {
-  background: transparent;
-  color: var(--orenda-primary);
-  border: 1px solid var(--orenda-primary);
-}
-.btn-action-cancel:hover {
-  background: var(--orenda-primary);
-  color: #fff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,34,197,.3);
-}
-
-/* Delete = outline (same as cancel) */
+/* Cancel/Delete = outline (consolidated) */
+.btn-action-cancel,
 .btn-action-delete {
   background: transparent;
   color: var(--orenda-primary);
   border: 1px solid var(--orenda-primary);
 }
+.btn-action-cancel:hover,
 .btn-action-delete:hover {
   background: var(--orenda-primary);
   color: #fff !important;
@@ -466,40 +455,10 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .main-header, .main-header .navbar, .main-header .container-fluid{ min-height:55px; }
 }
 
-/* Focus Context Header in Navigation */
-.focus-context-header {
-  background: rgba(255,255,255,.15);
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: .5rem;
-  padding: .5rem .75rem;
-  backdrop-filter: blur(10px);
-}
-
-.focus-context-badge {
-  display: flex;
-  align-items: center;
-  color: white;
-  font-size: .85rem;
-  font-weight: 500;
-  gap: .25rem;
-}
-
-.focus-district-name {
-  max-width: 150px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Dropdown (global) */
 .dropdown-menu{ border:none; box-shadow:var(--orenda-shadow-lg); border-radius:.5rem; overflow:hidden; }
 .dropdown-item{ padding:.75rem 1.25rem; font-weight:500; transition:all .2s ease; }
 .dropdown-item:hover{ background:var(--orenda-primary); color:var(--orenda-text-white); }
-
-/* Dropdown enhancements for district switching */
-.dropdown-menu .dropdown-item:hover .bi-building {
-  color: white;
-}
 
 /* =========================================================
    Containers / Cards
@@ -564,7 +523,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   line-height: 1.1;
 }
 
-/* Calendar Badge for Focus Context */
+/* Calendar Badge */
 .orenda-card .badge.bg-light.text-dark {
   background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%) !important;
   color: white !important;
@@ -634,41 +593,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   padding: .25rem .5rem;
   font-size: .8rem;
   border-radius: .25rem;
-}
-
-/* Collapsible district header */
-.district-header-toggle{
-  background:#fff;
-  border:1px solid var(--orenda-border);
-  border-radius:12px;
-  padding:.75rem 1rem;
-  box-shadow:0 2px 12px rgba(0,0,0,.06);
-  cursor:pointer;
-  transition:box-shadow .2s ease, transform .15s ease, background .2s ease;
-  text-align:left;
-}
-.district-header-toggle:hover{
-  background:#f8f9ff;
-  box-shadow:0 4px 16px rgba(0,34,197,.12);
-  transform:translateY(-1px);
-}
-.district-header-toggle .chevron{
-  display:inline-block;
-  transition:transform .2s ease;
-}
-.district-header-toggle[aria-expanded="false"] .chevron{
-  transform:rotate(-90deg);
-}
-
-/* Collapse body animation */
-.collapse-body{
-  transition:max-height .25s ease, opacity .2s ease, margin-top .2s ease;
-  overflow:hidden;
-}
-.collapse-body.is-collapsed{
-  max-height:0 !important;
-  opacity:0;
-  margin-top:0 !important;
 }
 
 /* Modal polish */
@@ -801,7 +725,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 }
 
 /* =========================================================
-   District Cards & Focus UI
+   District Cards & Enhanced Components
    ========================================================= */
 
 .district-card-v2 {
@@ -811,20 +735,9 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   position: relative;
 }
 
-.district-card-v2:not(.focused-district):hover {
+.district-card-v2:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0,0,0,.1);
-}
-
-.district-card-v2.focused-district {
-  border: 2px solid var(--orenda-primary);
-  box-shadow: 0 4px 20px rgba(0,34,197,.15);
-  transform: scale(1.02);
-}
-
-.district-card-v2.focused-district:hover {
-  transform: scale(1.02) translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,34,197,.2);
 }
 
 .district-card-header {
@@ -833,28 +746,6 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   color: var(--orenda-text-white);
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.district-card-v2.focused-district .district-card-header {
-  background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.district-card-v2.focused-district .district-card-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
 }
 
 .district-card-header h4 {
@@ -867,31 +758,26 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   flex-grow: 1; /* This is key: it pushes the footer to the bottom */
 }
 
-.district-card-v2.focused-district .district-card-body {
-  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
-}
-
 .district-card-footer {
   padding: .75rem;
   background-color: var(--orenda-secondary);
   border-top: 1px solid var(--orenda-border);
-}
-
-.district-card-v2.focused-district .district-card-footer {
-  background: linear-gradient(135deg, var(--orenda-secondary) 0%, #f0f4ff 100%);
-  border-top-color: rgba(0,34,197,.1);
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
 }
 
 .action-link {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: .75rem 1rem;
+  padding: .5rem .75rem;
   border-radius: 8px;
   color: var(--orenda-primary);
   font-weight: 600;
   text-decoration: none;
   transition: all .2s ease;
+  margin: 0;
 }
 
 .action-link:hover {
@@ -908,126 +794,175 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   transform: translateX(4px); /* Arrow moves right on hover */
 }
 
-/* District Focus Header */
-.district-focus-header {
-  background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
-  border: 1px solid var(--orenda-border);
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,34,197,.06);
+.district-card-footer .action-link:not(:last-child) {
+  border-bottom: 1px solid rgba(0,34,197,.1);
 }
 
-.focus-indicator {
-  background: var(--orenda-primary);
-  color: white;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+/* District Stats (Schools/Students counts) */
+.district-stat {
+  text-align: center;
+  padding: .75rem .5rem;
+  background: rgba(0,34,197,.04);
+  border-radius: .5rem;
+  border: 1px solid rgba(0,34,197,.08);
 }
 
-/* Focus Badge */
-.focus-badge {
-  background: rgba(255,255,255,.2);
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.district-stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--orenda-primary);
+  line-height: 1;
+  margin-bottom: .25rem;
+}
+
+.district-stat-label {
   font-size: .75rem;
-  flex-shrink: 0;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: .5px;
 }
 
-/* Focus Button on District Cards */
-.btn-focus-district {
-  background: rgba(255,255,255,.25); /* More opaque */
-  border: 2px solid rgba(255,255,255,.6); /* Thicker, more visible border */
-  color: white;
-  border-radius: 50%;
-  width: 34px; /* Slightly larger */
-  height: 34px;
+/* School Preview List */
+.district-schools-preview {
+  background: rgba(248,249,251,.6);
+  border-radius: .5rem;
+  padding: .75rem;
+  border: 1px solid #e9ecef;
+}
+
+.school-preview-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  padding: .375rem 0;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+  font-size: .85rem;
+}
+
+.school-preview-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.school-preview-item.school-preview-more {
   justify-content: center;
-  font-size: .9rem; /* Larger icon */
-  font-weight: 700; /* Bolder */
-  transition: all .2s ease;
-  cursor: pointer;
+  padding-top: .5rem;
+  border-top: 1px solid rgba(0,0,0,.08);
+  border-bottom: none;
+}
+
+.school-name {
+  font-weight: 500;
+  color: #495057;
+  flex-grow: 1;
+  margin-right: .5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.school-enrollment {
+  font-weight: 600;
+  color: var(--orenda-primary);
+  font-size: .8rem;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15); /* More noticeable shadow */
 }
 
-.btn-focus-district:hover {
-  background: rgba(255,223,0,.9); /* Golden on hover */
-  border-color: rgba(255,223,0,1);
-  color: #8B4513; /* Dark brown text on golden background */
-  transform: scale(1.15); /* More dramatic scale */
-  box-shadow: 0 4px 12px rgba(255,223,0,.4); /* Golden glow on hover */
+/* Program Badges */
+.district-programs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: center;
 }
 
-/* Loading States */
-.btn-focus-district[aria-busy="true"] {
-  color: transparent !important;
-  pointer-events: none;
-}
-
-.btn-focus-district[aria-busy="true"]::after {
-  content: '';
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  top: 50%;
-  left: 50%;
-  margin: -6px 0 0 -6px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.6);
-  border-right-color: transparent;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* District Selection Modal */
-.district-option {
-  cursor: pointer;
-  margin-bottom: .75rem;
-  transition: all .2s ease;
-}
-
-.district-option:last-child {
-  margin-bottom: 0;
-}
-
-.district-option:hover .border {
-  border-color: var(--orenda-primary) !important;
-  background: rgba(0,34,197,.02);
-}
-
-.district-option:hover .bi-chevron-right {
-  color: var(--orenda-primary) !important;
-  transform: translateX(4px);
-}
-
-.district-option .bi-chevron-right {
-  transition: all .2s ease;
-}
-
-/* Focus indicator in navigation breadcrumbs */
-.breadcrumb .focus-context {
-  background: var(--orenda-primary);
-  color: white;
+.program-badge {
+  display: inline-flex;
+  align-items: center;
   padding: .25rem .5rem;
   border-radius: .375rem;
-  font-size: .8rem;
-  font-weight: 500;
-  margin-left: .5rem;
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  border: 1px solid;
+  transition: all .2s ease;
+}
+
+.program-badge i {
+  font-size: .7rem;
+}
+
+/* GA Program Badge */
+.program-ga {
+  background: rgba(0,34,197,.08);
+  color: var(--orenda-primary);
+  border-color: rgba(0,34,197,.2);
+}
+
+.program-ga:hover {
+  background: rgba(0,34,197,.12);
+  transform: translateY(-1px);
+}
+
+/* CA Program Badge */
+.program-ca {
+  background: rgba(40,167,69,.08);
+  color: #28a745;
+  border-color: rgba(40,167,69,.2);
+}
+
+.program-ca:hover {
+  background: rgba(40,167,69,.12);
+  transform: translateY(-1px);
+}
+
+/* No Programs Badge */
+.program-none {
+  background: rgba(108,117,125,.08);
+  color: #6c757d;
+  border-color: rgba(108,117,125,.2);
+}
+
+/* Hover Effects for District Cards */
+.district-card-v2:hover .district-stat {
+  background: rgba(0,34,197,.08);
+  border-color: rgba(0,34,197,.15);
+}
+
+.district-card-v2:hover .district-stat-number {
+  color: var(--orenda-primary-hover);
+}
+
+.district-card-v2:hover .school-enrollment {
+  color: var(--orenda-primary-hover);
+}
+
+/* =========================================================
+   Breadcrumbs & Navigation
+   ========================================================= */
+.breadcrumb {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "›";
+  color: var(--orenda-primary);
+  font-weight: 600;
+}
+
+.page-header {
+  border-bottom: 1px solid var(--orenda-border);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  color: var(--orenda-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 /* =========================================================
@@ -1046,158 +981,177 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 @media (max-width:768px){
   .orenda-header{ padding:1.5rem; }
   .orenda-card-body{ padding:1.5rem; }
-  .orenda-summary-item{ flex-direction:column; align-items:flex-start; }
-  .orenda-summary-label{ min-width:auto; margin-bottom:.25rem; }
   .orenda-container, .orenda-container-sm{ margin:0 1rem; max-width:none; }
-  .protocols-header{ padding:1.5rem; }
   .protocols-table th, .protocols-table td{ padding:.75rem .5rem; }
   
-  .district-focus-header {
-    padding: 1rem;
-  }
-  
-  .district-focus-header .d-flex {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start !important;
-  }
-  
-  .district-card-v2.focused-district {
-    transform: none;
-  }
-  
-  .district-card-v2.focused-district:hover {
+  .district-card-v2:hover {
     transform: translateY(-2px);
   }
   
-  .focus-context-header {
-    display: none !important;
+  .district-stat {
+    padding: .5rem .25rem;
+  }
+  
+  .district-stat-number {
+    font-size: 1.25rem;
+  }
+  
+  .district-stat-label {
+    font-size: .7rem;
+  }
+  
+  .district-schools-preview {
+    padding: .5rem;
+  }
+  
+  .school-preview-item {
+    font-size: .8rem;
+    padding: .25rem 0;
+  }
+  
+  .program-badge {
+    font-size: .7rem;
+    padding: .2rem .4rem;
   }
 }
 
-@media (max-width:991.98px){
-  .navbar-collapse.collapsing{ transition:height .35s ease; }
-}
-
-/* Add this to your site.css file */
-
 /* =========================================================
-   Compact District Focus Selector in Navbar
+   Expandable School Lists
    ========================================================= */
 
-.district-focus-selector {
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: .375rem;
-  padding: .25rem .5rem;
-  backdrop-filter: blur(10px);
-  margin: 0;
+.schools-expandable {
+  /* This contains the hidden schools */
+  transition: all 0.3s ease;
 }
 
-.district-focus-selector .dropdown-toggle {
-  border: none;
+/* Toggle button styling */
+.school-preview-toggle {
+  padding-top: .5rem;
+  border-top: 1px solid rgba(0,0,0,.08);
+  display: flex;
+  justify-content: center;
+  margin-top: .25rem;
+}
+
+.school-expand-btn {
   background: transparent;
-  color: var(--orenda-text-white);
-  font-weight: 500;
+  border: none;
+  color: var(--orenda-primary);
   font-size: .8rem;
+  font-weight: 500;
   padding: .25rem .5rem;
-  line-height: 1.2;
-  white-space: nowrap;
-  max-width: 160px;
+  border-radius: .375rem;
+  cursor: pointer;
+  transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
 }
 
-.district-focus-selector .dropdown-toggle:focus {
-  box-shadow: 0 0 0 .2rem rgba(255,255,255,.25);
+.school-expand-btn:hover {
+  background: rgba(0,34,197,.08);
+  color: var(--orenda-primary-hover);
+  transform: translateY(-1px);
 }
 
-.district-focus-selector .dropdown-toggle::after {
-  margin-left: .5rem;
+.school-expand-btn:active {
+  transform: translateY(0);
+}
+
+/* Icon rotation animation */
+.expand-icon {
+  transition: transform 0.3s ease;
   font-size: .7rem;
 }
 
-.district-focus-selector .district-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-  display: inline-block;
+/* Text switching */
+.expand-text,
+.collapse-text {
+  transition: opacity 0.2s ease;
 }
 
-/* Dropdown menu styling */
-.district-focus-selector .dropdown-menu {
-  background: #fff;
-  border: none;
-  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
-  border-radius: .375rem;
-  padding: .5rem 0;
-  margin-top: .25rem;
-  min-width: 200px;
+/* Enhanced school preview items for better interaction */
+.school-preview-item {
+  transition: background-color 0.2s ease;
 }
 
-.district-focus-selector .dropdown-item {
-  padding: .5rem 1rem;
-  font-size: .875rem;
-  color: #495057;
-  transition: all .2s ease;
-  border: none;
-  background: none;
-  text-decoration: none;
-  display: block;
-  width: 100%;
-  text-align: left;
+.schools-expandable .school-preview-item {
+  opacity: 0;
+  animation: fadeInSchool 0.3s ease forwards;
 }
 
-.district-focus-selector .dropdown-item:hover {
-  background: var(--orenda-primary);
-  color: #fff;
+.schools-expandable .school-preview-item:nth-child(1) { animation-delay: 0.1s; }
+.schools-expandable .school-preview-item:nth-child(2) { animation-delay: 0.15s; }
+.schools-expandable .school-preview-item:nth-child(3) { animation-delay: 0.2s; }
+.schools-expandable .school-preview-item:nth-child(4) { animation-delay: 0.25s; }
+.schools-expandable .school-preview-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes fadeInSchool {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.district-focus-selector .dropdown-item i {
-  width: 1.25rem;
+/* Hover effect for individual schools */
+.school-preview-item:hover {
+  background: rgba(0,34,197,.04);
+  border-radius: .25rem;
+  margin: 0 -.25rem;
+  padding-left: .25rem;
+  padding-right: .25rem;
 }
 
-.district-focus-selector .dropdown-item-text {
-  padding: .5rem 1rem;
-  font-size: .875rem;
-  color: #6c757d;
-  font-weight: 600;
+/* Better visual hierarchy when expanded */
+.district-card-v2 .schools-expandable {
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid rgba(0,0,0,.05);
 }
 
-.district-focus-selector .dropdown-item-text i.text-warning {
-  color: #ffc107 !important;
-}
-
-/* Mobile adjustments */
-@media (max-width: 991.98px) {
-  .district-focus-selector {
-    background: rgba(255,255,255,.15);
-    border-radius: .375rem;
-    margin-top: .5rem;
-    padding: .5rem;
-    width: 100%;
+/* Mobile adjustments for expandable schools */
+@media (max-width: 768px) {
+  .school-expand-btn {
+    font-size: .75rem;
+    padding: .2rem .4rem;
   }
   
-  .district-focus-selector .dropdown-toggle {
-    font-size: .9rem;
-    padding: .5rem;
-    text-align: left;
-    width: 100%;
-    max-width: none;
+  .expand-icon {
+    font-size: .65rem;
   }
   
-  .district-focus-selector .district-name {
-    max-width: none;
+  .school-preview-item:hover {
+    margin: 0 -.15rem;
+    padding-left: .15rem;
+    padding-right: .15rem;
   }
 }
 
-/* Small mobile screens */
-@media (max-width: 575.98px) {
-  .district-focus-selector .dropdown-toggle {
-    font-size: .85rem;
-    padding: .375rem .5rem;
-  }
-  
-  .district-focus-selector .district-name {
-    font-size: .85rem;
-  }
+/* Accessibility improvements */
+.school-expand-btn:focus {
+  outline: 2px solid var(--orenda-primary);
+  outline-offset: 2px;
+}
+
+.school-expand-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Loading state (optional enhancement) */
+.school-expand-btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.school-expand-btn.loading .expand-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
