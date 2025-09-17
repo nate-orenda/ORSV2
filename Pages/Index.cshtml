@@ -41,71 +41,67 @@
                             </div>
                         </div>
 
+                        <!-- Updated District Card Body Section -->
                         <div class="district-card-body">
-                            <!-- Quick Stats Row -->
-                            <div class="row g-3 mb-3">
-                                <div class="col-6">
-                                    <div class="district-stat">
-                                        <div class="district-stat-number">@district.Schools.Count</div>
-                                        <div class="district-stat-label">School@(district.Schools.Count == 1 ? "" : "s")</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="district-stat">
-                                        <div class="district-stat-number">@totalEnrollment.ToString("N0")</div>
-                                        <div class="district-stat-label">Students</div>
+                            <!-- Compact Overview Section -->
+                            <div class="district-overview mb-3">
+                                <div class="district-stats-compact">
+                                    <div class="d-flex flex-column gap-2">
+                                        <!-- Stats Row -->
+                                        <div class="stats-row d-flex justify-content-between">
+                                            <div class="compact-stat">
+                                                <i class="bi bi-building"></i>
+                                                <span class="stat-number">@district.Schools.Count</span>
+                                                <span class="stat-label">school@(district.Schools.Count == 1 ? "" : "s")</span>
+                                            </div>
+                                            <div class="compact-stat">
+                                                <i class="bi bi-people"></i>
+                                                <span class="stat-number">@totalEnrollment.ToString("N0")</span>
+                                                <span class="stat-label">students</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Schools Link Row -->
+                                        <div class="schools-link-row text-center">
+                                            <button type="button" 
+                                                    class="school-expand-btn" 
+                                                    data-target="@($"{districtId}-schools-detail")"
+                                                    data-expanded="false"
+                                                    title="View school details">
+                                                <span class="expand-text">View schools</span>
+                                                <span class="collapse-text" style="display: none;">Hide schools</span>
+                                                <i class="bi bi-chevron-down expand-icon ms-1"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- School List Preview -->
-                            <div class="district-schools-preview">
-                                @{
-                                    var schoolsToShow = district.Schools.Take(3).ToList();
-                                    var remainingSchools = district.Schools.Skip(3).ToList();
-                                }
-                                
-                                <!-- Always visible schools -->
-                                <div class="schools-visible">
-                                    @foreach (var school in schoolsToShow)
+                            <!-- Expandable School Details -->
+                            <div class="schools-detail-section" id="@($"{districtId}-schools-detail")" style="display: none;">
+                                <div class="schools-detail-list">
+                                    @foreach (var school in district.Schools.OrderBy(s => s.SchoolName))
                                     {
-                                        <div class="school-preview-item">
+                                        <div class="school-detail-item-compact">
                                             <span class="school-name">@school.SchoolName</span>
-                                            <span class="school-enrollment">@school.Enrollment.ToString("N0")</span>
+                                            <div class="school-meta-inline">
+                                                @if (school.CurrentCP.HasValue && school.CurrentCP.Value > 0)
+                                                {
+                                                    <span class="ga-chip cp-cp@(school.CurrentCP.Value)">CP@(school.CurrentCP.Value)</span>
+                                                }
+                                                @if (school.GA)
+                                                {
+                                                    <span class="program-mini program-ga-mini">GA</span>
+                                                }
+                                                @if (school.CA)
+                                                {
+                                                    <span class="program-mini program-ca-mini">CA</span>
+                                                }
+                                                <span class="enrollment">@school.Enrollment.ToString("N0")</span>
+                                            </div>
                                         </div>
                                     }
                                 </div>
-                                
-                                <!-- Expandable additional schools -->
-                                @if (remainingSchools.Any())
-                                {
-                                    <div class="schools-expandable" id="@($"{districtId}-schools")" style="display: none;">
-                                        @foreach (var school in remainingSchools)
-                                        {
-                                            <div class="school-preview-item">
-                                                <span class="school-name">@school.SchoolName</span>
-                                                <span class="school-enrollment">@school.Enrollment.ToString("N0")</span>
-                                            </div>
-                                        }
-                                    </div>
-                                    
-                                    <!-- Toggle button -->
-                                    <div class="school-preview-toggle">
-                                        <button type="button" 
-                                                class="school-expand-btn" 
-                                                data-target="@($"{districtId}-schools")"
-                                                data-expanded="false">
-                                            <span class="expand-text">+@remainingSchools.Count more school@(remainingSchools.Count == 1 ? "" : "s")</span>
-                                            <span class="collapse-text" style="display: none;">Show less</span>
-                                            <i class="bi bi-chevron-down expand-icon ms-1"></i>
-                                        </button>
-                                    </div>
-                                }
-                                
-                                @if (!remainingSchools.Any() && district.Schools.Count <= 3)
-                                {
-                                    <!-- No expand needed, but keep consistent spacing -->
-                                }
                             </div>
 
                             <!-- Program Availability -->
@@ -295,10 +291,10 @@
     }
 </div>
 
-<!-- School Expansion JavaScript -->
+<!-- School Details Toggle JavaScript - Fixed Selector -->
 <script>
     (function() {
-        // Handle school list expansion
+        // Handle school details expansion - using correct class selector
         document.querySelectorAll('.school-expand-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const targetId = this.dataset.target;
