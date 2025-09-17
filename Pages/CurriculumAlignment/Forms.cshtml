@@ -4,6 +4,8 @@
     ViewData["Title"] = "Select a Form";
 }
 
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
 <div class="orenda-container">
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Curriculum Alignment</h2>
@@ -15,7 +17,7 @@
             <a href="@Url.Page("/CurriculumAlignment/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
                     <h5 class="text-orenda-primary">Form 1</h5>
-                    <p class="text-muted small">Enter and review foundational curriculum alignment data.</p>
+                    <p class="text-muted small">Standards analysis view per teacher, class, and student.</p>
                 </div>
             </a>
         </div>
@@ -24,7 +26,7 @@
             <a href="@Url.Page("/CurriculumAlignment/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
                     <h5 class="text-orenda-primary">Form 2</h5>
-                    <p class="text-muted small">Analyze and track alignment progress and outcomes.</p>
+                    <p class="text-muted small">Quadrant analysis for assessment data based on overall proficiency of standards.</p>
                 </div>
             </a>
         </div>
@@ -36,7 +38,7 @@
                         <h5 class="text-orenda-primary mb-0">Form 3</h5>
                         <span class="badge bg-light text-dark">Coming Soon</span>
                     </div>
-                    <p class="text-muted small">Advanced reporting and strategic planning tools.</p>
+                    <p class="text-muted small">Teacher level summary for a single assessment.</p>
                 </div>
             </div>
         </div>

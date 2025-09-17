@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using ORSV2.Models;
 using System.Security.Claims;
 
 namespace ORSV2.Pages.CurriculumAlignment
@@ -113,6 +114,7 @@ namespace ORSV2.Pages.CurriculumAlignment
 
         private readonly IConfiguration _config;
         public Form2Model(IConfiguration config) => _config = config;
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
         public async Task OnGet()
         {
@@ -148,11 +150,19 @@ namespace ORSV2.Pages.CurriculumAlignment
                     {
                         DistrictName = result.ToString();
                     }
+
+                    Breadcrumbs = new List<BreadcrumbItem>
+                    {
+                        new BreadcrumbItem { Title = "Curriculum Alignment", Url = Url.Page("/CurriculumAlignment/Index") },
+                        new BreadcrumbItem {
+                            Title = $"{(DistrictName ?? "District")} - Select Forms",
+                            Url = DistrictId.HasValue ? Url.Page("/CurriculumAlignment/Forms", new { districtId = DistrictId }) : null
+                        },
+                        new BreadcrumbItem { Title = "Form 2" } // current page, no URL
+                    };
                 }
                 catch (SqlException)
                 {
-                    // If the query fails, we can log it or just proceed.
-                    // The DistrictName will remain null and won't be displayed.
                 }
             }
 

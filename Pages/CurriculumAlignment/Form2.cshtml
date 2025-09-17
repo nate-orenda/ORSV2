@@ -4,6 +4,8 @@
     ViewData["Title"] = "Curriculum Alignment – Quadrant Breakdown (Form 2)";
 }
 
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
 @section Styles {
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">

@@ -18,6 +18,8 @@
     }).OrderBy(t => t.TeacherName);
 }
 
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">DRS Form 1</h2>
@@ -330,8 +332,8 @@
 
 /* Quadrant theming via CSS variables (site-wide overrideable) */
 .quad-cell { border-radius: 8px; padding: 0.5rem; }
-.quadrant-challenge { background: var(--quad-challenge-bg, #ecfdf5); color: var(--quad-challenge-fg, #065f46); }
-.quadrant-benchmark { background: var(--quad-benchmark-bg, #eff6ff); color: var(--quad-benchmark-fg, #1e40af); }
+.quadrant-challenge { background: var(--quad-benchmark-bg, #eff6ff); color: var(--quad-benchmark-fg, #1e40af); }
+.quadrant-benchmark { background: var(--quad-challenge-bg, #ecfdf5); color: var(--quad-challenge-fg, #065f46); }
 .quadrant-strategic { background: var(--quad-strategic-bg, #fffbeb); color: var(--quad-strategic-fg, #92400e); }
 .quadrant-intensive { background: var(--quad-intensive-bg, #fef2f2); color: var(--quad-intensive-fg, #991b1b); }
 

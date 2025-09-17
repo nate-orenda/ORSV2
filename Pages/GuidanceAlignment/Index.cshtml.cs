@@ -26,7 +26,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Dashboard", Url = Url.Page("/Index") },
-                new BreadcrumbItem { Title = "Curriculum Alignment" }
+                new BreadcrumbItem { Title = "Guidance Alignment" }
             };
 
             return Page();

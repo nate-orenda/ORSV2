@@ -6,7 +6,8 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using System;
-using System.Security.Claims; // Added this using statement
+using System.Security.Claims;
+using ORSV2.Models;
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
@@ -73,7 +74,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         public List<SelectListItem> AvailableTeachers { get; private set; } = new();
         public List<ColDef> Columns { get; private set; } = new();
         public List<RowVm> Rows { get; private set; } = new();
-
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
         private readonly IConfiguration _config;
         public Form1Model(IConfiguration config) => _config = config;
 
@@ -84,7 +85,24 @@ namespace ORSV2.Pages.CurriculumAlignment
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
-            
+
+            string? districtName = null;
+            if (DistrictId.HasValue)
+            {
+                districtName = await GetDistrictNameAsync(conn, DistrictId.Value);
+            }
+
+            // Build: Curriculum Alignment -> {District} Forms -> Form 1
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Curriculum Alignment", Url = Url.Page("/CurriculumAlignment/Index") },
+                new BreadcrumbItem {
+                    Title = $"{(districtName ?? "District")} - Select Forms",
+                    Url = DistrictId.HasValue ? Url.Page("/CurriculumAlignment/Forms", new { districtId = DistrictId }) : null
+                },
+                new BreadcrumbItem { Title = "Form 1" } // current page, no URL
+            };
+
             if (IsDistrictAdmin && UserDistrictId.HasValue)
             {
                 DistrictId = UserDistrictId.Value;
@@ -100,7 +118,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 if (UserSchoolIds.Any()) SchoolId = UserSchoolIds.First();
                 TeacherId = UserStaffId;
             }
-            
+
             if (DistrictId.HasValue)
             {
                 AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
@@ -198,7 +216,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         private async Task LoadMatrixData(SqlConnection conn, Guid batchId)
         {
             using var cmd = new SqlCommand("dbo.GetAssessmentBatchMatrix", conn) { CommandType = CommandType.StoredProcedure };
-            
+
             // Add UI filter parameters
             cmd.Parameters.AddWithValue("@BatchId", batchId);
             if (DistrictId.HasValue) cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
@@ -215,10 +233,10 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
             else if (IsDistrictAdmin && UserDistrictId.HasValue)
             {
-                 cmd.Parameters.AddWithValue("@UserScopeId", UserDistrictId.Value);
+                cmd.Parameters.AddWithValue("@UserScopeId", UserDistrictId.Value);
             }
             // Note: SchoolAdmins are scoped by the @SchoolId parameter, which is already enforced by the UI logic.
-            
+
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
@@ -228,9 +246,9 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 while (await rdr.ReadAsync())
                 {
-                    var row = new RowVm 
-                    { 
-                        StudentName = rdr.GetString("StudentName"), 
+                    var row = new RowVm
+                    {
+                        StudentName = rdr.GetString("StudentName"),
                         LocalId = rdr.GetString("LocalId"),
                         TeacherName = rdr.GetString("TeacherName"),
                         Period = rdr.GetString("Period")
@@ -339,6 +357,13 @@ namespace ORSV2.Pages.CurriculumAlignment
                     Intensive = intensive
                 };
             }
+        }
+        private static async Task<string?> GetDistrictNameAsync(SqlConnection conn, int districtId)
+        {
+            using var cmd = new SqlCommand("SELECT Name FROM dbo.Districts WHERE Id = @Id", conn);
+            cmd.Parameters.AddWithValue("@Id", districtId);
+            var res = await cmd.ExecuteScalarAsync();
+            return res?.ToString();
         }
     }
 }
