@@ -338,7 +338,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public async Task<IActionResult> OnPostImport()
         {
             await LoadDistrictOptionsAsync();
-            
+
             // Only validate required fields for import (not preview)
             if (DistrictId == 0)
             {
@@ -348,7 +348,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             {
                 ModelState.AddModelError(nameof(Subject), "Subject is required for import.");
             }
-            
+
             if (!ModelState.IsValid)
             {
                 return await OnPostPreview();
@@ -399,13 +399,13 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                         var rawPts = (cells[m.ScoreCol] ?? "").Trim();
                         var standardValue = (cells[m.StdCol] ?? "").Trim();
 
-                        if (!string.IsNullOrEmpty(standardValue) && 
+                        if (!string.IsNullOrEmpty(standardValue) &&
                             decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out var pts))
                         {
                             // Handle pipe-separated sub-standards - take the last (rightmost) GUID
                             var standardParts = standardValue.Split('|');
                             var lastStandardId = standardParts[standardParts.Length - 1].Trim();
-                            
+
                             if (Guid.TryParse(lastStandardId, out var standardId))
                             {
                                 allIds.Add(standardId);
@@ -474,20 +474,26 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     tvp.Rows.Add(r);
                 }
             }
-            
+
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
+
+            // ADD: capture PRINT / low-severity RAISERROR messages from SQL Server
+            var sqlMessages = new List<string>();
+            conn.InfoMessage += (s, e) => { if (!string.IsNullOrWhiteSpace(e.Message)) sqlMessages.Add(e.Message); };
+
+
             await conn.OpenAsync();
-            
-            // Start transaction for all operations
+
             using var transaction = conn.BeginTransaction();
-            
+
             try
             {
                 // Step 1: Import assessment results
                 using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn, transaction)
                 {
-                    CommandType = CommandType.StoredProcedure
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 120 // ADD: avoid short default timeouts
                 };
                 cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
                 cmd.Parameters.AddWithValue("@TestId", TestId);
@@ -497,63 +503,84 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 var p = cmd.Parameters.AddWithValue("@Rows", tvp);
                 p.SqlDbType = SqlDbType.Structured;
                 p.TypeName = "dbo.AssessmentResultImportType";
-                
-                var batchId = (await cmd.ExecuteScalarAsync())?.ToString();
-                
-                if (string.IsNullOrWhiteSpace(batchId))
-                {
-                    throw new InvalidOperationException("Import failed - no batch ID returned");
-                }
+
+                // CHG: validate GUID strictly so we don’t hide earlier SQL issues
+                var obj = await cmd.ExecuteScalarAsync();
+                if (!Guid.TryParse(obj?.ToString(), out var batchGuid))
+                    throw new InvalidOperationException($"Import failed - invalid batch ID returned: '{obj}'");
 
                 // Step 2: Update student totals
-                using var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
+                using (var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
                 {
-                    CommandType = CommandType.StoredProcedure
-                };
-                totalsCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
-                await totalsCmd.ExecuteNonQueryAsync();
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 120 // ADD
+                })
+                {
+                    totalsCmd.Parameters.AddWithValue("@BatchId", batchGuid);
+                    await totalsCmd.ExecuteNonQueryAsync();
+                }
 
                 // Step 3: Update student roster
-                using var rosterCmd = new SqlCommand("dbo.UpsertAssessmentStudentRoster", conn, transaction)
+                using (var rosterCmd = new SqlCommand("dbo.UpsertAssessmentStudentRoster", conn, transaction)
                 {
-                    CommandType = CommandType.StoredProcedure
-                };
-                rosterCmd.Parameters.AddWithValue("@BatchId", Guid.Parse(batchId));
-                rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
-                await rosterCmd.ExecuteNonQueryAsync();
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 120 // ADD
+                })
+                {
+                    rosterCmd.Parameters.AddWithValue("@BatchId", batchGuid);
+                    rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                    await rosterCmd.ExecuteNonQueryAsync();
+                }
 
-                // Commit all operations
                 transaction.Commit();
-                
-                // Success message
-                TempData["ImportSuccessMessage"] = $"Import complete! Batch ID: {batchId}. Processed {tvp.Rows.Count} student-standard result rows. Student totals and roster updated.";
-                TempData["ImportBatchId"] = batchId;
+
+                // CHG: include SQL messages so you can see PRINTs
+                TempData["ImportSuccessMessage"] =
+                    $"Import complete! Batch ID: {batchGuid}. " +
+                    $"Processed {tvp.Rows.Count} student-standard result rows. " +
+                    (sqlMessages.Count > 0 ? $"Messages: {string.Join(" | ", sqlMessages)}" : "");
+                TempData["ImportBatchId"] = batchGuid.ToString();
+
+                TryDelete(TempPath);
+                TempPath = null;
+                return Page();
+            }
+            catch (SqlException sqlEx)
+            {
+                try { if (transaction?.Connection != null) transaction.Rollback(); } catch { /* ignore */ }
+
+                var sb = new StringBuilder("SQL error(s) during import:\n");
+                foreach (SqlError err in sqlEx.Errors)
+                    sb.AppendLine($"• {err.Number} (Severity {err.Class}) at line {err.LineNumber} in {err.Procedure}: {err.Message}");
+                if (sqlMessages.Count > 0) sb.AppendLine($"Messages: {string.Join(" | ", sqlMessages)}");
+
+                ModelState.AddModelError(string.Empty, sb.ToString());
+                return Page();
             }
             catch (Exception ex)
             {
-                // Rollback on any error
-                transaction.Rollback();
-                ModelState.AddModelError("", $"Import failed: {ex.Message}");
+                try { if (transaction?.Connection != null) transaction.Rollback(); } catch { /* ignore */ }
+
+                var detail = ex.InnerException != null ? $"{ex.Message} | Inner: {ex.InnerException.Message}" : ex.Message;
+                if (sqlMessages.Count > 0) detail += $" | Messages: {string.Join(" | ", sqlMessages)}";
+                ModelState.AddModelError(string.Empty, $"Import failed: {detail}");
                 return Page();
             }
 
-            TryDelete(TempPath);
-            TempPath = null;
-            return Page();
         }
 
         // ---------- NEW ANALYSIS METHODS ----------
 
-        /// <summary>
-        /// Analyzes file contents and extracts metadata
-        /// </summary>
+            /// <summary>
+            /// Analyzes file contents and extracts metadata
+            /// </summary>
         private async Task<FileAnalysisResult> AnalyzeFileContents(string filePath, string delimiter)
         {
             var result = new FileAnalysisResult();
             var delimiterChar = delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
 
             using var sr = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true);
-            
+
             // Read header
             var header = await sr.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(header))
