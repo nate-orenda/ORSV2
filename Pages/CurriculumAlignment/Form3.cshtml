@@ -1,0 +1,178 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.Form3Model
+@{
+    ViewData["Title"] = "DRS – Form 3";
+}
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
+
+<div class="orenda-container">
+    <div class="orenda-header shadow-orenda">
+        <h2 class="mb-1">Data Reflection</h2>
+        <p class="mb-0">Form 3</p>
+    </div>
+
+    <!-- Filters: District -> Unit/Cycle -> Assessment -> School (no Teacher filter) -->
+    <form method="get" class="row g-3 mt-3">
+        <input type="hidden" name="DistrictId" value="@Model.DistrictId" />
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Unit/Cycle</label>
+            <select name="UnitCycle" class="form-select" onchange="this.form.submit()">
+                @foreach (var opt in Model.AvailableUnitCycles)
+                {
+                    <option value="@opt.Value" selected="@(Model.UnitCycle == opt.Value)">@opt.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Assessment</label>
+            <select name="BatchId" class="form-select" onchange="this.form.submit()">
+                @foreach (var opt in Model.AvailableBatches)
+                {
+                    <option value="@opt.Value" selected="@(Model.BatchId == opt.Value)">@opt.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label fw-semibold">School</label>
+            <select name="SchoolId" class="form-select" onchange="this.form.submit()">
+                @foreach (var opt in Model.AvailableSchools)
+                {
+                    <option value="@opt.Value" selected="@(Model.SchoolId?.ToString() == opt.Value)">@opt.Text</option>
+                }
+            </select>
+        </div>
+    </form>
+
+    @if (Model.GroupSummaries.Any() && Model.Columns.Any())
+    {
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <h5 class="mb-0">By Teacher / Class Period</h5>
+                    <small class="text-muted">Percentages are based on tested students in each class/period.</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-nowrap">Teacher Name</th>
+                                <th class="text-nowrap">Class + Period</th>
+
+                                @* For each standard, show Code + short description, then 4 data cols *@
+                                @for (int i = 0; i < Model.Columns.Count; i++)
+                                {
+                                    var c = Model.Columns[i];
+                                    <th class="text-center" colspan="4">
+                                        <div class="fw-semibold">@c.Code</div>
+                                        <div class="small text-muted">@c.ShortStatement</div>
+                                    </th>
+                                }
+
+                                <th class="text-center" colspan="4">
+                                    <div class="fw-semibold">Overall Proficiency</div>
+                                    <div class="small text-muted">3+ standards passed</div>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+
+                                @for (int i = 0; i < Model.Columns.Count; i++)
+                                {
+                                    <th class="text-center small">% Passed<br/>(# passed)</th>
+                                    <th class="text-center small">% Not Passed</th>
+                                    <th class="text-center small"># Not Passed</th>
+                                    <th class="text-center small">Denom</th>
+                                }
+
+                                <th class="text-center small">% Passed<br/>(# passed)</th>
+                                <th class="text-center small">% Not Passed</th>
+                                <th class="text-center small"># Not Passed</th>
+                                <th class="text-center small">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var g in Model.GroupSummaries)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@g.Key.TeacherName</td>
+                                <td class="text-nowrap">@g.Key.Period</td>
+
+                                @for (int i = 0; i < Model.Columns.Count; i++)
+                                {
+                                    var den = g.DenomPerStd[i];
+                                    var pass = g.PassedPerStd[i];
+                                    var notp = g.NotPassedPerStd[i];
+
+                                    <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den) <span class="text-muted">(@pass)</span></td>
+                                    <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)</td>
+                                    <td class="text-center">@notp</td>
+                                    <td class="text-center">@den</td>
+                                }
+
+                                @{
+                                    var totDen = g.StudentCount;
+                                    var totPass = g.PassedByTotal;
+                                    var totNot = g.NotPassedByTotal;
+                                }
+                                <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen) <span class="text-muted">(@totPass)</span></td>
+                                <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)</td>
+                                <td class="text-center">@totNot</td>
+                                <td class="text-center">@totDen</td>
+                            </tr>
+                        }
+                        </tbody>
+                        @if (Model.GrandTotals is not null)
+    {
+        <tfoot class="table-light">
+            <tr>
+                <th class="text-nowrap">OVERALL</th>
+                <th class="text-nowrap">All Classes</th>
+
+                @for (int i = 0; i < Model.Columns.Count; i++)
+                {
+                    var den  = Model.GrandTotals.DenomPerStd[i];
+                    var pass = Model.GrandTotals.PassedPerStd[i];
+                    var notp = Model.GrandTotals.NotPassedPerStd[i];
+
+                    <th class="text-center">
+                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
+                        <span class="text-muted">(@pass)</span>
+                    </th>
+                    <th class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)</th>
+                    <th class="text-center">@notp</th>
+                    <th class="text-center">@den</th>
+                }
+
+                @{
+                    var totDen  = Model.GrandTotals.StudentCount;
+                    var totPass = Model.GrandTotals.PassedByTotal;
+                    var totNot  = Model.GrandTotals.NotPassedByTotal;
+                }
+                <th class="text-center">
+                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
+                    <span class="text-muted">(@totPass)</span>
+                </th>
+                <th class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)</th>
+                <th class="text-center">@totNot</th>
+                <th class="text-center">@totDen</th>
+            </tr>
+        </tfoot>
+    }
+                    </table>
+                </div>
+
+                <div class="mt-2 small text-muted">
+                    PASS cutoff = score ≥ 4 (per standard). Overall Proficiency = student passed ≥ 3 standards.
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mt-4">
+            Select a Unit/Cycle, Assessment, and School to view the summary.
+        </div>
+    }
+</div>
