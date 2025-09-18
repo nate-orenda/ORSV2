@@ -113,7 +113,7 @@ namespace ORSV2.Pages
 
             // ===== Enrollment =====
             var enrollBySchool = await _context.STU
-                .Where(stu => schoolIds.Contains(stu.SchoolID))
+                .Where(stu => schoolIds.Contains(stu.SchoolID) && !stu.Inactive)
                 .GroupBy(stu => stu.SchoolID)
                 .Select(g => new { SchoolId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.SchoolId, x => x.Count);
