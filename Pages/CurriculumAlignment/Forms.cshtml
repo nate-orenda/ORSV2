@@ -32,15 +32,51 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-            <div class="orenda-card h-100 is-disabled">
+            <a href="@Url.Page("/CurriculumAlignment/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="text-orenda-primary mb-0">Form 3</h5>
-                        <span class="badge bg-light text-dark">Coming Soon</span>
+                    <h5 class="text-orenda-primary">Form 3</h5>
+                    <p class="text-muted small">School and teacher level summary for a single assessment.</p>
+                </div>
+            </a>
+        </div>
+
+        @if (Model.ShowAdvancedForms)
+        {
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="orenda-card h-100 is-disabled">
+                    <div class="orenda-card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-orenda-primary mb-0">Meta</h5>
+                            <span class="badge bg-light text-dark">Coming Soon</span>
+                        </div>
+                        <p class="text-muted small">Advanced meta-analysis across multiple assessments and time periods.</p>
                     </div>
-                    <p class="text-muted small">Teacher level summary for a single assessment.</p>
                 </div>
             </div>
-        </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="orenda-card h-100 is-disabled">
+                    <div class="orenda-card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-orenda-primary mb-0">Mega</h5>
+                            <span class="badge bg-light text-dark">Coming Soon</span>
+                        </div>
+                        <p class="text-muted small">Comprehensive district-wide analysis with predictive insights.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="orenda-card h-100 is-disabled">
+                    <div class="orenda-card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-orenda-primary mb-0">Giga</h5>
+                            <span class="badge bg-light text-dark">Coming Soon</span>
+                        </div>
+                        <p class="text-muted small">Large-scale data analysis with machine learning capabilities.</p>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>

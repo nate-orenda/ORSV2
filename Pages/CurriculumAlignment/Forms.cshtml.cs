@@ -6,7 +6,7 @@ using ORSV2.Models;
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
-    public class FormsModel : PageModel
+    public class FormsModel : SecureReportPageModel
     {
         private readonly ApplicationDbContext _context;
 
@@ -19,9 +19,15 @@ namespace ORSV2.Pages.CurriculumAlignment
         public int DistrictId { get; set; }
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
         public string DistrictName { get; set; } = string.Empty;
+        
+        // Property to control visibility of advanced forms
+        public bool ShowAdvancedForms { get; private set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
+            // Initialize user data scope from SecureReportPageModel
+            InitializeUserDataScope();
+
             if (DistrictId == 0)
             {
                 return NotFound("A District ID is required.");
@@ -35,6 +41,9 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
 
             DistrictName = district.Name;
+
+            // Use the properties from SecureReportPageModel for cleaner role checking
+            ShowAdvancedForms = IsOrendaUser || IsDistrictAdmin || IsSchoolAdmin;
 
             Breadcrumbs = new List<BreadcrumbItem>
             {

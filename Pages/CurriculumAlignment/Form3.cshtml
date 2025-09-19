@@ -5,6 +5,233 @@
 }
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
+<style>
+    /* Custom styles for Form 3 */
+    .form3-table {
+        font-size: 0.8rem; /* Reduced from default */
+    }
+    
+    .form3-table th {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.3rem;
+        vertical-align: middle;
+    }
+    
+    .form3-table td {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.25rem;
+        vertical-align: middle;
+    }
+    
+    .pass-not-pass-header {
+        line-height: 1.2;
+        margin-bottom: 0.1rem;
+    }
+    
+    .pass-not-pass-header .fw-semibold {
+        display: block;
+        margin-bottom: 0.15rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .pass-not-pass-header .small {
+        display: block;
+        font-size: 0.6rem;
+        line-height: 1.1;
+        font-weight: normal;
+    }
+    
+    .sub-header-row th {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.2rem;
+        line-height: 1.1;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .percentage-cell {
+        white-space: nowrap;
+    }
+    
+    .percentage-cell .text-muted {
+        font-size: 0.7rem;
+        margin-left: 0.1rem;
+    }
+    
+    .compact-nowrap {
+        white-space: nowrap;
+        font-size: 0.75rem;
+    }
+    
+    .table-compact {
+        margin-bottom: 0.5rem;
+    }
+    
+    .form3-footer-note {
+        font-size: 0.7rem;
+        margin-top: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    
+    /* Alternating column backgrounds for better readability */
+    .form3-table .standard-group-even {
+        background-color: #f1f3f4 !important;
+    }
+    
+    .form3-table .standard-group-odd {
+        background-color: #ffffff !important;
+    }
+    
+    /* Ensure alternating colors work in all table sections */
+    .form3-table thead .standard-group-even,
+    .form3-table tbody .standard-group-even,
+    .form3-table tfoot .standard-group-even {
+        background-color: #f1f3f4 !important;
+    }
+    
+    .form3-table thead .standard-group-odd,
+    .form3-table tbody .standard-group-odd,
+    .form3-table tfoot .standard-group-odd {
+        background-color: #ffffff !important;
+    }
+    
+    /* Print styles */
+    @@media print {
+        /* Hide everything first */
+        body * {
+            visibility: hidden !important;
+        }
+        
+        /* Only show the table and print title */
+        .form3-table,
+        .form3-table *,
+        .print-title,
+        .print-title * {
+            visibility: visible !important;
+        }
+        
+        /* Reset body and html for clean positioning */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+        }
+        
+        /* Position print title at top */
+        .print-title {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            text-align: center !important;
+            font-size: 12pt !important;
+            font-weight: bold !important;
+            padding: 0.1in 0 !important;
+            background: white !important;
+            z-index: 1000 !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        /* Position table container below title with more buffer */
+        .table-responsive {
+            position: fixed !important;
+            top: 0.6in !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100% - 0.6in) !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            visibility: visible !important;
+        }
+        
+        /* Table styling with top border */
+        .form3-table {
+            width: 100% !important;
+            font-size: 0.6rem !important;
+            margin: 0 !important;
+            border-collapse: collapse !important;
+            position: relative !important;
+            border-top: 2px solid #000 !important;
+        }
+        
+        .form3-table th,
+        .form3-table td {
+            font-size: 0.55rem !important;
+            padding: 0.15rem 0.1rem !important;
+            border: 1px solid #000 !important;
+        }
+        
+        /* Standard code and description styling for print */
+        .pass-not-pass-header .fw-semibold {
+            font-size: 0.65rem !important;
+            font-weight: bold !important;
+        }
+        
+        .pass-not-pass-header .small {
+            font-size: 0.5rem !important;
+            font-weight: normal !important;
+        }
+        
+        .percentage-cell .text-muted {
+            font-size: 0.5rem !important;
+        }
+        
+        /* Force table to break across pages properly */
+        .form3-table thead {
+            display: table-header-group !important;
+        }
+        
+        .form3-table tfoot {
+            display: table-footer-group !important;
+        }
+        
+        .form3-table tbody {
+            display: table-row-group !important;
+        }
+        
+        /* Ensure headers repeat on each page */
+        .form3-table thead tr {
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+        }
+        
+        /* Prevent awkward page breaks */
+        .form3-table tbody tr {
+            page-break-inside: avoid !important;
+        }
+        
+        /* Maintain alternating colors in print */
+        .form3-table .standard-group-even {
+            background-color: #f5f5f5 !important;
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        
+        .form3-table .standard-group-odd {
+            background-color: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        
+        /* Print page setup - maximize space */
+        @@page {
+            margin: 0.2in !important;
+            size: landscape !important;
+        }
+    }
+    
+    /* Print button styling */
+    .print-button {
+        margin-bottom: 1rem;
+    }
+    
+    /* Hide elements on screen */
+    .no-print {
+        display: none;
+    }
+</style>
+
 <div class="orenda-container">
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Data Reflection</h2>
@@ -46,69 +273,102 @@
     @if (Model.GroupSummaries.Any() && Model.Columns.Any())
     {
         <div class="card shadow-sm mt-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                    <h5 class="mb-0">By Teacher / Class Period</h5>
-                    <small class="text-muted">Percentages are based on tested students in each class/period.</small>
+                            <div class="card-body">
+                <!-- Print Button -->
+                <div class="print-button mb-3">
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Report
+                    </button>
+                </div>
+                
+                <!-- Print Title (hidden on screen, visible in print) -->
+                <div class="print-title" style="display: none;">
+                    @if (!string.IsNullOrEmpty(Model.BatchId) && Model.AvailableBatches.Any())
+                    {
+                        var selectedBatch = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
+                        if (selectedBatch != null)
+                        {
+                            <span>@selectedBatch.Text - Form 3</span>
+                        }
+                    }
+                </div>
+
+                <!-- Test Name Header for screen -->
+                <div class="mb-2">
+                    @if (!string.IsNullOrEmpty(Model.BatchId) && Model.AvailableBatches.Any())
+                    {
+                        var selectedBatch = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
+                        if (selectedBatch != null)
+                        {
+                            <h5 class="mb-0 text-center">@selectedBatch.Text - Form 3</h5>
+                        }
+                    }
+                    else
+                    {
+                        <h5 class="mb-0 text-center">Assessment Data</h5>
+                    }
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                    <table class="table form3-table table-compact align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-nowrap">Teacher Name</th>
-                                <th class="text-nowrap">Class + Period</th>
+                                <th class="compact-nowrap text-center">Teacher Name</th>
+                                <th class="compact-nowrap text-center">Period</th>
 
                                 @* For each standard, show Code + short description, then 4 data cols *@
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
                                     var c = Model.Columns[i];
-                                    <th class="text-center" colspan="4">
-                                        <div class="fw-semibold">@c.Code</div>
-                                        <div class="small text-muted">@c.ShortStatement</div>
+                                    var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
+                                    <th class="text-center pass-not-pass-header @groupClass" colspan="2">
+                                        <span class="fw-semibold">@c.Code</span>
+                                        <span class="small text-muted">@c.ShortStatement</span>
                                     </th>
                                 }
 
-                                <th class="text-center" colspan="4">
-                                    <div class="fw-semibold">Overall Proficiency</div>
-                                    <div class="small text-muted">3+ standards passed</div>
+                                <th class="text-center pass-not-pass-header standard-group-odd" colspan="2">
+                                    <span class="fw-semibold">Overall Proficiency</span>
+                                    <span class="small text-muted">3+ standards passed</span>
                                 </th>
                             </tr>
-                            <tr>
-                                <th></th>
-                                <th></th>
+                            <tr class="sub-header-row">
+                                <th class="text-center"></th>
+                                <th class="text-center"></th>
 
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
-                                    <th class="text-center small">% Passed<br/>(# passed)</th>
-                                    <th class="text-center small">% Not Passed</th>
-                                    <th class="text-center small"># Not Passed</th>
-                                    <th class="text-center small">Denom</th>
+                                    var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
+                                    <th class="text-center @groupClass">% (#)<br/><small>Passed</small></th>
+                                    <th class="text-center @groupClass">% (#)<br/><small>Not Passed</small></th>
                                 }
 
-                                <th class="text-center small">% Passed<br/>(# passed)</th>
-                                <th class="text-center small">% Not Passed</th>
-                                <th class="text-center small"># Not Passed</th>
-                                <th class="text-center small">Total</th>
+                                <th class="text-center standard-group-odd">% (#)<br/><small>Passed</small></th>
+                                <th class="text-center standard-group-odd">% (#)<br/><small>Not Passed</small></th>
                             </tr>
                         </thead>
                         <tbody>
                         @foreach (var g in Model.GroupSummaries)
                         {
                             <tr>
-                                <td class="text-nowrap">@g.Key.TeacherName</td>
-                                <td class="text-nowrap">@g.Key.Period</td>
+                                <td class="compact-nowrap text-center">@g.Key.TeacherName</td>
+                                <td class="compact-nowrap text-center">@g.Key.Period</td>
 
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
                                     var den = g.DenomPerStd[i];
                                     var pass = g.PassedPerStd[i];
                                     var notp = g.NotPassedPerStd[i];
+                                    var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
-                                    <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den) <span class="text-muted">(@pass)</span></td>
-                                    <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)</td>
-                                    <td class="text-center">@notp</td>
-                                    <td class="text-center">@den</td>
+                                    <td class="text-center percentage-cell @groupClass">
+                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
+                                        <span class="text-muted">(@pass)</span>
+                                    </td>
+                                    <td class="text-center percentage-cell @groupClass">
+                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)
+                                        <span class="text-muted">(@notp)</span>
+                                    </td>
                                 }
 
                                 @{
@@ -116,54 +376,61 @@
                                     var totPass = g.PassedByTotal;
                                     var totNot = g.NotPassedByTotal;
                                 }
-                                <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen) <span class="text-muted">(@totPass)</span></td>
-                                <td class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)</td>
-                                <td class="text-center">@totNot</td>
-                                <td class="text-center">@totDen</td>
+                                <td class="text-center percentage-cell standard-group-odd">
+                                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
+                                    <span class="text-muted">(@totPass)</span>
+                                </td>
+                                <td class="text-center percentage-cell standard-group-odd">
+                                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)
+                                    <span class="text-muted">(@totNot)</span>
+                                </td>
                             </tr>
                         }
                         </tbody>
                         @if (Model.GrandTotals is not null)
-    {
-        <tfoot class="table-light">
-            <tr>
-                <th class="text-nowrap">OVERALL</th>
-                <th class="text-nowrap">All Classes</th>
+                        {
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th class="compact-nowrap text-center">OVERALL</th>
+                                    <th class="compact-nowrap text-center">All Classes</th>
 
-                @for (int i = 0; i < Model.Columns.Count; i++)
-                {
-                    var den  = Model.GrandTotals.DenomPerStd[i];
-                    var pass = Model.GrandTotals.PassedPerStd[i];
-                    var notp = Model.GrandTotals.NotPassedPerStd[i];
+                                    @for (int i = 0; i < Model.Columns.Count; i++)
+                                    {
+                                        var den  = Model.GrandTotals.DenomPerStd[i];
+                                        var pass = Model.GrandTotals.PassedPerStd[i];
+                                        var notp = Model.GrandTotals.NotPassedPerStd[i];
+                                        var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
-                    <th class="text-center">
-                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
-                        <span class="text-muted">(@pass)</span>
-                    </th>
-                    <th class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)</th>
-                    <th class="text-center">@notp</th>
-                    <th class="text-center">@den</th>
-                }
+                                        <th class="text-center percentage-cell @groupClass">
+                                            @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
+                                            <span class="text-muted">(@pass)</span>
+                                        </th>
+                                        <th class="text-center percentage-cell @groupClass">
+                                            @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)
+                                            <span class="text-muted">(@notp)</span>
+                                        </th>
+                                    }
 
-                @{
-                    var totDen  = Model.GrandTotals.StudentCount;
-                    var totPass = Model.GrandTotals.PassedByTotal;
-                    var totNot  = Model.GrandTotals.NotPassedByTotal;
-                }
-                <th class="text-center">
-                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
-                    <span class="text-muted">(@totPass)</span>
-                </th>
-                <th class="text-center">@ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)</th>
-                <th class="text-center">@totNot</th>
-                <th class="text-center">@totDen</th>
-            </tr>
-        </tfoot>
-    }
+                                    @{
+                                        var totDen  = Model.GrandTotals.StudentCount;
+                                        var totPass = Model.GrandTotals.PassedByTotal;
+                                        var totNot  = Model.GrandTotals.NotPassedByTotal;
+                                    }
+                                    <th class="text-center percentage-cell standard-group-odd">
+                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
+                                        <span class="text-muted">(@totPass)</span>
+                                    </th>
+                                    <th class="text-center percentage-cell standard-group-odd">
+                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)
+                                        <span class="text-muted">(@totNot)</span>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        }
                     </table>
                 </div>
 
-                <div class="mt-2 small text-muted">
+                <div class="form3-footer-note text-muted">
                     PASS cutoff = score ≥ 4 (per standard). Overall Proficiency = student passed ≥ 3 standards.
                 </div>
             </div>
