@@ -896,7 +896,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 SELECT s.localstudentid
                 FROM dbo.students s
                 JOIN #LocalIds temp ON s.localstudentid = temp.Id
-                WHERE s.districtid = @districtId;";
+                WHERE s.districtid = @districtId
+                AND ISNULL(s.Inactive, 0) = 0;   -- NEW
+            ";
+
             
             var found = new HashSet<int>();
             await using (var cmd = new SqlCommand(sql, conn))
