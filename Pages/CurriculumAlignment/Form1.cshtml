@@ -2,7 +2,16 @@
 @model ORSV2.Pages.CurriculumAlignment.Form1Model
 
 @{
-    ViewData["Title"] = "DRS Form 1";
+    var batchForTitle = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
+    var schoolForTitle = Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString());
+    var teacherForTitle = Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString());
+    
+    var dynamicTitle = batchForTitle != null 
+        ? $"{batchForTitle.Text} - {schoolForTitle?.Text ?? "All Schools"} - {teacherForTitle?.Text ?? "All Teachers"} - Form 1"
+        : "DRS Form 1";
+    
+    ViewData["Title"] = dynamicTitle;
+    
     // Group the rows by Teacher and then by Period for display
     var groupedRows = Model.Rows.GroupBy(r => r.TeacherName).Select(g => new 
     {
@@ -413,15 +422,14 @@
                         <i class="fas fa-print me-2"></i>Print Report
                     </button>
                 </div>
-                
                 <!-- Print Title (hidden on screen, visible in print) -->
                 <div class="print-title">
-                    @(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - Form 1
+                    @(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - @(Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString())?.Text ?? "All Teachers") - Form 1
                 </div>
 
                 <!-- Test Name Header for screen -->
                 <div class="mb-2">
-                    <h5 class="mb-0 text-center">@(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - Form 1</h5>
+                    <h5 class="mb-0 text-center">@(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - @(Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString())?.Text ?? "All Teachers") - Form 1</h5>
                 </div>
 
                 <div class="table-responsive">
@@ -429,7 +437,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="sticky-col text-center" style="width: 140px;">Student Name</th>
-                                <th class="sticky-col-2 text-center" style="width: 85px;">Student Local ID</th>
+                                <th class="sticky-col-2 text-center" style="width: 85px;">Local ID</th>
                                 @foreach (var col in Model.Columns)
                                 {
                                     <th class="std-head">

@@ -1,7 +1,15 @@
 @page
 @model ORSV2.Pages.CurriculumAlignment.Form3Model
+
 @{
-    ViewData["Title"] = "DRS – Form 3";
+    var batchForTitle = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
+    var schoolForTitle = Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString());
+    
+    var dynamicTitle = batchForTitle != null 
+        ? $"{batchForTitle.Text} - {schoolForTitle?.Text ?? "All Schools"} - Form 3"
+        : "DRS – Form 3";
+    
+    ViewData["Title"] = dynamicTitle;
 }
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
@@ -288,7 +296,7 @@
                         var selectedBatch = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
                         if (selectedBatch != null)
                         {
-                            <span>@selectedBatch.Text - Form 3</span>
+                            <span>@selectedBatch.Text - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - Form 3</span>
                         }
                     }
                 </div>
@@ -300,7 +308,7 @@
                         var selectedBatch = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
                         if (selectedBatch != null)
                         {
-                            <h5 class="mb-0 text-center">@selectedBatch.Text - Form 3</h5>
+                            <h5 class="mb-0 text-center">@selectedBatch.Text - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - Form 3</h5>
                         }
                     }
                     else
