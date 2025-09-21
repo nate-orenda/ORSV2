@@ -64,7 +64,7 @@ namespace ORSV2.Pages
             // Get user name from Identity
             UserName = User.Identity?.Name?.Split('@')[0] ?? User.Identity?.Name ?? "User";
 
-            // ===== Determine scope using claims =====
+            // ===== Determine scope using claims (assignment-first) =====
             IQueryable<School> scopedSchools;
 
             if (IsOrendaUser)
@@ -75,28 +75,29 @@ namespace ORSV2.Pages
                     .Include(s => s.District)
                     .Where(s => !s.Inactive && s.enabled);
             }
-            else if (IsDistrictAdmin && UserDistrictId.HasValue)
+            else if (UserSchoolIds.Any())
             {
-                // District admins see only their district's schools
-                scopedSchools = _context.Schools
-                    .AsNoTracking()
-                    .Include(s => s.District)
-                    .Where(s => !s.Inactive && s.enabled && s.DistrictId == UserDistrictId.Value);
-            }
-            else if ((IsSchoolAdmin || IsTeacher) && UserSchoolIds.Any())
-            {
-                // School admins and teachers see only their assigned schools
+                // Anyone explicitly assigned to school(s) (e.g., Counselor, School Admin, Teacher)
                 scopedSchools = _context.Schools
                     .AsNoTracking()
                     .Include(s => s.District)
                     .Where(s => !s.Inactive && s.enabled && UserSchoolIds.Contains(s.Id));
             }
+            else if (UserDistrictId.HasValue)
+            {
+                // Anyone explicitly assigned to a district (e.g., District Counselor, District Admin)
+                scopedSchools = _context.Schools
+                    .AsNoTracking()
+                    .Include(s => s.District)
+                    .Where(s => !s.Inactive && s.enabled && s.DistrictId == UserDistrictId.Value);
+            }
             else
             {
-                // User has no valid assignments - return empty
+                // No valid assignments
                 DistrictBlocks = new();
                 return Page();
             }
+
 
             var schools = await scopedSchools
                 .OrderBy(s => s.District!.Name)
