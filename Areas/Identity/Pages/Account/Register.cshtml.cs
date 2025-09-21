@@ -22,6 +22,8 @@ using Microsoft.Extensions.Logging;
 using ORSV2.Data;
 using ORSV2.Models;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
+
 
 namespace ORSV2.Areas.Identity.Pages.Account
 {
@@ -34,23 +36,26 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
-
+        private readonly string _notificationEmail;
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
             IEmailSender emailSender,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            string notificationEmail)
         {
-            _userManager = userManager;
-            _userStore = userStore;
-            _emailStore = GetEmailStore();
+            _userManager   = userManager;
+            _userStore     = userStore;
+            _emailStore    = GetEmailStore();
             _signInManager = signInManager;
-            _logger = logger;
-            _emailSender = emailSender;
-            _context = context;
+            _logger        = logger;
+            _emailSender   = emailSender;
+            _context       = context;
+            _notificationEmail = notificationEmail;
         }
+
 
         [BindProperty]
         public InputModel Input { get; set; }
@@ -174,6 +179,44 @@ namespace ORSV2.Areas.Identity.Pages.Account
 
                     await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                         $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    
+                    // --- Admin notification (single mailbox) ---
+                    if (!string.IsNullOrWhiteSpace(_notificationEmail))
+                    {
+                        // Keep PII concise and useful for provisioning
+                        var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
+                        var locked       = user.LockoutEnd.HasValue
+                            ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
+                            : "Unlocked";
+
+                        // Admin page link (prefer Page() when available; fall back to Content)
+                        var adminUrl =
+                            Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme)
+                            ?? Url.Content("~/Admin/Users?search=" + user.Email);
+
+                        var adminBody = $@"
+                    <h3>New ORSV2 Registration</h3>
+                    <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                    <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                    <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                    <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                    <p><strong>Status:</strong> {locked}</p>
+                    <p><a href=""{HtmlEncoder.Default.Encode(adminUrl)}"">Open user admin</a></p>";
+
+                        try
+                        {
+                            await _emailSender.SendEmailAsync(
+                                _notificationEmail,
+                                "New ORSV2 registration",
+                                adminBody);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed sending new user notification to {Admin}", _notificationEmail);
+                        }
+                    }
+                    // --- end admin notification ---
+
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

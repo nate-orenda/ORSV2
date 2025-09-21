@@ -121,6 +121,10 @@ builder.Services.AddHttpClient("ImportsClient")
         c.Timeout = TimeSpan.FromMinutes(10); // extend to 10 minutes
     });
 
+builder.Services.AddSingleton<string>(
+    _ => builder.Configuration.GetValue<string>("NotificationEmail")
+         ?? throw new InvalidOperationException("NotificationEmail is not configured"));
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
