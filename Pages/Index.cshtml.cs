@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -19,7 +20,7 @@ namespace ORSV2.Pages
         }
 
         // User context
-        public string UserName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
 
         // View model for the cards
         public List<DistrictBlock> DistrictBlocks { get; set; } = new();
@@ -61,8 +62,19 @@ namespace ORSV2.Pages
             // Initialize user data scope from claims
             InitializeUserDataScope();
 
-            // Get user name from Identity
-            UserName = User.Identity?.Name?.Split('@')[0] ?? User.Identity?.Name ?? "User";
+            var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userId != null)
+            {
+                // Find the user in the database
+                var currentUser = await _context.Users.FindAsync(userId);
+                // Use the FirstName from the database, otherwise fall back to parsing the username
+                FirstName = currentUser?.FirstName ?? User.Identity?.Name?.Split('@')[0] ?? "User";
+            }
+            else
+            {
+                // Fallback for safety, though a user ID should always be present for an authorized user
+                FirstName = User.Identity?.Name?.Split('@')[0] ?? User.Identity?.Name ?? "User";
+            }
 
             // ===== Determine scope using claims (assignment-first) =====
             IQueryable<School> scopedSchools;
