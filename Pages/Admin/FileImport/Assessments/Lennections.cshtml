@@ -69,6 +69,186 @@
         </div>
     </div>
 
+    <!-- ENHANCED: Persistent Analysis Results -->
+    @if (Model.AnalysisResults != null)
+    {
+        <div class="card mb-4" id="analysisResultsCard">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-analytics me-2"></i>
+                    File Analysis Results
+                    <small class="text-muted ms-2">Analyzed: @Model.AnalysisResults.AnalyzedAt.ToString("HH:mm:ss")</small>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Left column - Detection results -->
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-magic me-2"></i>Auto-Detection Results</h6>
+                        <ul class="mb-3">
+                            @if (!string.IsNullOrWhiteSpace(Model.AnalysisResults.DetectedTestId))
+                            {
+                                <li><strong>Test ID:</strong> "@Model.AnalysisResults.DetectedTestId" 
+                                    <span class="text-muted">(from @Model.AnalysisResults.TestIdSource)</span></li>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.AnalysisResults.DetectedSubject))
+                            {
+                                <li><strong>Subject:</strong> @Model.AnalysisResults.DetectedSubject</li>
+                            }
+                            @if (Model.AnalysisResults.DetectedUnitCycle.HasValue)
+                            {
+                                <li><strong>Unit Cycle:</strong> @Model.AnalysisResults.DetectedUnitCycle</li>
+                            }
+                            <li><strong>Data Rows:</strong> @Model.AnalysisResults.TotalRows.ToString("N0")</li>
+                            <li><strong>Standards Columns:</strong> @Model.AnalysisResults.StandardsColumns</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Right column - Validation status -->
+                    <div class="col-md-6">
+                        @if (Model.AnalysisResults.HasStudentId)
+                        {
+                            <div class="alert alert-success py-2 mb-2">
+                                <i class="fas fa-check me-2"></i>
+                                <strong>Student ID Column:</strong><br>
+                                <small>Found: @Model.AnalysisResults.StudentIdColumn</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger py-2 mb-2">
+                                <i class="fas fa-times me-2"></i>
+                                <strong>Missing StudentId Column</strong><br>
+                                <small>Required column not found</small>
+                            </div>
+                        }
+                        
+                        @if (Model.AnalysisResults.ValidationMessages?.Count > 0)
+                        {
+                            <div class="alert alert-warning py-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Issues:</strong><br>
+                                <small>@Html.Raw(string.Join("<br>", Model.AnalysisResults.ValidationMessages))</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ENHANCED: Column Matching Metrics -->
+    @if (Model.MatchingMetrics != null)
+    {
+        <div class="card mb-4" id="columnMatchingCard">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-columns me-2"></i>
+                    Column Structure Analysis
+                    <span class="badge bg-@(Model.MatchingMetrics.MatchPercentage >= 80 ? "success" : Model.MatchingMetrics.MatchPercentage >= 60 ? "warning" : "danger") ms-2">
+                        @Model.MatchingMetrics.MatchPercentage.ToString("0")% Match
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Question Blocks Found:</span>
+                            <strong>@Model.MatchingMetrics.TotalQuestionBlocks</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Valid Blocks (3/3 columns):</span>
+                            <strong class="text-@(Model.MatchingMetrics.ValidQuestionBlocks == Model.MatchingMetrics.TotalQuestionBlocks ? "success" : "warning")">
+                                @Model.MatchingMetrics.ValidQuestionBlocks
+                            </strong>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-@(Model.MatchingMetrics.MatchPercentage >= 80 ? "success" : Model.MatchingMetrics.MatchPercentage >= 60 ? "warning" : "danger")" 
+                                 style="width: @Model.MatchingMetrics.MatchPercentage%"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            Each question block should contain:<br>
+                            • <strong>Item</strong> column<br>
+                            • <strong>Score</strong> column<br>
+                            • <strong>ItemStandard</strong> column
+                        </small>
+                    </div>
+                </div>
+
+                @if (Model.MatchingMetrics.QuestionBlocks.Any())
+                {
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="sticky-top bg-light">
+                                <tr>
+                                    <th>Q#</th>
+                                    <th>Start Col</th>
+                                    <th>Item</th>
+                                    <th>Score</th>
+                                    <th>Standard</th>
+                                    <th>Match</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var block in Model.MatchingMetrics.QuestionBlocks)
+                                {
+                                    <tr class="@(block.IsComplete ? "" : "table-warning")">
+                                        <td><strong>@block.QuestionNumber</strong></td>
+                                        <td>@block.StartColumn</td>
+                                        <td>
+                                            @if (block.HasItemColumn)
+                                            {
+                                                <i class="fas fa-check text-success me-1"></i>
+                                                <small>@block.ItemHeader</small>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-times text-danger me-1"></i>
+                                                <small class="text-muted">Missing</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (block.HasScoreColumn)
+                                            {
+                                                <i class="fas fa-check text-success me-1"></i>
+                                                <small>@block.ScoreHeader</small>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-times text-danger me-1"></i>
+                                                <small class="text-muted">Missing</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (block.HasStandardColumn)
+                                            {
+                                                <i class="fas fa-check text-success me-1"></i>
+                                                <small>@block.StandardHeader</small>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-times text-danger me-1"></i>
+                                                <small class="text-muted">Missing</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-@(block.IsComplete ? "success" : "warning")">
+                                                @block.MatchedColumns/3
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
     <!-- Step 2: Import Configuration Form -->
     <div class="card" id="configCard">
         <div class="card-header">
@@ -78,11 +258,6 @@
             </h5>
         </div>
         <div class="card-body">
-            <div id="detectionSummary" class="detection-summary d-none">
-                <h6><i class="fas fa-magic me-2"></i>Auto-Detection Results</h6>
-                <div id="detectionResults"></div>
-            </div>
-
             <form method="post" enctype="multipart/form-data" id="importForm">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -153,7 +328,7 @@
         </div>
     </div>
 
-    <!-- Step 3: Preview Results -->
+    <!-- Step 3: Enhanced Preview Results with Question Counts -->
     @if (Model.HasPreview)
     {
         <div class="card mt-4">
@@ -161,6 +336,7 @@
                 <h5 class="mb-0">
                     <i class="fas fa-table me-2"></i>
                     Preview Results
+                    <span class="badge bg-secondary ms-2">@Model.Preview.Count Standards Found</span>
                 </h5>
             </div>
             <div class="card-body p-0">
@@ -170,15 +346,32 @@
                             <tr>
                                 <th>Standard ID (from file)</th>
                                 <th>HumanCodingScheme (from DB)</th>
+                                <th>Questions</th>
                                 <th>Exists in Standards?</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var p in Model.Preview)
                             {
-                                <tr>
-                                    <td>@p.StandardId</td>
-                                    <td>@p.HumanCodingScheme</td>
+                                <tr class="@(!p.ExistsInStandards ? "table-warning" : "")">
+                                    <td>
+                                        <code class="small">@p.StandardId</code>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(p.HumanCodingScheme))
+                                        {
+                                            <strong>@p.HumanCodingScheme</strong>
+                                        }
+                                        else
+                                        {
+                                            <em class="text-muted">No scheme found</em>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(p.QuestionCount > 0 ? "primary" : "secondary")">
+                                            @p.QuestionCount question@(p.QuestionCount != 1 ? "s" : "")
+                                        </span>
+                                    </td>
                                     <td>
                                         @if (p.ExistsInStandards) 
                                         { 
@@ -203,7 +396,7 @@
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>Validation:</strong> The following Standard IDs from the file were not found in the <code>Standards</code> table:
                 <div class="small mt-2">
-                    @string.Join(", ", Model.MissingIds.OrderBy(x => x))
+                    <code>@string.Join("</code>, <code>", Model.MissingIds.OrderBy(x => x))</code>
                 </div>
                 <div class="mt-2">You can still import; rows with these Standard IDs will be skipped.</div>
             </div>
@@ -293,6 +486,74 @@
         padding: 0.5rem;
         border-radius: 0.375rem;
         border: 1px solid #28a745;
+    }
+    
+    /* Enhanced styling for metrics */
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+    }
+    
+    .table-warning {
+        --bs-table-accent-bg: rgba(255, 193, 7, 0.1);
+    }
+    
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+    }
+    
+    .card-header .badge {
+        font-size: 0.75em;
+    }
+    
+    /* Improved table responsiveness */
+    .table-responsive {
+        border-radius: 0.375rem;
+    }
+    
+    .table-responsive::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Code styling improvements */
+    code {
+        font-size: 0.8em;
+        padding: 0.125rem 0.25rem;
+        background-color: rgba(13, 110, 253, 0.1);
+        border-radius: 0.25rem;
+    }
+    
+    /* Animation for showing/hiding analysis cards */
+    #analysisResultsCard, #columnMatchingCard {
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 </style>
 }
@@ -423,7 +684,7 @@ class EnhancedFileImporter {
 
             if (result.success) {
                 this.populateFields(result.analysis);
-                this.showDetectionSummary(result.analysis);
+                this.showAnalysisSuccess();
                 this.enablePreview();
                 
                 // Store temp path for preview/import
@@ -476,61 +737,17 @@ class EnhancedFileImporter {
         }
     }
 
-    showDetectionSummary(analysis) {
-        const summary = document.getElementById('detectionSummary');
-        const results = document.getElementById('detectionResults');
+    showAnalysisSuccess() {
+        // Show a hint that the form is ready for preview
+        const hint = document.createElement('div');
+        hint.className = 'alert alert-success mt-2';
+        hint.innerHTML = '<i class="fas fa-check me-2"></i>File analyzed! Analysis results and column matching shown above. You can now preview the import.';
         
-        let html = '<div class="row">';
+        const existing = document.querySelector('.analysis-ready-hint');
+        if (existing) existing.remove();
         
-        // Left column - Detection results
-        html += '<div class="col-md-8"><ul class="mb-0">';
-        
-        if (analysis.detectedTestId) {
-            html += `<li><strong>Test ID:</strong> "${analysis.detectedTestId}" <span class="text-muted">(from ${analysis.testIdSource})</span></li>`;
-        }
-        
-        if (analysis.detectedSubject) {
-            html += `<li><strong>Subject:</strong> ${analysis.detectedSubject}</li>`;
-        }
-        
-        if (analysis.detectedUnitCycle) {
-            html += `<li><strong>Unit Cycle:</strong> ${analysis.detectedUnitCycle}</li>`;
-        }
-        
-        html += `<li><strong>Data Rows:</strong> ${analysis.totalRows.toLocaleString()}</li>`;
-        html += `<li><strong>Standards Columns:</strong> ${analysis.standardsColumns}</li>`;
-        
-        html += '</ul></div>';
-        
-        // Right column - Validation status
-        html += '<div class="col-md-4">';
-        
-        if (analysis.hasStudentId) {
-            html += `<div class="alert alert-success py-2 mb-2">
-                <i class="fas fa-check me-2"></i>
-                <strong>Student ID Column:</strong><br>
-                <small>Found: ${analysis.studentIdColumn}</small>
-            </div>`;
-        } else {
-            html += `<div class="alert alert-danger py-2 mb-2">
-                <i class="fas fa-times me-2"></i>
-                <strong>Missing StudentId Column</strong><br>
-                <small>Required column not found</small>
-            </div>`;
-        }
-        
-        if (analysis.validationMessages && analysis.validationMessages.length > 0) {
-            html += '<div class="alert alert-warning py-2">';
-            html += '<i class="fas fa-exclamation-triangle me-2"></i>';
-            html += '<strong>Issues:</strong><br>';
-            html += '<small>' + analysis.validationMessages.join('<br>') + '</small>';
-            html += '</div>';
-        }
-        
-        html += '</div></div>';
-        
-        results.innerHTML = html;
-        summary.classList.remove('d-none');
+        hint.classList.add('analysis-ready-hint');
+        document.getElementById('configCard').querySelector('.card-body').appendChild(hint);
     }
 
     enablePreview() {
@@ -538,17 +755,6 @@ class EnhancedFileImporter {
         previewBtn.disabled = false;
         previewBtn.classList.remove('btn-secondary');
         previewBtn.classList.add('btn-primary');
-        
-        // Show a hint that the form is ready for preview
-        const hint = document.createElement('div');
-        hint.className = 'alert alert-success mt-2';
-        hint.innerHTML = '<i class="fas fa-check me-2"></i>File analyzed! You can now preview the import.';
-        
-        const existing = document.querySelector('.analysis-ready-hint');
-        if (existing) existing.remove();
-        
-        hint.classList.add('analysis-ready-hint');
-        document.getElementById('detectionSummary').appendChild(hint);
     }
 
     showError(message) {
