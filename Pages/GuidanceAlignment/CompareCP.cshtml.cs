@@ -157,7 +157,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             else
             {
                 if (schoolId is null || grade is null)
-                    return BadRequest("When no Target Group id is provided, pass ?schoolId={id}&grade={number}");
+                    return BadRequest("When no Focus Group id is provided, pass ?schoolId={id}&grade={number}");
 
                 var school = await _context.Schools
                     .AsNoTracking()
@@ -172,7 +172,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 GroupName = $"All Students • Grade {Grade}";
             }
 
-            ViewData["Title"] = $"Target Group - {GroupName}";
+            ViewData["Title"] = $"Focus Group - {GroupName}";
 
             // Checkpoint + SchoolYear
             var schedule = await _context.GACheckpointSchedule

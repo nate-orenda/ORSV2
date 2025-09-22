@@ -8,9 +8,9 @@ using ORSV2.Utilities;
 namespace ORSV2.Pages.GuidanceAlignment
 {
     [IgnoreAntiforgeryToken] // AJAX JSON endpoints below
-    public class ViewTargetGroupsModel : GABasePageModel
+    public class ViewFocusGroups : GABasePageModel
     {
-        public ViewTargetGroupsModel(ApplicationDbContext context) : base(context) { }
+        public ViewFocusGroups(ApplicationDbContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)]
         public int SchoolId { get; set; }
