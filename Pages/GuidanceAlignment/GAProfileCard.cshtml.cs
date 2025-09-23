@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
@@ -282,16 +283,17 @@ namespace ORSV2.Pages.GuidanceAlignment
                                          SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode,
                                          c.Title,
                                          c.CourseNumber,
-                                         ms.Period
+                                         ms.Period,
+                                         ms.Semester
                                      }).AsNoTracking().ToListAsync();
 
             // Process Non-A-G schedule
             NonAGSchedule = scheduleData
                 .Where(x => string.IsNullOrWhiteSpace(x.SubjectCode) || !validSubjectCodes.Contains(x.SubjectCode))
-                .OrderBy(x => x.Period).ThenBy(x => x.Title)
+                .OrderBy(x => x.Semester).ThenBy(x => x.Period).ThenBy(x => x.Title)
                 .Select(x => new SubjectGrade
                 {
-                    Term = $"Period {x.Period}",
+                    Term = $"( { x.Semester } ) " + $"Period {x.Period}",
                     CourseNumber = x.CourseNumber,
                     Title = x.Title,
                     Type = "Schedule"
@@ -307,7 +309,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                     SubjectLabel = subjectMap[g.Key],
                     Grades = g.Select(x => new SubjectGrade
                     {
-                        Term = $"Period {x.Period}",
+                        Term = $"( { x.Semester } ) " + $"Period {x.Period}",
                         CourseNumber = x.CourseNumber,
                         Title = x.Title,
                         Type = "Schedule"
