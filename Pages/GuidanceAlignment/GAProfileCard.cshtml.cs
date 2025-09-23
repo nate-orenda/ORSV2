@@ -7,13 +7,10 @@ using ORSV2.Utilities;
 
 namespace ORSV2.Pages.GuidanceAlignment
 {
-    public class GAProfileCardModel : PageModel
+    public class GAProfileCardModel : GABasePageModel
     {
-        private readonly ApplicationDbContext _context;
-
-        public GAProfileCardModel(ApplicationDbContext context)
+        public GAProfileCardModel(ApplicationDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public GAResults Student { get; set; } = default!;
@@ -27,7 +24,6 @@ namespace ORSV2.Pages.GuidanceAlignment
         public List<SubjectGradesGroup> SubjectGradesByArea { get; set; } = new();
         public List<SubjectGradesGroup> AGScheduleByArea { get; set; } = new();
         public List<SubjectGrade> NonAGSchedule { get; set; } = new();
-
 
         public string QuadrantLevel => Student.Quadrant ?? "Unknown";
         public string QuadrantColorClass => (Student.Quadrant ?? "").ToLower() switch
@@ -72,24 +68,107 @@ namespace ORSV2.Pages.GuidanceAlignment
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
-           Student = await _context.GAResults
+            // Add caching headers for better performance
+            Response.Headers["Cache-Control"] = "private, max-age=300"; // 5 minutes
+
+            // Input validation
+            if (id <= 0) return BadRequest("Invalid student ID");
+
+            Student = await _context.GAResults
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.ResultId == id)
                 ?? throw new InvalidOperationException("Student not found");
 
-            var school = await _context.Schools.Include(s => s.District).FirstOrDefaultAsync(s => s.Id == Student.SchoolId);
+            // SECURITY: Verify user has access to this student's school
+            if (!await AuthorizeAsync(Student.SchoolId)) 
+                return Forbid();
+
+            var school = await _context.Schools
+                .AsNoTracking()
+                .Include(s => s.District)
+                .FirstOrDefaultAsync(s => s.Id == Student.SchoolId);
+            
             if (school == null) return NotFound();
 
-            var schedule = await _context.GACheckpointSchedule.FirstOrDefaultAsync(s => s.SchoolId == Student.SchoolId);
+            // Get schedule and calculate checkpoint
+            var schedule = await _context.GACheckpointSchedule
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SchoolId == Student.SchoolId);
+            
             int cp = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, DateTime.Today);
             int schoolYear = DateTime.Today.Month >= 8 ? DateTime.Today.Year + 1 : DateTime.Today.Year;
 
-            var indicators = await _context.GAQuadrantIndicators
+            // Execute queries sequentially to avoid DbContext concurrency issues
+            var indicators = await GetIndicatorsAsync(cp, school.DistrictId);
+            var matrix = await GetMatrixAsync(cp, school.DistrictId);
+            var agProgress = await GetAGProgressAsync(schoolYear, cp, school.DistrictId);
+            var attendanceAbsences = await GetAttendanceAsync();
+
+            // Process indicators
+            ProcessIndicators(indicators, matrix);
+            AGProgress = agProgress;
+            AttendanceAbsences = attendanceAbsences;
+
+            // Process grades and schedule data
+            await ProcessGradesAndScheduleAsync(school.DistrictId);
+
+            return Page();
+        }
+
+        private async Task<List<GAQuadrantIndicators>> GetIndicatorsAsync(int cp, int districtId)
+        {
+            return await _context.GAQuadrantIndicators
+                .AsNoTracking()
                 .Where(i => i.Grade == Student.Grade && i.CP == cp && i.IsEnabled == true &&
-                       (i.SchoolId == null || i.SchoolId == Student.SchoolId) &&
-                       (i.DistrictId == null || i.DistrictId == school.DistrictId))
+                           (i.SchoolId == null || i.SchoolId == Student.SchoolId) &&
+                           (i.DistrictId == null || i.DistrictId == districtId))
                 .GroupBy(i => i.IndicatorName)
                 .Select(g => g.OrderByDescending(i => i.SchoolId != null ? 3 : i.DistrictId != null ? 2 : 1).First())
                 .ToListAsync();
+        }
+
+        private async Task<List<GAMatrix>> GetMatrixAsync(int cp, int districtId)
+        {
+            return await _context.GAMatrix
+                .AsNoTracking()
+                .Where(m => m.Grade == Student.Grade && m.CP == cp &&
+                           (m.DistrictId == null || m.DistrictId == districtId) &&
+                           (m.SchoolId == null || m.SchoolId == Student.SchoolId))
+                .GroupBy(m => m.Indicator)
+                .Select(g => g.OrderByDescending(m => m.SchoolId != null ? 3 : m.DistrictId != null ? 2 : 1).First())
+                .ToListAsync();
+        }
+
+        private async Task<GAAGProgress?> GetAGProgressAsync(int schoolYear, int cp, int districtId)
+        {
+            return await _context.GAAGProgress
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p =>
+                    p.StudentId == Student.StudentId &&
+                    p.SchoolId == Student.SchoolId &&
+                    p.DistrictId == districtId &&
+                    p.CP == cp &&
+                    p.SchoolYear == schoolYear);
+        }
+
+        private async Task<int?> GetAttendanceAsync()
+        {
+            return await _context.StudentAttendance
+                .AsNoTracking()
+                .Where(a => a.DistrictId == Student.DistrictId &&
+                           a.SchoolId == Student.SchoolId &&
+                           a.StudentId == Student.StudentId)
+                .Select(a => (int?)a.Absences)
+                .FirstOrDefaultAsync();
+        }
+
+        private void ProcessIndicators(List<GAQuadrantIndicators> indicators, List<GAMatrix> matrix)
+        {
+            IndicatorRequirements = matrix.Select(m => new IndicatorRequirement
+            {
+                Name = m.Indicator,
+                RequirementText = m.ReadableValue ?? ""
+            }).ToList();
 
             foreach (var ind in indicators)
             {
@@ -106,43 +185,16 @@ namespace ORSV2.Pages.GuidanceAlignment
                     _ => false
                 };
 
-                var matrix = await _context.GAMatrix
-                    .Where(m =>
-                        m.Grade == Student.Grade &&
-                        m.CP == cp &&
-                        (m.DistrictId == null || m.DistrictId == school.DistrictId) &&
-                        (m.SchoolId == null || m.SchoolId == Student.SchoolId))
-                    .GroupBy(m => m.Indicator)
-                    .Select(g => g.OrderByDescending(m => m.SchoolId != null ? 3 : m.DistrictId != null ? 2 : 1).First())
-                    .ToListAsync();
-
-                AGProgress = await _context.GAAGProgress.FirstOrDefaultAsync(p =>
-                    p.StudentId == Student.StudentId &&
-                    p.SchoolId == Student.SchoolId &&
-                    p.DistrictId == school.DistrictId &&
-                    p.CP == cp &&
-                    p.SchoolYear == schoolYear);
-
-                IndicatorRequirements = matrix.Select(m => new IndicatorRequirement
-                {
-                    Name = m.Indicator,
-                    RequirementText = m.ReadableValue ?? ""
-                }).ToList();
-
                 StudentIndicators.Add(new IndicatorSummary
                 {
                     Name = ind.IndicatorName,
                     Met = met
                 });
             }
+        }
 
-            AttendanceAbsences = await _context.StudentAttendance
-                .Where(a => a.DistrictId == Student.DistrictId &&
-                            a.SchoolId == Student.SchoolId &&
-                            a.StudentId == Student.StudentId)
-                .Select(a => (int?)a.Absences)
-                .FirstOrDefaultAsync();
-
+        private async Task ProcessGradesAndScheduleAsync(int districtId)
+        {
             var subjectMap = new Dictionary<string, string>
             {
                 ["A"] = "History",
@@ -154,39 +206,29 @@ namespace ORSV2.Pages.GuidanceAlignment
                 ["G"] = "College-Prep Elective"
             };
 
-            var validSubjectCodes = subjectMap.Keys.ToList(); // Create list for client-side filtering
+            var validSubjectCodes = subjectMap.Keys.ToHashSet(); // Use HashSet for O(1) lookups
 
-            // Fixed query - remove problematic subjectMap.Keys.Contains() from SQL
-            var gradesQuery = from g in _context.Grades
-                              join c in _context.Courses
-                                on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, CourseNumber = c.CourseNumber }
-                              where g.StudentId == Student.StudentId
-                                    && g.DistrictId == school.DistrictId
-                                    && (c.CSU_SubjectAreaCode != null || c.UC_SubjectAreaCode != null)
-                              select new
-                              {
-                                  g.SchoolYear,
-                                  g.Term,
-                                  g.CN,
-                                  c.Title,
-                                  g.GradeLevel,
-                                  g.Mark,
-                                  g.Type,
-                                  g.CC,
-                                  SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode
-                              };
+            // Get all grades data in one optimized query
+            var gradesData = await _context.Grades
+                .AsNoTracking()
+                .Where(g => g.StudentId == Student.StudentId && g.DistrictId == districtId)
+                .Join(_context.Courses.AsNoTracking(),
+                    g => new { g.DistrictId, CourseNumber = g.CN },
+                    c => new { c.DistrictId, c.CourseNumber },
+                    (g, c) => new {
+                        g.SchoolYear, g.Term, g.CN, c.Title, g.GradeLevel, 
+                        g.Mark, g.Type, g.CC,
+                        SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode
+                    })
+                .ToListAsync();
 
-            // Execute query and filter on client-side
-            var allGrades = await gradesQuery.ToListAsync();
-            
-            // Client-side filtering to only include valid subject codes
-            var filteredGrades = allGrades
-                .Where(x => x.SubjectCode != null && validSubjectCodes.Contains(x.SubjectCode))
+            // Process A-G grades
+            var agGrades = gradesData
+                .Where(x => !string.IsNullOrEmpty(x.SubjectCode) && validSubjectCodes.Contains(x.SubjectCode))
+                .GroupBy(g => g.SubjectCode!)
                 .ToList();
 
-            var grouped = filteredGrades.GroupBy(g => g.SubjectCode).ToList();
-
-            SubjectGradesByArea = grouped.Select(g => new SubjectGradesGroup
+            SubjectGradesByArea = agGrades.Select(g => new SubjectGradesGroup
             {
                 SubjectCode = g.Key,
                 SubjectLabel = subjectMap[g.Key],
@@ -203,80 +245,76 @@ namespace ORSV2.Pages.GuidanceAlignment
                 }).OrderByDescending(x => x.SchoolYear).ThenBy(x => x.Term).ToList()
             }).ToList();
 
-            NonAGGrades = (await (
-                from g in _context.Grades
-                join c in _context.Courses
-                  on new { g.DistrictId, CourseNumber = g.CN } equals new { c.DistrictId, c.CourseNumber }
-                where g.StudentId == Student.StudentId
-                      && g.DistrictId == school.DistrictId
-                      && string.IsNullOrEmpty(c.CSU_SubjectAreaCode)
-                      && string.IsNullOrEmpty(c.UC_SubjectAreaCode)
-                select new SubjectGrade
+            // Process Non-A-G grades
+            NonAGGrades = gradesData
+                .Where(g => string.IsNullOrEmpty(g.SubjectCode) && 
+                           int.TryParse(g.GradeLevel, out var gl) && gl > 8)
+                .Select(g => new SubjectGrade
                 {
                     SchoolYear = g.SchoolYear,
                     Term = g.Term,
                     CourseNumber = g.CN,
-                    Title = c.Title,
+                    Title = g.Title,
                     GradeLevel = g.GradeLevel,
                     Mark = g.Mark,
                     Type = g.Type,
                     CreditsEarned = g.CC
-                }).ToListAsync())
-                .Where(g => int.TryParse(g.GradeLevel, out var gl) && gl > 8)
+                })
                 .OrderBy(g => g.SchoolYear).ThenBy(g => g.Term).ThenBy(g => g.GradeLevel).ThenBy(g => g.Title)
                 .ToList();
 
-            var studentId = Student.StudentId;
-            var schoolId = Student.SchoolId;
-            var districtId = Student.DistrictId;
+            // Get current schedule data sequentially
+            await ProcessCurrentScheduleAsync(districtId, subjectMap, validSubjectCodes);
+        }
 
-            var currentSchedule = from sc in _context.StudentClasses
-                                  join c in _context.Courses on new { sc.DistrictId, CourseNumber = sc.CourseID } equals new { c.DistrictId, c.CourseNumber }
-                                  join ms in _context.MasterSchedule on new { sc.DistrictId, sc.SchoolId, sc.SectionNumber } equals new { ms.DistrictId, ms.SchoolId, ms.SectionNumber }
-                                  where sc.StudentId == studentId
-                                        && sc.SchoolId == schoolId
-                                        && sc.DistrictId == districtId
-                                  select new
-                                  {
-                                      SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode,
-                                      c.Title,
-                                      c.CourseNumber,
-                                      ms.Period
-                                  };
-            // Build Non‑A‑G schedule items (anything not A–G or null/blank)
-            var nonAgItems = (await currentSchedule.ToListAsync())
-                .Where(x => string.IsNullOrWhiteSpace(x.SubjectCode) || !subjectMap.ContainsKey(x.SubjectCode))
-                .OrderBy(x => x.Period)
-                .ThenBy(x => x.Title)
-                .ToList();
+        private async Task ProcessCurrentScheduleAsync(int districtId, Dictionary<string, string> subjectMap, HashSet<string> validSubjectCodes)
+        {
+            var scheduleData = await (from sc in _context.StudentClasses
+                                     join c in _context.Courses on new { sc.DistrictId, CourseNumber = sc.CourseID } 
+                                         equals new { c.DistrictId, c.CourseNumber }
+                                     join ms in _context.MasterSchedule on new { sc.DistrictId, sc.SchoolId, sc.SectionNumber } 
+                                         equals new { ms.DistrictId, ms.SchoolId, ms.SectionNumber }
+                                     where sc.StudentId == Student.StudentId &&
+                                           sc.SchoolId == Student.SchoolId &&
+                                           sc.DistrictId == districtId
+                                     select new
+                                     {
+                                         SubjectCode = c.CSU_SubjectAreaCode ?? c.UC_SubjectAreaCode,
+                                         c.Title,
+                                         c.CourseNumber,
+                                         ms.Period
+                                     }).AsNoTracking().ToListAsync();
 
-            NonAGSchedule = nonAgItems.Select(x => new SubjectGrade
-            {
-                Term = $"Period {x.Period}",
-                CourseNumber = x.CourseNumber,
-                Title = x.Title,
-                Type = "" // current schedule item
-            }).ToList();
-
-            var allScheduledCourses = await currentSchedule.ToListAsync();
-
-            var scheduledGrouped = allScheduledCourses
-                .Where(x => x.SubjectCode != null && validSubjectCodes.Contains(x.SubjectCode))
-                .GroupBy(x => x.SubjectCode)
-                .ToList();
-
-            var scheduledSubjectGradesByArea = scheduledGrouped.Select(g => new SubjectGradesGroup
-            {
-                SubjectCode = g.Key,
-                SubjectLabel = subjectMap[g.Key],
-                Grades = g.Select(x => new SubjectGrade
+            // Process Non-A-G schedule
+            NonAGSchedule = scheduleData
+                .Where(x => string.IsNullOrWhiteSpace(x.SubjectCode) || !validSubjectCodes.Contains(x.SubjectCode))
+                .OrderBy(x => x.Period).ThenBy(x => x.Title)
+                .Select(x => new SubjectGrade
                 {
                     Term = $"Period {x.Period}",
                     CourseNumber = x.CourseNumber,
                     Title = x.Title,
-                }).OrderBy(x => x.Term).ToList()
-            }).ToList();
+                    Type = "Schedule"
+                }).ToList();
 
+            // Process A-G schedule
+            var agScheduleGroups = scheduleData
+                .Where(x => !string.IsNullOrEmpty(x.SubjectCode) && validSubjectCodes.Contains(x.SubjectCode))
+                .GroupBy(x => x.SubjectCode!)
+                .Select(g => new SubjectGradesGroup
+                {
+                    SubjectCode = g.Key,
+                    SubjectLabel = subjectMap[g.Key],
+                    Grades = g.Select(x => new SubjectGrade
+                    {
+                        Term = $"Period {x.Period}",
+                        CourseNumber = x.CourseNumber,
+                        Title = x.Title,
+                        Type = "Schedule"
+                    }).OrderBy(x => x.Term).ToList()
+                }).ToList();
+
+            // Combine transcript and schedule data
             AGScheduleByArea = SubjectGradesByArea.Select(g => new SubjectGradesGroup
             {
                 SubjectCode = g.SubjectCode,
@@ -294,20 +332,19 @@ namespace ORSV2.Pages.GuidanceAlignment
                 }).ToList()
             }).ToList();
 
-            foreach (var scheduled in scheduledSubjectGradesByArea)
+            // Add current schedule to existing transcript data
+            foreach (var scheduledGroup in agScheduleGroups)
             {
-                var existing = AGScheduleByArea.FirstOrDefault(x => x.SubjectCode == scheduled.SubjectCode);
+                var existing = AGScheduleByArea.FirstOrDefault(x => x.SubjectCode == scheduledGroup.SubjectCode);
                 if (existing != null)
                 {
-                    existing.Grades.AddRange(scheduled.Grades);
+                    existing.Grades.AddRange(scheduledGroup.Grades);
                 }
                 else
                 {
-                    AGScheduleByArea.Add(scheduled);
+                    AGScheduleByArea.Add(scheduledGroup);
                 }
             }
-
-            return Page();
         }
 
         // Helper methods for the Razor page

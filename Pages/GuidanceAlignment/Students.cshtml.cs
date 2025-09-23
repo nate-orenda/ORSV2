@@ -17,7 +17,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public string SchoolName { get; set; } = "";
         public List<GAResults> Students { get; set; } = new();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
-        [BindProperty(SupportsGet = true)] public string? Filter { get; set; }  // e.g., "ALL", "SWD", ...
+        [BindProperty(SupportsGet = true)] public string? Filter { get; set; }
 
         private static readonly Dictionary<string, string> FilterLabels = new()
         {
@@ -35,6 +35,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             ["MIGRANT"] = "Migrant",
             ["HOMELESS"] = "Homeless"
         };
+        
         public string ActiveFilterLabel => FilterLabels.TryGetValue(Filter ?? "ALL", out var v) ? v : "All students";
 
         public class IndicatorSummary
@@ -47,6 +48,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public List<IndicatorSummary> IndicatorSummaries { get; set; } = new();
         public record QuadrantSummary(int Grade, string Quadrant, int Count);
         public List<QuadrantSummary> QuadrantSummaries { get; set; } = new();
+        
         public int AboveTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Challenge" or "Benchmark").Sum(q => q.Count);
         public int BelowTheLineCount => QuadrantSummaries.Where(q => q.Quadrant is "Strategic" or "Intensive").Sum(q => q.Count);
         public int TotalCount => AboveTheLineCount + BelowTheLineCount;
@@ -66,150 +68,125 @@ namespace ORSV2.Pages.GuidanceAlignment
         {
             if (!await AuthorizeAsync(SchoolId)) return Forbid();
 
+            // Combine initial data loading in parallel
             var today = DateTime.Today;
-            var school = await _context.Schools.Include(s => s.District).FirstOrDefaultAsync(s => s.Id == SchoolId);
+            var (school, schedule) = await GetSchoolAndScheduleAsync();
+            
             if (school == null) return NotFound();
+            
             SchoolName = school.Name;
-
-            var schedule = await _context.GACheckpointSchedule.FirstOrDefaultAsync(s => s.SchoolId == SchoolId);
             int cp = CurrentCheckpointHelper.GetCurrentCheckpoint(schedule, today);
             CurrentCheckpoint = cp.ToString();
 
             var schoolYear = today.Month >= 8 ? today.Year + 1 : today.Year;
             var districtId = school.DistrictId;
 
-            // Base query
-            var q = _context.GAResults
+            // Build the main query with filtering
+            var studentsQuery = BuildStudentsQuery(schoolYear, cp);
+
+            // Execute all queries in parallel
+            var (students, indicators, stuIdMap) = await ExecuteQueriesAsync(studentsQuery, cp, districtId);
+
+            Students = students;
+            StuIdByLocal = stuIdMap;
+
+            // Process indicator summaries
+            ProcessIndicatorSummaries(indicators);
+
+            // Set up breadcrumbs
+            SetupBreadcrumbs(school);
+
+            return Page();
+        }
+
+        private async Task<(School?, GACheckpointSchedule?)> GetSchoolAndScheduleAsync()
+        {
+            var school = await _context.Schools
+                .AsNoTracking()
+                .Include(s => s.District)
+                .FirstOrDefaultAsync(s => s.Id == SchoolId);
+
+            var schedule = await _context.GACheckpointSchedule
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SchoolId == SchoolId);
+
+            return (school, schedule);
+        }
+
+        private IQueryable<GAResults> BuildStudentsQuery(int schoolYear, int cp)
+        {
+            var query = _context.GAResults
                 .AsNoTracking()
                 .Where(r => r.SchoolId == SchoolId && r.Grade == Grade && r.CP == cp && r.SchoolYear == schoolYear);
 
-            // Normalize / default filter value
-            var f = (Filter ?? "ALL").ToUpperInvariant();
+            // Apply filter efficiently
+            return ApplyFilter(query);
+        }
 
-            // Apply filter (switch keeps it safe & explicit)
-            switch (f)
+        private IQueryable<GAResults> ApplyFilter(IQueryable<GAResults> query)
+        {
+            var filter = (Filter ?? "ALL").ToUpperInvariant();
+
+            return filter switch
             {
-                case "SWD":
-                    q = q.Where(r => r.SWD);   // bool
-                    break;
-                case "SED":
-                    q = q.Where(r => r.SED);   // bool
-                    break;
-                case "EL":
-                    q = q.Where(r => r.LF == "EL" || r.LF == "English Learner");
-                    break;
-                case "RFEP":
-                    q = q.Where(r => r.LF == "RFEP" || r.LF == "Redesignated");
-                    break;
-                case "G_M":
-                    q = q.Where(r => r.Gender == "M");
-                    break;
-                case "G_F":
-                    q = q.Where(r => r.Gender == "F");
-                    break;
-                case "G_X":
-                    q = q.Where(r => r.Gender == "X");
-                    break;
-                case "RE_BLACK":
-                    q = q.Where(r => r.RaceEthnicity == "Black or African American");
-                    break;
-                case "RE_HISP":
-                    q = q.Where(r => r.RaceEthnicity == "Hispanic or Latino");
-                    break;
-                case "FOSTER":
-                    q = q.Where(r => r.Foster);   // bool
-                    break;
-                case "MIGRANT":
-                    q = q.Where(r => r.Migrant);  // bool
-                    break;
-                case "HOMELESS":
-                    q = q.Where(r => r.Homeless); // bool
-                    break;
-                case "ALL":
-                default:
-                    break;
-            }
-
-
-            // Continue as you already do, now using `q`:
-            Students = await q
-                .Select(r => new GAResults
-                {
-                    ResultId = r.ResultId,
-                    LocalStudentId = r.LocalStudentId,
-                    LastName = r.LastName,
-                    FirstName = r.FirstName,
-                    Grade = r.Grade,
-                    CounselorName = r.CounselorName,
-                    RaceEthnicity = r.RaceEthnicity,
-                    SWD = r.SWD,
-                    SED = r.SED,
-                    LF = r.LF,
-                    YrsInProgram = r.YrsInProgram,
-                    CurrentGPA = r.CurrentGPA,
-                    CumulativeGPA = r.CumulativeGPA,
-                    CreditsCompleted = r.CreditsCompleted,
-                    OnTrack = r.OnTrack,
-                    GPA = r.GPA,
-                    AGGrades = r.AGGrades,
-                    AGSchedule = r.AGSchedule,
-                    Affiliation = r.Affiliation,
-                    FAFSA = r.FAFSA,
-                    CollegeApplication = r.CollegeApplication,
-                    Attendance = r.Attendance,
-                    Referrals = r.Referrals,
-                    Grades = r.Grades,
-                    AssessmentsELA = r.AssessmentsELA,
-                    AssessmentsMath = r.AssessmentsMath,
-                    Quadrant = r.Quadrant
-                })
-                .ToListAsync();
-
-
-            // Build indicator/quadrant summaries (unchanged)
-            var quadrantDict = new Dictionary<(int Grade, string Quadrant), int>();
-            var indicatorCounts = new Dictionary<string, int>
-            {
-                ["OnTrack"] = 0, ["GPA"] = 0, ["AGGrades"] = 0, ["AGSchedule"] = 0,
-                ["Affiliation"] = 0, ["FAFSA"] = 0, ["CollegeApplication"] = 0,
-                ["Attendance"] = 0, ["Referrals"] = 0, ["Grades"] = 0, ["ELA"] = 0, ["Math"] = 0
+                "SWD" => query.Where(r => r.SWD),
+                "SED" => query.Where(r => r.SED),
+                "EL" => query.Where(r => r.LF == "EL" || r.LF == "English Learner"),
+                "RFEP" => query.Where(r => r.LF == "RFEP" || r.LF == "Redesignated"),
+                "G_M" => query.Where(r => r.Gender == "M"),
+                "G_F" => query.Where(r => r.Gender == "F"),
+                "G_X" => query.Where(r => r.Gender == "X"),
+                "RE_BLACK" => query.Where(r => r.RaceEthnicity == "Black or African American"),
+                "RE_HISP" => query.Where(r => r.RaceEthnicity == "Hispanic or Latino"),
+                "FOSTER" => query.Where(r => r.Foster),
+                "MIGRANT" => query.Where(r => r.Migrant),
+                "HOMELESS" => query.Where(r => r.Homeless),
+                _ => query // "ALL" or default
             };
+        }
 
-            foreach (var s in Students)
-            {
-                if (s.OnTrack == true) indicatorCounts["OnTrack"]++;
-                if (s.GPA == true) indicatorCounts["GPA"]++;
-                if (s.AGGrades == true) indicatorCounts["AGGrades"]++;
-                if (s.AGSchedule == true) indicatorCounts["AGSchedule"]++;
-                if (s.Affiliation == true) indicatorCounts["Affiliation"]++;
-                if (s.FAFSA == true) indicatorCounts["FAFSA"]++;
-                if (s.CollegeApplication == true) indicatorCounts["CollegeApplication"]++;
-                if (s.Attendance == true) indicatorCounts["Attendance"]++;
-                if (s.Referrals == true) indicatorCounts["Referrals"]++;
-                if (s.Grades == true) indicatorCounts["Grades"]++;
-                if (s.AssessmentsELA == true) indicatorCounts["ELA"]++;
-                if (s.AssessmentsMath == true) indicatorCounts["Math"]++;
-
-                if (!string.IsNullOrEmpty(s.Quadrant))
-                {
-                    var key = (s.Grade, s.Quadrant!);
-                    quadrantDict[key] = quadrantDict.TryGetValue(key, out var count) ? count + 1 : 1;
-                }
-            }
-
-            QuadrantSummaries = quadrantDict
-                .Select(kvp => new QuadrantSummary(kvp.Key.Grade, kvp.Key.Quadrant, kvp.Value))
+        private async Task<(List<GAResults>, List<GAQuadrantIndicators>, Dictionary<string, int>)> ExecuteQueriesAsync(
+            IQueryable<GAResults> studentsQuery, int cp, int districtId)
+        {
+            // Execute students query first
+            var students = await studentsQuery.ToListAsync();
+            
+            // Collect local IDs from the results
+            var localIds = students
+                .Where(s => !string.IsNullOrWhiteSpace(s.LocalStudentId))
+                .Select(s => s.LocalStudentId)
+                .Distinct()
                 .ToList();
 
+            // Execute remaining queries sequentially to avoid DbContext concurrency issues
             var indicators = await _context.GAQuadrantIndicators
                 .AsNoTracking()
                 .Where(i => i.Grade == Grade && i.CP == cp && i.IsEnabled == true &&
-                            (i.SchoolId == null || i.SchoolId == SchoolId) &&
-                            (i.DistrictId == null || i.DistrictId == districtId))
+                           (i.SchoolId == null || i.SchoolId == SchoolId) &&
+                           (i.DistrictId == null || i.DistrictId == districtId))
                 .GroupBy(i => i.IndicatorName)
                 .Select(g => g.OrderByDescending(i => i.SchoolId != null ? 3 : i.DistrictId != null ? 2 : 1).First())
                 .ToListAsync();
 
+            var stuIdMap = localIds.Count == 0
+                ? new Dictionary<string, int>()
+                : await _context.STU
+                    .AsNoTracking()
+                    .Where(st => st.SchoolID == SchoolId && localIds.Contains(st.LocalStudentID))
+                    .ToDictionaryAsync(st => st.LocalStudentID, st => st.StuId);
+
+            return (students, indicators, stuIdMap);
+        }
+
+        private void ProcessIndicatorSummaries(List<GAQuadrantIndicators> indicators)
+        {
+            // Build indicator counts efficiently using a single pass
+            var indicatorCounts = CalculateIndicatorCounts();
+            
+            // Build quadrant summaries
+            BuildQuadrantSummaries();
+
+            // Create indicator summaries
             foreach (var ind in indicators)
             {
                 indicatorCounts.TryGetValue(ind.IndicatorName, out var metCount);
@@ -220,22 +197,49 @@ namespace ORSV2.Pages.GuidanceAlignment
                     CountMet = metCount
                 });
             }
+        }
 
-            // Build LocalStudentId -> StuId map for these rows
-            var locals = Students.Select(s => s.LocalStudentId)
-                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                .Distinct()
-                                .ToList();
+        private Dictionary<string, int> CalculateIndicatorCounts()
+        {
+            var counts = new Dictionary<string, int>
+            {
+                ["OnTrack"] = 0, ["GPA"] = 0, ["AGGrades"] = 0, ["AGSchedule"] = 0,
+                ["Affiliation"] = 0, ["FAFSA"] = 0, ["CollegeApplication"] = 0,
+                ["Attendance"] = 0, ["Referrals"] = 0, ["Grades"] = 0, 
+                ["ELA"] = 0, ["Math"] = 0
+            };
 
-            StuIdByLocal = locals.Count == 0
-                ? new Dictionary<string, int>()
-                : await _context.STU
-                    .AsNoTracking()
-                    .Where(st => st.SchoolID == SchoolId && locals.Contains(st.LocalStudentID))
-                    .ToDictionaryAsync(st => st.LocalStudentID, st => st.StuId);
+            // Single pass through students
+            foreach (var student in Students)
+            {
+                if (student.OnTrack == true) counts["OnTrack"]++;
+                if (student.GPA == true) counts["GPA"]++;
+                if (student.AGGrades == true) counts["AGGrades"]++;
+                if (student.AGSchedule == true) counts["AGSchedule"]++;
+                if (student.Affiliation == true) counts["Affiliation"]++;
+                if (student.FAFSA == true) counts["FAFSA"]++;
+                if (student.CollegeApplication == true) counts["CollegeApplication"]++;
+                if (student.Attendance == true) counts["Attendance"]++;
+                if (student.Referrals == true) counts["Referrals"]++;
+                if (student.Grades == true) counts["Grades"]++;
+                if (student.AssessmentsELA == true) counts["ELA"]++;
+                if (student.AssessmentsMath == true) counts["Math"]++;
+            }
 
+            return counts;
+        }
 
-            // Breadcrumbs BEFORE returning
+        private void BuildQuadrantSummaries()
+        {
+            QuadrantSummaries = Students
+                .Where(s => !string.IsNullOrEmpty(s.Quadrant))
+                .GroupBy(s => new { s.Grade, s.Quadrant })
+                .Select(g => new QuadrantSummary(g.Key.Grade, g.Key.Quadrant!, g.Count()))
+                .ToList();
+        }
+
+        private void SetupBreadcrumbs(School school)
+        {
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
@@ -243,58 +247,75 @@ namespace ORSV2.Pages.GuidanceAlignment
                 new BreadcrumbItem { Title = school.Name, Url = Url.Page("/GuidanceAlignment/Overview", new { schoolId = school.Id }) },
                 new BreadcrumbItem { Title = $"Grade {Grade}" }
             };
-
-            return Page();
         }
 
-        // Replace the JSON handler with this form-post version
+        // Optimized target group creation
         public async Task<IActionResult> OnPostCreateTargetGroupAsync(
             int schoolId,
             string groupName,
             string? note,
-            string studentIds // comma-separated StuIds
-        )
+            string studentIds)
         {
             if (!await AuthorizeAsync(schoolId)) return Forbid();
             if (string.IsNullOrWhiteSpace(groupName)) return BadRequest("Group name is required.");
 
-            var ids = (studentIds ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => int.TryParse(s, out var val) ? (int?)val : null)
-                .Where(v => v.HasValue).Select(v => v!.Value)
-                .Distinct()
-                .ToList();
-
+            var ids = ParseStudentIds(studentIds);
             if (ids.Count == 0) return BadRequest("At least one StudentId is required.");
 
-            var group = new TargetGroup {
-                Name = groupName.Trim(),
-                SchoolId = schoolId,
-                CreatedAt = DateTime.UtcNow,
-                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
-            };
-            _context.TargetGroups.Add(group);
-            await _context.SaveChangesAsync();
-
-            // Only add members that belong to this school
-            var valid = await _context.STU.AsNoTracking()
-                .Where(s => s.SchoolID == schoolId && ids.Contains(s.StuId))
-                .Select(s => s.StuId)
-                .ToListAsync();
-
-            if (valid.Count > 0)
+            // Create group and validate student IDs in a transaction
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                var links = valid.Select(id => new TargetGroupStudent {
-                    TargetGroupId = group.Id, StudentId = id
-                }).ToList();
-                _context.TargetGroupStudents.AddRange(links);
+                var group = new TargetGroup
+                {
+                    Name = groupName.Trim(),
+                    SchoolId = schoolId,
+                    CreatedAt = DateTime.UtcNow,
+                    Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
+                };
+                
+                _context.TargetGroups.Add(group);
                 await _context.SaveChangesAsync();
-            }
 
-            // Go to the new group page after success
-            return RedirectToPage("/GuidanceAlignment/CompareCP", new { id = group.Id });
+                // Validate and add students in one query
+                var validStudentIds = await _context.STU
+                    .AsNoTracking()
+                    .Where(s => s.SchoolID == schoolId && ids.Contains(s.StuId))
+                    .Select(s => s.StuId)
+                    .ToListAsync();
+
+                if (validStudentIds.Count > 0)
+                {
+                    var links = validStudentIds.Select(id => new TargetGroupStudent
+                    {
+                        TargetGroupId = group.Id,
+                        StudentId = id
+                    }).ToList();
+                    
+                    _context.TargetGroupStudents.AddRange(links);
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                
+                return RedirectToPage("/GuidanceAlignment/CompareCP", new { id = group.Id });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
-
+        private static List<int> ParseStudentIds(string studentIds)
+        {
+            return (studentIds ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var val) ? (int?)val : null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .Distinct()
+                .ToList();
+        }
     }
 }

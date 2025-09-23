@@ -434,15 +434,45 @@
     </div>
 
 </div>
-
-<!-- Put the student name + IDs + quadrant back into the modal header -->
+<!-- Replace the script at the bottom of GAProfileCard.cshtml with this: -->
 <script>
 (function () {
-  var el = document.getElementById('profileModalLabel');
-  if (!el) return;
-  var name = "@Model.Student.FirstName @Model.Student.LastName";
-  var ids = "ID: @Model.Student.LocalStudentId &nbsp;&nbsp;|&nbsp;&nbsp; Internal: @Model.Student.StudentId";
-  var badge = `<span class="badge @Model.QuadrantColorClass ms-2">@Model.QuadrantLevel</span>`;
-  el.innerHTML = `${name} ${badge}<div class="small text-muted mt-1">${ids}</div>`;
+  try {
+    var el = document.getElementById('profileModalLabel');
+    if (!el) return;
+    
+    var name = "@Html.Raw(Html.Encode(Model.Student.FirstName + " " + Model.Student.LastName))";
+    var localId = "@Html.Raw(Html.Encode(Model.Student.LocalStudentId?.ToString() ?? ""))";
+    var studentId = "@Html.Raw(Html.Encode(Model.Student.StudentId.ToString()))";
+    var quadrantClass = "@Html.Raw(Html.Encode(Model.QuadrantColorClass ?? ""))";
+    var quadrantLevel = "@Html.Raw(Html.Encode(Model.QuadrantLevel ?? ""))";
+    
+    var ids = "ID: " + localId + " &nbsp;&nbsp;|&nbsp;&nbsp; Internal: " + studentId;
+    var badge = '';
+    
+    // Only add badge if we have valid quadrant data
+    if (quadrantClass && quadrantLevel) {
+      badge = '<span class="badge ' + quadrantClass + ' ms-2">' + quadrantLevel + '</span>';
+    }
+    
+    el.innerHTML = name + ' ' + badge + '<div class="small text-muted mt-1">' + ids + '</div>';
+  } catch (error) {
+    // Fallback to basic title
+    var el = document.getElementById('profileModalLabel');
+    if (el) {
+      el.innerHTML = 'Student Profile';
+    }
+  }
 })();
+
+// Clean up modal title on hide
+document.getElementById('profileModal')?.addEventListener('hidden.bs.modal', function () {
+    try {
+        const titleEl = document.getElementById('profileModalLabel');
+        if (titleEl) {
+            titleEl.innerHTML = 'Student Profile';
+        }
+    } catch (error) {
+    }
+});
 </script>

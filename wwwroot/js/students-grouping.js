@@ -1,4 +1,4 @@
-// Students Grouping and Table Management
+// Students Grouping and Table Management - Complete Version
 window.StudentGrouping = (function () {
     // Private variables for module state
     let currentGrouping = [];
@@ -8,9 +8,8 @@ window.StudentGrouping = (function () {
     let groupSort = new Map();
     let suppressOrderBounce = false;
     let schoolId = null;
-    let grade = null; // NEW: Variable to hold the grade
-    let createGroupModal, bsCreateGroupModal;  // Bootstrap modal instance
-
+    let grade = null;
+    let createGroupModal, bsCreateGroupModal;
 
     /**
      * Initializes the entire student grouping module.
@@ -20,11 +19,10 @@ window.StudentGrouping = (function () {
      */
     function init(config) {
         if (!config || !config.schoolId || !config.grade) {
-            console.error("StudentGrouping init requires a schoolId and grade.");
             return;
         }
-        schoolId = config.schoolId; // Store the school ID
-        grade = config.grade;       // Store the grade
+        schoolId = config.schoolId;
+        grade = config.grade;
 
         injectCompactStyles();
         buildColumnMap();
@@ -50,9 +48,9 @@ window.StudentGrouping = (function () {
         loadJQueryUI();
 
         // Wait for charts to be initialized as well
-        if (window.StudentCharts?.init) {
-            StudentCharts.init();
-        }
+        //if (window.StudentCharts?.init) {
+        //    StudentCharts.init();
+        //}
 
         // --- HIDE LOADER ---
         // This should be the VERY LAST step.
@@ -74,14 +72,25 @@ window.StudentGrouping = (function () {
         if (document.getElementById(styleId)) return;
 
         const css = `
-            #studentsTable td, #studentsTable th { padding: 4px 8px !important; white-space: nowrap; }
-            .btn.condensed-btn { padding: 0.15rem 0.4rem; font-size: 0.8rem; }
-            .narrow-column { width: 50px; }`;
+            #studentsTable td, #studentsTable th { 
+                padding: 4px 8px !important; 
+                white-space: nowrap; 
+            }
+            .btn.condensed-btn { 
+                padding: 0.15rem 0.4rem; 
+                font-size: 0.8rem; 
+            }
+            .narrow-column { width: 50px; }
+            .condensed-column {
+                max-width: 120px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }`;
 
         const style = document.createElement('style');
         style.id = styleId;
-        style.type = 'text/css';
-        style.appendChild(document.createTextNode(css));
+        style.textContent = css;
         document.head.appendChild(style);
     }
 
@@ -99,28 +108,124 @@ window.StudentGrouping = (function () {
     }
 
     /**
-     * Sets up the student profile modal.
+     * Sets up the student profile modal with enhanced error handling.
      */
-    function initializeModal() {
-        const modal = document.getElementById('profileModal');
-        if (!modal) return; // prevent errors if the modal is absent
-        modal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const studentId = button.getAttribute('data-result-id');
-            fetch(`/GuidanceAlignment/GAProfileCard?id=${studentId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById("profileContent").innerHTML = html;
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = html;
-                    const scriptTag = tempDiv.querySelector('script');
-                    if (scriptTag) {
-                        eval(scriptTag.textContent);
-                    }
-                });
-        });
-    }
+    /**
+ * Sets up the student profile modal with enhanced error handling.
+ */
+function initializeModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    
+    let loadingController = null;
+    
+    modal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const studentId = button?.getAttribute('data-result-id');
+        
+        
+        // Validate student ID
+        if (!studentId || studentId === '0' || studentId.trim() === '') {
+            const content = document.getElementById("profileContent");
+            content.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6>Invalid Student ID</h6>
+                    <p class="mb-0">Unable to load profile - no valid student ID found.</p>
+                </div>`;
+            return;
+        }
 
+        // Cancel any existing request
+        if (loadingController) {
+            loadingController.abort();
+        }
+        
+        loadingController = new AbortController();
+        const content = document.getElementById("profileContent");
+        
+        // Show loading state
+        content.innerHTML = `
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading student profile...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading student data...</p>
+            </div>`;
+        
+        const timeoutId = setTimeout(() => loadingController.abort(), 15000); // Increased timeout
+        
+        // Construct the URL safely
+        const url = `/GuidanceAlignment/GAProfileCard?id=${encodeURIComponent(studentId)}`;
+        
+        fetch(url, {
+            signal: loadingController.signal,
+            headers: { 
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest' // Mark as AJAX request
+            }
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            if (loadingController.signal.aborted) return;
+            
+            content.innerHTML = html;
+            
+            // Execute inline scripts safely
+            const scripts = content.querySelectorAll('script');
+            scripts.forEach(scriptTag => {
+                if (scriptTag.textContent.trim()) {
+                    try {
+                        // Create new script element to execute
+                        const newScript = document.createElement('script');
+                        newScript.textContent = scriptTag.textContent;
+                        document.head.appendChild(newScript);
+                        document.head.removeChild(newScript);
+                    } catch (error) {
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                return;
+            }
+            
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>Error Loading Profile</h6>
+                    <p class="mb-1">Unable to load student profile. Please try again.</p>
+                    <small class="text-muted">Error: ${error.message}</small>
+                    <br><small class="text-muted">Student ID: ${studentId}</small>
+                </div>`;
+        })
+        .finally(() => {
+            clearTimeout(timeoutId);
+            loadingController = null;
+        });
+    });
+
+    // Clean up on modal hide
+    modal.addEventListener('hidden.bs.modal', function () {
+        if (loadingController) {
+            loadingController.abort();
+            loadingController = null;
+        }
+        
+        // Clear any stale modal title but keep the content for better UX
+        const titleEl = document.getElementById('profileModalLabel');
+        if (titleEl && titleEl.innerHTML !== 'Student Profile') {
+            titleEl.innerHTML = 'Student Profile';
+        }
+    });
+}
     /**
      * Initializes jQuery UI drag and drop for table headers.
      */
@@ -152,8 +257,15 @@ window.StudentGrouping = (function () {
         if (!dataTable) return;
         const buttons = dataTable.buttons().container();
         $('#dtButtons').empty().append(buttons);
+        
+        // Add debounced search for better performance
+        let searchTimeout;
         $('#studentsSearch').off('input.dtSearch').on('input.dtSearch', function () {
-            dataTable.search(this.value).draw();
+            clearTimeout(searchTimeout);
+            const searchValue = this.value;
+            searchTimeout = setTimeout(() => {
+                dataTable.search(searchValue).draw();
+            }, 300);
         });
     }
 
@@ -197,10 +309,8 @@ window.StudentGrouping = (function () {
             else $('#createGroupModal').modal('show');
         });
 
-        // ⬇️ NEW: ensure correct initial enabled/disabled state after (re)init
         updateState();
     }
-
 
     /**
      * Initializes or re-initializes the main DataTable with optional grouping.
@@ -221,7 +331,6 @@ window.StudentGrouping = (function () {
             orderMulti: true,
             processing: false,
             info: false,
-            // CHANGED: Removed the 'f' (filter/search) from the dom string
             dom: 'Brtip',
             buttons: [
                 { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
@@ -236,8 +345,8 @@ window.StudentGrouping = (function () {
                 }
             ],
             columnDefs: [
-                { "targets": [1], "className": "narrow-column" }, // Targets the 'ID' column
-                { "targets": [4, 7], "className": "condensed-column" } // Targets 'Race/Eth' and 'LF'
+                { "targets": [1], "className": "narrow-column" },
+                { "targets": [4, 7], "className": "condensed-column" }
             ],
             orderFixed: groupIndices.length ? { pre: groupIndices.map(i => [i, 'asc']) } : null,
             rowGroup: groupingConfig ? groupingConfig.config : false,
@@ -278,22 +387,17 @@ window.StudentGrouping = (function () {
     function setupGroupSelectionEvents() {
         const $table = $('#studentsTable');
 
-        // FIX 1: Bind the click event to the entire group row ('tr.dtrg-start').
-        // This makes the entire row, including the text, a reliable and intuitive click target.
+        // Bind the click event to the entire group row ('tr.dtrg-start').
         $table.off('click.selectGroup').on('click.selectGroup', 'tr.dtrg-start', function () {
             const $groupRow = $(this);
 
-            // FIX 2: Implement logic that correctly handles nested groups.
-            // We find the clicked group's level and then gather all rows until we hit another
-            // group header at the same (or a higher) level.
-
             // Find the level of the clicked group (e.g., 'dtrg-level-0').
             const levelMatch = $groupRow.attr('class').match(/dtrg-level-(\d+)/);
-            if (!levelMatch) return; // Exit if the group level class isn't found
+            if (!levelMatch) return;
             const groupLevel = parseInt(levelMatch[1], 10);
 
             const memberRows = [];
-            let currentRow = $groupRow.next(); // Start with the row immediately after the header
+            let currentRow = $groupRow.next();
 
             // Traverse through all subsequent rows
             while (currentRow.length) {
@@ -304,21 +408,21 @@ window.StudentGrouping = (function () {
                         const nextGroupLevel = parseInt(nextLevelMatch[1], 10);
                         // If we find a group at the same or a higher level, it's the boundary.
                         if (nextGroupLevel <= groupLevel) {
-                            break; // Exit the loop; we've collected all members of our group.
+                            break;
                         }
                     }
                 }
 
                 // We only want to select actual data rows, not subgroup headers or group footers.
                 if (!currentRow.hasClass('dtrg-start') && !currentRow.hasClass('dtrg-end')) {
-                    memberRows.push(currentRow[0]); // Add the raw DOM element to our list
+                    memberRows.push(currentRow[0]);
                 }
 
-                currentRow = currentRow.next(); // Move to the next row
+                currentRow = currentRow.next();
             }
 
             if (memberRows.length === 0) {
-                return; // Nothing to do if the group is empty.
+                return;
             }
 
             // Use the collected rows to perform the selection/deselection.
@@ -372,16 +476,16 @@ window.StudentGrouping = (function () {
                 if (!name) { $('#tgName').focus(); return; }
                 if (!ids.length) { alert('No students selected.'); return; }
 
-                // Fill the hidden form and submit (classic POST with antiforgery)
+                // Show loading state
+                $(this).prop('disabled', true).text('Creating...');
+
                 $('#tgFormName').val(name);
                 $('#tgFormNote').val(note);
-                $('#tgFormIds').val(ids.join(',')); // comma-separated StuIds
+                $('#tgFormIds').val(ids.join(','));
 
                 document.getElementById('createGroupForm').submit();
             });
     }
-
-
 
     function applyGrouping() {
         if (!currentGrouping.length) {
@@ -419,11 +523,19 @@ window.StudentGrouping = (function () {
     };
 })();
 
+// Enhanced chart module with better error handling
 window.StudentCharts = (function () {
+    let indicatorChartInstance = null;
+
     function init() {
-        if (window.studentPageData) {
+        if (!window.studentPageData) {
+            return;
+        }
+
+        try {
             initializeIndicatorChart();
-            initializeQuadrantChart();
+            //initializeQuadrantChart();
+        } catch (error) {
         }
     }
 
@@ -431,19 +543,27 @@ window.StudentCharts = (function () {
         const indicatorData = window.studentPageData.indicatorData;
         const indicatorLabels = indicatorData.map(i => i.Name);
         const indicatorPercents = indicatorData.map(i => i.PercentMet.toFixed(1));
+        
         if (indicatorData.length > 0) {
-            if (window.indicatorChartInstance) {
-                window.indicatorChartInstance.destroy();
+            if (indicatorChartInstance) {
+                indicatorChartInstance.destroy();
             }
-            window.indicatorChartInstance = new Chart(document.getElementById('indicatorChart'), {
+            indicatorChartInstance = new Chart(document.getElementById('indicatorChart'), {
                 type: 'bar',
                 data: {
                     labels: indicatorLabels,
                     datasets: [{ label: '% Met', data: indicatorPercents, backgroundColor: '#0d6efd' }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% Met' } } },
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100, 
+                            title: { display: true, text: '% Met' } 
+                        } 
+                    },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -454,6 +574,7 @@ window.StudentCharts = (function () {
         const data = window.studentPageData;
         const quadrantCounts = data.quadrantCounts;
         const total = data.total;
+        
         new Chart(document.getElementById('quadrantPie'), {
             type: 'pie',
             data: {
@@ -466,7 +587,8 @@ window.StudentCharts = (function () {
                 }]
             },
             options: {
-                responsive: true, maintainAspectRatio: true,
+                responsive: true, 
+                maintainAspectRatio: true,
                 plugins: {
                     legend: { display: true, position: 'top', align: 'center' },
                     tooltip: {
@@ -483,10 +605,14 @@ window.StudentCharts = (function () {
         });
     }
 
-    return { init: init };
+    return { 
+        init: init,
+        destroy: function() {
+            if (indicatorChartInstance) indicatorChartInstance.destroy();
+        }
+    };
 })();
 
 window.clearGrouping = function () {
     StudentGrouping.clearGrouping();
 };
-
