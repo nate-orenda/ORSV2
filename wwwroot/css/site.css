@@ -1525,7 +1525,7 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
 }
 
 /* === GA Checkpoint Gantt === */
-.ga-gantt-card { overflow: hidden; }
+.ga-gantt-card { overflow: hidden; margin-bottom: 3rem; }
 
 .ga-gantt-scale { position: relative; margin-left: 220px; } /* leaves room for y-labels */
 .ga-gantt-scale-track {
@@ -1586,6 +1586,4 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   .ga-gantt-row { grid-template-columns: 1fr; }
   .ga-gantt-label { margin-bottom: .25rem; }
 }
-main {
-  padding-bottom: 3rem; /* orenda vibe: airy, not cramped */
-}
+
