@@ -39,6 +39,46 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public FileAnalysisResult? AnalysisResults { get; private set; }
         public ColumnMatchingMetrics? MatchingMetrics { get; private set; }
 
+        // Add this new helper method inside the LennectionsModel class
+
+        /// <summary>
+        /// Creates a mapping from 'SL.%.2' standard IDs to their 'SL.%.3' counterparts.
+        /// </summary>
+        /// <returns>A dictionary mapping the old Guid to the new Guid.</returns>
+        private async Task<Dictionary<Guid, Guid>> GetStandardMappingAsync()
+        {
+            var map = new Dictionary<Guid, Guid>();
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            using var conn = new SqlConnection(connStr);
+
+            var sql = @"
+        SELECT
+            s2.id AS OldId,
+            s3.id AS NewId
+        FROM dbo.standards s2
+        JOIN dbo.standards s3
+            ON REPLACE(s2.human_coding_scheme, '.2', '.3') = s3.human_coding_scheme
+        WHERE s2.human_coding_scheme LIKE 'SL.%.2'
+          AND s3.human_coding_scheme LIKE 'SL.%.3';
+    ";
+
+            using var cmd = new SqlCommand(sql, conn);
+            await conn.OpenAsync();
+            using var rdr = await cmd.ExecuteReaderAsync();
+
+            while (await rdr.ReadAsync())
+            {
+                // ✨ FIX: Read the columns as strings and then parse them into GUIDs.
+                // This prevents the InvalidCastException if the DB column is NVARCHAR.
+                if (Guid.TryParse(rdr.GetString(0), out var oldId) &&
+                    Guid.TryParse(rdr.GetString(1), out var newId))
+                {
+                    map[oldId] = newId;
+                }
+            }
+            return map;
+        }
+
         // --- NEW: COLUMN MATCHING METRICS ---
         public class ColumnMatchingMetrics
         {
@@ -111,14 +151,15 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 // Analyze file with enhanced metrics
                 var analysis = await AnalyzeFileContents(temp, Delimiter);
                 var metrics = await AnalyzeColumnMatching(temp, Delimiter);
-                
+
                 // Store results for persistence across postbacks
                 AnalysisResults = analysis;
                 MatchingMetrics = metrics;
-                
+
                 // Return analysis results with temp path for later use
-                return new JsonResult(new { 
-                    success = true, 
+                return new JsonResult(new
+                {
+                    success = true,
                     analysis = analysis,
                     metrics = metrics,
                     tempPath = temp
@@ -126,9 +167,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             }
             catch (Exception ex)
             {
-                return new JsonResult(new { 
-                    success = false, 
-                    message = ex.Message 
+                return new JsonResult(new
+                {
+                    success = false,
+                    message = ex.Message
                 });
             }
         }
@@ -140,7 +182,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             TempData.Remove("ImportBatchId");
 
             await LoadDistrictOptionsAsync();
-            
+
+            // ✨ FIX: Call the mapping helper method at the top-level of the function.
+            var standardMap = await GetStandardMappingAsync();
+
             // Remove validation for fields that can be auto-detected
             ModelState.Remove(nameof(Subject));
             ModelState.Remove(nameof(DistrictId));
@@ -156,7 +201,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     ModelState.AddModelError("", "Please upload a CSV file.");
                     return Page();
                 }
-                
+
                 // Use existing temp file - no need to recreate
                 tempFilePath = TempPath;
             }
@@ -172,7 +217,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             // ENHANCED: Re-analyze file to get persistent metrics
             AnalysisResults = await AnalyzeFileContents(tempFilePath, Delimiter);
             MatchingMetrics = await AnalyzeColumnMatching(tempFilePath, Delimiter);
-            
+
             // Auto-fill TestId if blank
             if (string.IsNullOrWhiteSpace(TestId) && !string.IsNullOrWhiteSpace(AnalysisResults.DetectedTestId))
             {
@@ -235,33 +280,38 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             // ENHANCED: Build standard preview with question count per standard
             var standardQuestionCounts = new Dictionary<Guid, int>();
             var seenStandardIds = new HashSet<Guid>();
-            
+
             // First, process the first data line that we already read for test ID detection
             if (!string.IsNullOrWhiteSpace(firstDataLine))
             {
                 var cells = firstDataLine.Split(delimiterChar);
-                
+
                 foreach (var qm in maps)
                 {
                     if (qm.StdCol >= cells.Length) continue;
-                    
+
                     var standardValue = (cells[qm.StdCol] ?? "").Trim();
-                    
+
                     if (!string.IsNullOrEmpty(standardValue))
                     {
                         // Handle pipe-separated sub-standards - take the last (rightmost) GUID
                         var standardParts = standardValue.Split('|');
                         var lastStandardId = standardParts[standardParts.Length - 1].Trim();
-                        
+
                         if (Guid.TryParse(lastStandardId, out var standardId))
                         {
+                            // ✨ FIX: Apply the standard mapping. This fixes the compiler errors.
+                            if (standardMap.TryGetValue(standardId, out var newStandardId))
+                            {
+                                standardId = newStandardId;
+                            }
                             seenStandardIds.Add(standardId);
                             standardQuestionCounts[standardId] = standardQuestionCounts.GetValueOrDefault(standardId, 0) + 1;
                         }
                     }
                 }
             }
-            
+
             // Then process the remaining data rows
             string? line;
             while ((line = await sr.ReadLineAsync()) != null)
@@ -272,15 +322,20 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 {
                     if (qm.StdCol >= cells.Length) continue;
                     var standardValue = (cells[qm.StdCol] ?? "").Trim();
-                    
+
                     if (!string.IsNullOrEmpty(standardValue))
                     {
                         // Handle pipe-separated sub-standards - take the last (rightmost) GUID
                         var standardParts = standardValue.Split('|');
                         var lastStandardId = standardParts[standardParts.Length - 1].Trim();
-                        
+
                         if (Guid.TryParse(lastStandardId, out var standardId))
                         {
+                            // ✨ FIX: Apply the standard mapping here as well.
+                            if (standardMap.TryGetValue(standardId, out var newStandardId))
+                            {
+                                standardId = newStandardId;
+                            }
                             seenStandardIds.Add(standardId);
                             // Only count from first row to avoid duplicates
                         }
@@ -291,8 +346,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             var existingStandardsMap = await LoadSchemesForIds(seenStandardIds);
             Preview = seenStandardIds
                 .Select(id => new StandardPreview(
-                    id, 
-                    existingStandardsMap.GetValueOrDefault(id), 
+                    id,
+                    existingStandardsMap.GetValueOrDefault(id),
                     existingStandardsMap.ContainsKey(id),
                     standardQuestionCounts.GetValueOrDefault(id, 0)))
                 .OrderBy(p => p.HumanCodingScheme).ToList();
@@ -302,13 +357,13 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             sr.BaseStream.Seek(0, SeekOrigin.Begin);
             sr.DiscardBufferedData();
             await sr.ReadLineAsync(); // Skip header
-            
+
             // Read the first data line again to include it in validation
             firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
 
             var localIds = new HashSet<int>();
             int scannedCount = 0;
-            
+
             // Process the first line for validation
             if (!string.IsNullOrWhiteSpace(firstDataLine))
             {
@@ -417,24 +472,24 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             if (!string.IsNullOrWhiteSpace(testName))
             {
                 var testLower = testName.ToLowerInvariant();
-                
+
                 if (testLower.Contains("ela") || testLower.Contains("english") || testLower.Contains("reading") || testLower.Contains("language"))
                     return "ELA";
-                    
+
                 if (testLower.Contains("math"))
                     return "Math";
-                    
+
                 if (testLower.Contains("science"))
                     return "Science";
-                    
+
                 if (testLower.Contains("social") || testLower.Contains("history"))
                     return "Social Science";
             }
 
             // Check standards in headers for subject clues
-            var standardHeaders = headers.Where(h => h.Contains("standard", StringComparison.OrdinalIgnoreCase) || 
+            var standardHeaders = headers.Where(h => h.Contains("standard", StringComparison.OrdinalIgnoreCase) ||
                                                     h.Contains("ccss", StringComparison.OrdinalIgnoreCase)).ToList();
-            
+
             foreach (var header in standardHeaders)
             {
                 var headerLower = header.ToLowerInvariant();
@@ -506,7 +561,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             if (string.IsNullOrWhiteSpace(headerLine)) return metrics;
 
             var headers = headerLine.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-            
+
             // Find all Item positions first
             var itemPositions = new List<int>();
             for (int i = 0; i < headers.Length; i++)
@@ -530,12 +585,12 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     HasItemColumn = true,
                     ItemHeader = headers[itemPos]
                 };
-                
+
                 // Look for Score and ItemStandard in the next few columns after Item
                 for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
                 {
                     var columnHeader = headers[itemPos + offset].Trim();
-                    
+
                     if (columnHeader.Equals("Score", StringComparison.OrdinalIgnoreCase) && !blockStatus.HasScoreColumn)
                     {
                         blockStatus.HasScoreColumn = true;
@@ -549,7 +604,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 }
 
                 metrics.QuestionBlocks.Add(blockStatus);
-                
+
                 if (blockStatus.IsComplete)
                 {
                     metrics.ValidQuestionBlocks++;
@@ -581,6 +636,9 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             {
                 ModelState.AddModelError("", "Temp file not found. Please re-run Preview."); return Page();
             }
+
+            // ✨ FIX: Call the mapping helper method at the top-level of the function.
+            var standardMap = await GetStandardMappingAsync();
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
             var tvp = new DataTable();
@@ -632,6 +690,12 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
                             if (Guid.TryParse(lastStandardId, out var standardId))
                             {
+                                // ✨ FIX: Apply the standard mapping here.
+                                if (standardMap.TryGetValue(standardId, out var newStandardId))
+                                {
+                                    standardId = newStandardId;
+                                }
+
                                 allIds.Add(standardId);
                                 var key = (localId, standardId);
                                 if (agg.TryGetValue(key, out var cur))
@@ -815,16 +879,16 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             for (int itemIndex = 0; itemIndex < itemPositions.Count; itemIndex++)
             {
                 var itemPos = itemPositions[itemIndex];
-                
+
                 // Look for Score and ItemStandard in the next few columns after Item
                 int? scoreCol = null;
                 int? standardCol = null;
-                
+
                 // Search in the next 6 positions for Score and ItemStandard
                 for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
                 {
                     var header = headers[itemPos + offset].Trim();
-                    
+
                     if (header.Equals("Score", StringComparison.OrdinalIgnoreCase) && !scoreCol.HasValue)
                     {
                         scoreCol = itemPos + offset;
@@ -839,10 +903,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (scoreCol.HasValue && standardCol.HasValue)
                 {
                     maps.Add(new QuestionMap(
-                        maps.Count + 1, 
-                        headers[scoreCol.Value], 
-                        scoreCol.Value, 
-                        headers[standardCol.Value], 
+                        maps.Count + 1,
+                        headers[scoreCol.Value],
+                        scoreCol.Value,
+                        headers[standardCol.Value],
                         standardCol.Value
                     ));
                 }
@@ -865,7 +929,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             for (int i = 0; i < headers.Length; i++)
                 if (headers[i].Trim().Equals("StudentId", StringComparison.OrdinalIgnoreCase))
                     return i;
-            
+
             for (int i = 0; i < headers.Length; i++)
                 if (headers[i].Trim().Equals("Local Student ID", StringComparison.OrdinalIgnoreCase))
                     return i;
@@ -909,7 +973,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 // Try to parse the id column as either GUID or string
                 Guid guidId;
                 var idValue = rdr.GetValue(0);
-                
+
                 if (idValue is Guid directGuid)
                 {
                     guidId = directGuid;
@@ -922,7 +986,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 {
                     continue; // Skip this row if we can't parse the ID
                 }
-                
+
                 result[guidId] = rdr.GetString(1);
             }
             return result;
@@ -962,7 +1026,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 AND ISNULL(s.Inactive, 0) = 0;   -- NEW
             ";
 
-            
+
             var found = new HashSet<int>();
             await using (var cmd = new SqlCommand(sql, conn))
             {
