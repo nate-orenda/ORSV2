@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
@@ -15,6 +14,13 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
 
     public GAProtocol? Protocol { get; set; }
     public School? School { get; set; }
+
+    // NEW: expose lock state to views
+    public bool IsLocked { get; private set; }
+
+    // If a page wants to allow viewing even when finalized (e.g., Print)
+    protected virtual bool AllowReadOnlyWhenFinalized => false;
+
     public Dictionary<int, string> SectionTitles { get; set; } = new()
     {
         {1, "Introduction"},
@@ -31,7 +37,6 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
     public Dictionary<int, string> Responses { get; set; } = new();
     public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
-    // Abstract property that each section must implement to identify itself
     public abstract int CurrentSection { get; }
 
     protected async Task<IActionResult> LoadProtocolDataAsync()
@@ -42,23 +47,31 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
         Protocol = await _context.GAProtocols
             .Include(p => p.SectionResponses)
             .FirstOrDefaultAsync(p => p.Id == ProtocolId);
-
         if (Protocol == null) return NotFound();
 
         School = await _context.Schools
             .Include(s => s.District)
             .FirstOrDefaultAsync(s => s.Id == Protocol.SchoolId);
-
         if (School == null || School.District == null) return NotFound();
 
-        // Load section responses into dictionary
-        foreach (var title in SectionTitles)
+        // === Lock state ===
+        IsLocked = Protocol.IsFinalized;
+
+        // If a page explicitly allows read-only viewing when finalized, just continue.
+        // Otherwise, still continue (render read-only), but add a heads-up.
+        if (IsLocked && !AllowReadOnlyWhenFinalized)
         {
-            var response = Protocol.SectionResponses?.FirstOrDefault(r => r.SectionNumber == title.Key);
-            Responses[title.Key] = response?.ResponseText ?? string.Empty;
+            TempData["Alert"] ??= "This protocol is finalized. Editing is disabled until an Orenda user unlocks it.";
         }
 
-        // Build breadcrumbs
+        // Load section responses (null-safe)
+        var sectionList = Protocol.SectionResponses ?? new List<GAProtocolSectionResponse>();
+        foreach (var title in SectionTitles)
+        {
+            Responses[title.Key] = sectionList.FirstOrDefault(r => r.SectionNumber == title.Key)?.ResponseText ?? string.Empty;
+        }
+
+        // Breadcrumbs
         Breadcrumbs = new List<BreadcrumbItem>
         {
             new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
@@ -68,7 +81,7 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
             new BreadcrumbItem { Title = $"Edit Protocol – CP {Protocol.CP}" }
         };
 
-        // Set ViewData for the layout
+        // ViewData for layout/partials
         ViewData["ProtocolId"] = ProtocolId;
         ViewData["Protocol"] = Protocol;
         ViewData["School"] = School;
@@ -76,6 +89,7 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
         ViewData["SectionTitles"] = SectionTitles;
         ViewData["Responses"] = Responses;
         ViewData["Breadcrumbs"] = Breadcrumbs;
+        ViewData["IsLocked"] = IsLocked;
 
         return Page();
     }
@@ -88,20 +102,26 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
         var protocol = await _context.GAProtocols
             .Include(p => p.SectionResponses)
             .FirstOrDefaultAsync(p => p.Id == ProtocolId);
-
         if (protocol == null) return NotFound();
+
+        // Hard block writes while finalized
+        if (protocol.IsFinalized)
+        {
+            TempData["Alert"] = "This protocol is finalized and cannot be edited. Ask an Orenda user to unlock.";
+            return RedirectToPage("/GuidanceAlignment/Protocols", new { schoolId = protocol.SchoolId });
+        }
 
         var now = DateTime.UtcNow;
         var user = User.Identity?.Name ?? "Unknown";
 
-        var response = protocol.SectionResponses
+        var existing = (protocol.SectionResponses ??= new List<GAProtocolSectionResponse>())
             .FirstOrDefault(r => r.SectionNumber == sectionNumber);
 
-        if (response != null)
+        if (existing != null)
         {
-            response.ResponseText = content?.Trim();
-            response.UpdatedAt = now;
-            response.UpdatedBy = user;
+            existing.ResponseText = content?.Trim();
+            existing.UpdatedAt = now;
+            existing.UpdatedBy = user;
         }
         else
         {

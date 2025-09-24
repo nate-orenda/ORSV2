@@ -77,7 +77,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 var existing = Protocols.Select(p => p.CP).ToList();
                 BuildableCheckpoints = CurrentCheckpointHelper.GetBuildableCheckpointLabels(schedule, today, existing);
             }
-            
+
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Guidance Alignment", Url = Url.Page("/GuidanceAlignment/Index") },
@@ -120,5 +120,45 @@ namespace ORSV2.Pages.GuidanceAlignment
 
             return RedirectToPage(new { schoolId = SchoolId });
         }
+
+        public async Task<IActionResult> OnPostFinalizeAsync(int protocolId)
+        {
+            var ok = await AuthorizeAsync();
+            if (!ok) return Forbid();
+
+            var p = await _context.GAProtocols.FirstOrDefaultAsync(x => x.Id == protocolId);
+            if (p is null) return NotFound();
+
+            if (!p.IsFinalized)
+            {
+                p.IsFinalized = true;
+                p.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToPage(new { schoolId = p.SchoolId });
+        }
+
+        public async Task<IActionResult> OnPostUnlockAsync(int protocolId)
+        {
+            var ok = await AuthorizeAsync();
+            if (!ok) return Forbid();
+
+            if (!(User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser")))
+                return Forbid();
+
+            var p = await _context.GAProtocols.FirstOrDefaultAsync(x => x.Id == protocolId);
+            if (p is null) return NotFound();
+
+            if (p.IsFinalized)
+            {
+                p.IsFinalized = false; // simple unlock
+                p.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToPage(new { schoolId = p.SchoolId });
+        }
+
     }
 }

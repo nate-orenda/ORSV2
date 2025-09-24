@@ -150,6 +150,15 @@
         border-color: #adb5bd;
         transform: translateY(-1px);
     }
+    .btn-disabled {
+        background: #e9ecef !important;
+        color: #6c757d !important;
+        cursor: not-allowed !important;
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+        pointer-events: none; /* prevents clicks */
+    }
+
     
     .create-protocol-btn {
         background: white;
@@ -294,21 +303,66 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a asp-page="/GuidanceAlignment/ProtocolSections/Introduction"
-                                       asp-route-protocolId="@protocol.Id"
-                                       class="btn-action btn-edit">
-                                        <i class="bi bi-pencil-square me-1"></i>
-                                        Edit
-                                    </a>
-                                    <a href="/GuidanceAlignment/ProtocolSections/ClientSidePrint?protocolId=@protocol.Id" 
-                                       target="_blank"
-                                       class="btn-action btn-print"
-                                       title="Print Protocol">
-                                        <i class="bi bi-printer me-1"></i>
-                                        Print
-                                    </a>
+                                    @if (protocol.IsFinalized)
+                                    {
+                                        <!-- Edit disabled when finalized -->
+                                        <a class="btn-action btn-edit btn-disabled">
+                                            <i class="bi bi-pencil-square me-1"></i>
+                                            Edit
+                                        </a>
+                                        <a href="/GuidanceAlignment/ProtocolSections/ClientSidePrint?protocolId=@protocol.Id" 
+                                        target="_blank"
+                                        class="btn-action btn-print"
+                                        title="Print Protocol">
+                                            <i class="bi bi-printer me-1"></i>
+                                            Print
+                                        </a>
+
+                                        <span class="badge bg-danger ms-2">Finalized</span>
+
+                                        @* Orenda-only unlock *@
+                                        @if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser"))
+                                        {
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="protocolId" value="@protocol.Id" />
+                                                <button formaction="?handler=Unlock" class="btn btn-sm btn-warning ms-2">
+                                                    Unlock
+                                                </button>
+                                                @Html.AntiForgeryToken()
+                                            </form>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <!-- Normal edit + print -->
+                                        <a asp-page="/GuidanceAlignment/ProtocolSections/Introduction"
+                                        asp-route-protocolId="@protocol.Id"
+                                        class="btn-action btn-edit">
+                                            <i class="bi bi-pencil-square me-1"></i>
+                                            Edit
+                                        </a>
+
+                                        <a href="/GuidanceAlignment/ProtocolSections/ClientSidePrint?protocolId=@protocol.Id" 
+                                        target="_blank"
+                                        class="btn-action btn-print"
+                                        title="Print Protocol">
+                                            <i class="bi bi-printer me-1"></i>
+                                            Print
+                                        </a>
+
+                                        <span class="badge bg-secondary ms-2">In-Progress</span>
+
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="protocolId" value="@protocol.Id" />
+                                            <button formaction="?handler=Finalize" class="btn btn-sm btn-primary ms-2">
+                                                Finalize
+                                            </button>
+                                            @Html.AntiForgeryToken()
+                                        </form>
+                                    }
                                 </div>
                             </td>
+
                         </tr>
                     }
                 </tbody>
@@ -323,7 +377,7 @@
             </div>
             <h4 class="mb-3">No Protocols Found</h4>
             <p class="mb-3">Get started by creating your first guidance alignment protocol.</p>
-            <button type="button" class="btn btn-inverse btn-sm" data-bs-toggle="modal" data-bs-target="#createProtocolModal">
+            <button type="button" class="btn btn btn-sm" data-bs-toggle="modal" data-bs-target="#createProtocolModal">
                 <i class="bi bi-plus-circle me-2"></i>
                 Create Your First Protocol
             </button>
