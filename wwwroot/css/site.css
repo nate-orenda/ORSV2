@@ -1523,3 +1523,69 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
         justify-content: space-between;
     }
 }
+
+/* === GA Checkpoint Gantt === */
+.ga-gantt-card { overflow: hidden; }
+
+.ga-gantt-scale { position: relative; margin-left: 220px; } /* leaves room for y-labels */
+.ga-gantt-scale-track {
+  position: relative;
+  height: 24px;
+}
+.ga-gantt-tick {
+  position: absolute; top: 0; transform: translateX(-50%);
+  height: 24px; border-left: 1px dashed #e2e8f0;
+}
+.ga-gantt-tick span {
+  position: absolute; top: 0; left: 6px; font-size: .75rem; color: #6c757d;
+  transform: translateX(-50%);
+}
+
+.ga-gantt {
+  display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem;
+}
+.ga-gantt-row { display: grid; grid-template-columns: 210px 1fr; gap: .5rem; align-items: center; }
+.ga-gantt-label {
+  font-weight: 600; color: var(--orenda-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ga-gantt-track {
+  position: relative; height: 34px; border: 1px solid var(--orenda-border);
+  background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.04);
+}
+
+/* Bars */
+.ga-span {
+  position: absolute; height: 100%;
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: flex-start; padding-left: .5rem;
+  font-size: .8rem; font-weight: 700; letter-spacing: .2px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  border: 1px solid rgba(0,0,0,.06);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.ga-span:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+.ga-span-label { text-shadow: 0 1px 0 rgba(255,255,255,.4); }
+
+/* Colors match your chip palette */
+.ga-span.cp-cp1 { background: var(--quad-benchmark-bg); color: var(--quad-benchmark-fg); }
+.ga-span.cp-cp2 { background: var(--quad-challenge-bg); color: var(--quad-challenge-fg); }
+.ga-span.cp-cp3 { background: var(--quad-strategic-bg); color: var(--quad-strategic-fg); }
+.ga-span.cp-cp4 { background: var(--quad-intensive-bg); color: var(--quad-intensive-fg); }
+.ga-span.cp-cp5 { background: #eef2ff; color: #3730a3; }
+
+/* Responsive */
+@media (max-width: 992px){
+  .ga-gantt-scale { margin-left: 180px; }
+  .ga-gantt-row { grid-template-columns: 170px 1fr; }
+  .ga-gantt-track { height: 30px; }
+  .ga-span { font-size: .75rem; }
+}
+@media (max-width: 576px){
+  .ga-gantt-scale { display:none; } /* hide month ticks on very small screens */
+  .ga-gantt-row { grid-template-columns: 1fr; }
+  .ga-gantt-label { margin-bottom: .25rem; }
+}
+main {
+  padding-bottom: 3rem; /* orenda vibe: airy, not cramped */
+}

@@ -157,137 +157,114 @@
             }
         </div>
 
-        <!-- Calendar Section -->
-        <div class="orenda-card">
-            <div class="orenda-card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="mb-0">
-                        Guidance Alignment Calendar
-                        @if (Model.IsOrendaUser)
-                        {
-                            <span class="badge bg-light text-dark ms-2">All Districts</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-light text-dark ms-2">My Districts</span>
-                        }
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <button class="btn-orenda-outline btn-sm" id="calPrev" aria-label="Previous Month">&larr;</button>
-                        <div class="badge-compact" id="calTitle"></div>
-                        <button class="btn-orenda-outline btn-sm" id="calNext" aria-label="Next Month">&rarr;</button>
-                        <button class="btn-orenda-ghost btn-sm" id="calToday">Today</button>
-                    </div>
-                </div>
-                <div class="ga-calendar" id="gaCalendar" aria-label="Month calendar"></div>
-                
-                @{
-                    var clientItems = Model.CalendarItems.Select(it => new {
-                        date = it.Date,
-                        dateStr = it.Date.ToString("yyyy-MM-dd"),
-                        label = it.Label,
-                        schoolId = it.SchoolId,
-                        districtId = it.DistrictId,
-                        districtName = it.DistrictName,
-                        cp = it.Cp
-                    }).ToList();
-                    var json = System.Text.Json.JsonSerializer.Serialize(
-                        clientItems,
-                        new System.Text.Json.JsonSerializerOptions {
-                            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                        }
-                    );
-                }
-                <script>
-                    (function(){
-                        const items = @Html.Raw(json);
-                        const byDate = items.reduce((m, it) => {
-                            (m[it.dateStr] ||= []).push(it);
-                            return m;
-                        }, {});
+    // Collect district-level CP anchors from the school-level rows you already fetch
+    // Fall-back note: if a CP date is missing, that span won’t render for that district.
+    var districtTimeline = Model.CheckpointSchedules
+        .GroupBy(s => new { s.DistrictId })
+        .Select(g => new {
+            DistrictId = g.Key.DistrictId,
+            DistrictName = g.Select(x => x.SchoolName)    // we need DistrictName; use first school's district name from your schools dict if available
+                              .Select(_ => Model.DistrictBlocks.FirstOrDefault(db => db.DistrictId == g.Key.DistrictId)?.DistrictName)
+                              .FirstOrDefault() ?? $"District {g.Key.DistrictId}",
+            CP1 = g.Min(x => x.Checkpoint1Date),
+            CP2 = g.Min(x => x.Checkpoint2Date),
+            CP3 = g.Min(x => x.Checkpoint3Date),
+            CP4 = g.Min(x => x.Checkpoint4Date),
+            CP5 = g.Min(x => x.Checkpoint5Date)
+        })
+        .OrderBy(x => x.DistrictName)
+        .ToList();
 
-                        const el = document.getElementById('gaCalendar');
-                        const titleEl = document.getElementById('calTitle');
-                        const prevBtn = document.getElementById('calPrev');
-                        const nextBtn = document.getElementById('calNext');
-                        const todayBtn = document.getElementById('calToday');
-                        let view = new Date();
+    DateTime? minAnchor = districtTimeline
+        .SelectMany(d => new[] { d.CP1, d.CP2, d.CP3, d.CP4, d.CP5 })
+        .Where(d => d.HasValue)
+        .DefaultIfEmpty()
+        .Min();
 
-                        function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-                        function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-                        function toYmd(d){
-                            return [
-                                d.getFullYear(),
-                                String(d.getMonth()+1).padStart(2,"0"),
-                                String(d.getDate()).padStart(2,"0")
-                            ].join("-");
-                        }
+    DateTime? maxAnchor = districtTimeline
+        .SelectMany(d => new[] { d.CP1, d.CP2, d.CP3, d.CP4, d.CP5 })
+        .Where(d => d.HasValue)
+        .DefaultIfEmpty()
+        .Max();
 
-                        function render(){
-                            const s = startOfMonth(view);
-                            const e = endOfMonth(view);
-                            const start = new Date(s);
-                            start.setDate(s.getDate() - s.getDay());
-                            const end = new Date(e);
-                            end.setDate(e.getDate() + (6 - e.getDay()));
-                            titleEl.textContent = s.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-                            const days = [];
-                            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate()+1)) {
-                                days.push(new Date(dt));
-                            }
+    // Build the visible window: pad a bit, and if CP5 exists, let bars extend to end-of-month
+    DateTime startWindow = (minAnchor ?? DateTime.Today).AddDays(-7).Date;
+    DateTime endWindow = ((maxAnchor ?? DateTime.Today).AddDays(14)).Date;
 
-                            const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-                            let html = '<div class="ga-cal-grid">';
-                            for (const h of dow) html += `<div class="ga-cal-head">${h}</div>`;
-                            const todayIso = toYmd(new Date());
+    // helper to get last day of the month
+    DateTime EndOfMonth(DateTime d) => new DateTime(d.Year, d.Month, DateTime.DaysInMonth(d.Year, d.Month));
 
-                            for (const d of days) {
-                                const inMonth = d.getMonth() === s.getMonth();
-                                const iso = toYmd(d);
-                                const dayEvents = byDate[iso] || [];
-                                let chipsHtml = '';
-                                if (dayEvents.length > 0) {
-                                    const grouped = {};
-                                    for (const ev of dayEvents) {
-                                        if (!grouped[ev.districtId]) {
-                                            grouped[ev.districtId] = { name: ev.districtName, cps: new Set() };
-                                        }
-                                        grouped[ev.districtId].cps.add(ev.cp);
-                                    }
-                                    const districtChips = Object.values(grouped).map(g => {
-                                        const cpsJoined = Array.from(g.cps).join(', ');
-                                        const text = `${cpsJoined}-${g.name}`;
-                                        const title = text;
-                                        return `<span class="ga-chip district-chip" title="${title}">${text}</span>`;
-                                    });
-                                    const MAX_CHIPS = 2;
-                                    const visible = districtChips.slice(0, MAX_CHIPS);
-                                    const hiddenCount = districtChips.length - visible.length;
-                                    if (hiddenCount > 0) {
-                                        visible.push(
-                                            `<span class="ga-chip" title="${hiddenCount} more">+${hiddenCount} more</span>`
-                                        );
-                                    }
-                                    chipsHtml = visible.join('');
-                                }
-                                const todayCls = (iso===todayIso) ? ' is-today' : '';
-                                const dimCls = inMonth ? '' : ' is-out';
-                                html += `<div class="ga-cal-cell${dimCls}${todayCls}">
-                                            <div class="ga-cal-date">${d.getDate()}</div>
-                                            <div class="ga-cal-chips">${chipsHtml}</div>
-                                         </div>`;
-                            }
-                            html += '</div>';
-                            el.innerHTML = html;
-                        }
-                        prevBtn.addEventListener('click', () => { view.setMonth(view.getMonth()-1); render(); });
-                        nextBtn.addEventListener('click', () => { view.setMonth(view.getMonth()+1); render(); });
-                        todayBtn.addEventListener('click', () => { view = new Date(); render(); });
-                        render();
-                    })();
-                </script>
+    // Convert date to percentage along the window
+    Func<DateTime, double> pct = dt => {
+        var span = (endWindow - startWindow).TotalDays;
+        if (span <= 0) return 0;
+        return Math.Clamp(((dt - startWindow).TotalDays / span) * 100.0, 0, 100);
+    };
+
+    // Generate monthly tick marks for the header
+    var ticks = new List<DateTime>();
+    var tickIter = new DateTime(startWindow.Year, startWindow.Month, 1);
+    while (tickIter <= endWindow)
+    {
+        ticks.Add(tickIter);
+        tickIter = tickIter.AddMonths(1);
+    }
+
+<div class="orenda-card ga-gantt-card">
+  <div class="orenda-card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0 text-orenda-primary">GA Checkpoint Timeline</h5>
+      <div class="text-muted small">Bars show CP windows (start → next CP; CP5 → end of month)</div>
+    </div>
+
+    <!-- Header scale (months) -->
+    <div class="ga-gantt-scale">
+      <div class="ga-gantt-scale-track">
+        @foreach (var t in ticks)
+        {
+            var left = pct(t);
+            <div class="ga-gantt-tick" style="left:@left%"><span>@t.ToString("MMM yyyy")</span></div>
+        }
+      </div>
+    </div>
+
+    <!-- Rows -->
+    <div class="ga-gantt">
+      @foreach (var d in districtTimeline)
+      {
+          // Build spans per district
+          var spans = new List<(string cp, DateTime start, DateTime end)>();
+
+          if (d.CP1.HasValue && d.CP2.HasValue) spans.Add(("CP1", d.CP1.Value, d.CP2.Value));
+          if (d.CP2.HasValue && d.CP3.HasValue) spans.Add(("CP2", d.CP2.Value, d.CP3.Value));
+          if (d.CP3.HasValue && d.CP4.HasValue) spans.Add(("CP3", d.CP3.Value, d.CP4.Value));
+          if (d.CP4.HasValue && d.CP5.HasValue) spans.Add(("CP4", d.CP4.Value, d.CP5.Value));
+          if (d.CP5.HasValue) {
+              var eom = EndOfMonth(d.CP5.Value);
+              spans.Add(("CP5", d.CP5.Value, eom));
+          }
+
+          <div class="ga-gantt-row">
+            <div class="ga-gantt-label" title="@d.DistrictName">@d.DistrictName</div>
+            <div class="ga-gantt-track">
+              @foreach (var s in spans)
+              {
+                  var left = pct(s.start);
+                  var right = pct(s.end);
+                  var width = Math.Max(1, right - left); // keep tiny width if dates are equal
+                  <div class="ga-span cp-@s.cp.ToLower()" style="left:@left%;width:@width%"
+                       aria-label="@($"{s.cp}: {s.start:MMM d, yyyy} → {s.end:MMM d, yyyy}")"
+                       title="@($"{s.cp}: {s.start:MMM d} → {s.end:MMM d}")">
+                    <span class="ga-span-label">@s.cp</span>
+                  </div>
+              }
             </div>
-        </div>
+          </div>
+      }
+    </div>
+  </div>
+</div>
+
     }
 </div>
 
