@@ -53,13 +53,13 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             var sql = @"
         SELECT
-            s2.id AS OldId,
-            s3.id AS NewId
-        FROM dbo.standards s2
-        JOIN dbo.standards s3
-            ON REPLACE(s2.human_coding_scheme, '.2', '.3') = s3.human_coding_scheme
-        WHERE s2.human_coding_scheme LIKE 'SL.%.2'
-          AND s3.human_coding_scheme LIKE 'SL.%.3';
+            s3.id AS OldId,
+            s2.id AS NewId
+        FROM dbo.standards s3
+        JOIN dbo.standards s2
+            ON REPLACE(s3.human_coding_scheme, '.2', '.3') = s2.human_coding_scheme
+        WHERE s3.human_coding_scheme LIKE 'SL.%.2'
+          AND s2.human_coding_scheme LIKE 'SL.%.3';
     ";
 
             using var cmd = new SqlCommand(sql, conn);
