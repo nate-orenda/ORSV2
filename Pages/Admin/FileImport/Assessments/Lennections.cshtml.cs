@@ -39,6 +39,22 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public FileAnalysisResult? AnalysisResults { get; private set; }
         public ColumnMatchingMetrics? MatchingMetrics { get; private set; }
 
+        // Allowed subjects for both UI and server-side validation
+        private static readonly string[] AllowedSubjects = new[]
+        {
+            "ELA", "Math", "DLI", "Science", "Social Science", "LOTE", "VAPA"
+        };
+
+        public List<SelectListItem> SubjectOptions { get; private set; } = new();
+
+        private void BuildSubjectOptions(string? selected = null)
+        {
+            var sel = string.IsNullOrWhiteSpace(selected) ? Subject : selected;
+            SubjectOptions = AllowedSubjects
+                .Select(s => new SelectListItem { Text = s, Value = s, Selected = string.Equals(s, sel, StringComparison.OrdinalIgnoreCase) })
+                .ToList();
+        }
+
         // Add this new helper method inside the LennectionsModel class
 
         /// <summary>
@@ -128,6 +144,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
         public async Task OnGet()
         {
+            BuildSubjectOptions();
             await LoadDistrictOptionsAsync();
         }
 
@@ -149,7 +166,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     await Upload.CopyToAsync(fs);
 
                 // Analyze file with enhanced metrics
-                var analysis = await AnalyzeFileContents(temp, Delimiter);
+                var analysis = await AnalyzeFileContents(temp, Delimiter, Upload?.FileName);
                 var metrics = await AnalyzeColumnMatching(temp, Delimiter);
 
                 // Store results for persistence across postbacks
@@ -395,7 +412,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         /// <summary>
         /// Analyzes file contents and extracts metadata
         /// </summary>
-        private async Task<FileAnalysisResult> AnalyzeFileContents(string filePath, string delimiter)
+        private async Task<FileAnalysisResult> AnalyzeFileContents(string filePath, string delimiter, string? originalFileName = null)
         {
             var result = new FileAnalysisResult();
             var delimiterChar = delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
@@ -447,7 +464,9 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 result.DetectedSubject = DetectSubject(result.DetectedTestId, headers);
 
                 // Detect unit cycle from test name
-                result.DetectedUnitCycle = DetectUnitCycle(result.DetectedTestId);
+                result.DetectedUnitCycle =
+                    DetectUnitCycle(result.DetectedTestId) ??
+                    DetectUnitCycle(originalFileName);
             }
 
             // Count total rows
@@ -473,17 +492,22 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             {
                 var testLower = testName.ToLowerInvariant();
 
-                if (testLower.Contains("ela") || testLower.Contains("english") || testLower.Contains("reading") || testLower.Contains("language"))
+                if (testLower.Contains("ela") || testLower.Contains("english") || testLower.Contains("reading") || testLower.Contains("language")
+                    || testLower.Contains("literacy"))
                     return "ELA";
 
-                if (testLower.Contains("math"))
+                if (testLower.Contains("math") || testLower.Contains("im 1") || testLower.Contains("im 2") || testLower.Contains("im 3")
+                    || testLower.Contains("alg") || testLower.Contains("geom") || testLower.Contains("calc"))
                     return "Math";
 
-                if (testLower.Contains("science"))
+                if (testLower.Contains("science") || testLower.Contains("bio") || testLower.Contains("chem") || testLower.Contains("physics")
+                    || testLower.Contains("IS1") || testLower.Contains("IS2") || testLower.Contains("IS3"))
                     return "Science";
 
-                if (testLower.Contains("social") || testLower.Contains("history"))
+                if (testLower.Contains("social") || testLower.Contains("history") || testLower.Contains("gov") || testLower.Contains("econ") || testLower.Contains("world"))
                     return "Social Science";
+                if (testLower.Contains("dli") || testLower.Contains("sla"))
+                    return "DLI";
             }
 
             // Check standards in headers for subject clues
@@ -507,18 +531,33 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         /// <summary>
         /// Detects unit cycle from test name
         /// </summary>
-        private int? DetectUnitCycle(string? testName)
+        private int? DetectUnitCycle(string? source)
         {
-            if (string.IsNullOrWhiteSpace(testName)) return null;
+            if (string.IsNullOrWhiteSpace(source)) return null;
 
-            var match = UnitCyclePattern.Match(testName);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out var cycle))
+            var m = UnitCyclePattern.Match(source);
+            if (!m.Success) return null;
+
+            var token = m.Groups["num"].Value;
+
+            // 1) Arabic numerals
+            if (int.TryParse(token, out var n))
+                return (n >= 1 && n <= 5) ? n : null;
+
+            // 2) Roman numerals I..V
+            n = token.ToUpperInvariant() switch
             {
-                return (cycle >= 1 && cycle <= 5) ? cycle : null;
-            }
+                "I" => 1,
+                "II" => 2,
+                "III" => 3,
+                "IV" => 4,
+                "V" => 5,
+                _ => 0
+            };
 
-            return null;
+            return (n >= 1 && n <= 5) ? n : null;
         }
+
 
         /// <summary>
         /// Finds StudentId column with flexible matching

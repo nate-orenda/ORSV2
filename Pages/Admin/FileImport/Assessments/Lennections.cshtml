@@ -85,28 +85,25 @@
                     <!-- Left column - Detection results -->
                     <div class="col-md-6">
                         <h6><i class="fas fa-magic me-2"></i>Auto-Detection Results</h6>
-                        <ul class="mb-3">
-                            @if (!string.IsNullOrWhiteSpace(Model.AnalysisResults.DetectedTestId))
-                            {
-                                <li><strong>Test ID:</strong> "@Model.AnalysisResults.DetectedTestId" 
-                                    <span class="text-muted">(from @Model.AnalysisResults.TestIdSource)</span></li>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(Model.AnalysisResults.DetectedSubject))
-                            {
-                                <li><strong>Subject:</strong> @Model.AnalysisResults.DetectedSubject</li>
-                            }
-                            @if (Model.AnalysisResults.DetectedUnitCycle.HasValue)
-                            {
-                                <li><strong>Unit Cycle:</strong> @Model.AnalysisResults.DetectedUnitCycle</li>
-                            }
-                            <li><strong>Data Rows:</strong> @Model.AnalysisResults.TotalRows.ToString("N0")</li>
-                            <li><strong>Standards Columns:</strong> @Model.AnalysisResults.StandardsColumns</li>
-                        </ul>
+                        <div class="mb-3">
+                            <label asp-for="Subject" class="form-label">Subject</label>
+                            <select asp-for="Subject" asp-items="Model.SubjectOptions" class="form-select orenda-input"></select>
+                            <small class="form-text text-muted">
+                                @if (Model.AnalysisResults?.DetectedSubject is string ds && !string.IsNullOrWhiteSpace(ds))
+                                {
+                                    <span>Auto-detected: <strong>@ds</strong> (you can change)</span>
+                                }
+                                else
+                                {
+                                    <span>Pick the subject or run Preview to auto-detect.</span>
+                                }
+                            </small>
+                            </div>
                     </div>
                     
                     <!-- Right column - Validation status -->
                     <div class="col-md-6">
-                        @if (Model.AnalysisResults.HasStudentId)
+                        @if (Model.AnalysisResults!.HasStudentId)
                         {
                             <div class="alert alert-success py-2 mb-2">
                                 <i class="fas fa-check me-2"></i>
@@ -281,10 +278,20 @@
 
                     <div class="col-md-3">
                         <div class="field-group">
-                            <label class="form-label">Subject</label>
-                            <input asp-for="Subject" class="form-control" placeholder="ELA / Math / Science / Social Science" />
-                            <div class="form-text">Auto-detected from file content</div>
-                            <span class="text-danger" asp-validation-for="Subject"></span>
+                            <label asp-for="Subject" class="form-label">Subject</label>
+                                <select asp-for="Subject" asp-items="Model.SubjectOptions" class="form-select orenda-input"></select>
+                                <div class="form-text">
+                                    @if (Model.AnalysisResults?.DetectedSubject is string ds && !string.IsNullOrWhiteSpace(ds))
+                                    {
+                                        <span>Auto-detected: <strong>@ds</strong> (you can change)</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Pick the subject or run Analyze to auto-detect.</span>
+                                    }
+                                </div>
+                                <span class="text-danger" asp-validation-for="Subject"></span>
+
                         </div>
                     </div>
 
