@@ -55,6 +55,11 @@
                                     <i class="bi bi-book me-1"></i>Curriculum Alignment
                                 </a>
 
+@{
+    var isAdmin = User.IsInRole("OrendaManager") || User.IsInRole("OrendaAdmin") || User.IsInRole("SchoolAdmin") || User.IsInRole("DistrictAdmin");
+}
+@if (isAdmin)
+{
                                 <!-- Administration Dropdown -->
                                 <div class="dropdown">
                                     <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -77,12 +82,18 @@
                                             </a>
                                         </li>
                                         <li>
+                                            <a class="dropdown-item" asp-page="/Admin/FileImport/Assessments/MasteryConnect">
+                                                <i class="bi bi-cloud-upload me-2"></i>Import Mastery Connect
+                                            </a>
+                                        </li>
+                                        <li>
                                             <a class="dropdown-item" asp-page="/Admin/FileImport/Assessments/Lennections">
                                                 <i class="bi bi-cloud-upload me-2"></i>Import CASA
                                             </a>
                                         </li>
                                     </ul>
                                 </div>
+}
                             </nav>
 
                             <!-- Right side: User Profile -->
