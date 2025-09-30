@@ -1,7 +1,7 @@
 @page "{id?}"
 @model ORSV2.Pages.GuidanceAlignment.CompareCPModel
 @{
-    ViewData["Title"] = Model.GroupName;
+  ViewData["Title"] = Model.GroupName;
 }
 
 <div class="orenda-page-header d-flex align-items-center justify-content-between">
@@ -16,215 +16,391 @@
     </div>
   </div>
   <div>
-    <a class="btn-orenda-outline btn-sm" asp-page="/GuidanceAlignment/Overview" asp-route-schoolId="@Model.SchoolId">Back to Overview</a>
+    <a class="btn-orenda-outline btn-sm" asp-page="/GuidanceAlignment/Overview"
+      asp-route-schoolId="@Model.SchoolId">Back to Overview</a>
   </div>
 </div>
 
 
 @if (Model.Students.Count == 0)
 {
-    <div class="orenda-card mt-3">
-        <div class="orenda-card-body text-muted">This focus group has no students yet.</div>
-    </div>
+  <div class="orenda-card mt-3">
+    <div class="orenda-card-body text-muted">This focus group has no students yet.</div>
+  </div>
 }
 else
 {
-    <!-- KPI / Summary -->
-    <div class="orenda-card mt-3">
-      <div class="orenda-card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge checkpoint-badge">Checkpoint</span>
+  <!-- KPI / Summary -->
+  <div class="orenda-card mt-3">
+    <div class="orenda-card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge checkpoint-badge">Compare</span>
+
+          @if (Model.CurrentCheckpoint > 1)
+          {
+            <select id="compareFromSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;"
+              onchange="updateComparison()">
+              @for (int i = 1; i <= Model.CurrentCheckpoint; i++)
+              {
+                <option value="@i" selected="@(Model.CompareFromCheckpoint == i)">CP @i</option>
+              }
+            </select>
+
+            <span class="text-muted small">vs</span>
+
+            <select id="compareToSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;"
+              onchange="updateComparison()">
+              @for (int i = 1; i <= Model.CurrentCheckpoint; i++)
+              {
+                <option value="@i" selected="@(Model.CompareToCheckpoint == i)">CP @i</option>
+              }
+            </select>
+
+            <div id="loadingIndicator" class="spinner-border spinner-border-sm text-primary ms-2" style="display: none;"
+              role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          }
+          else
+          {
             <span class="text-muted small">CP @Model.CurrentCheckpoint</span>
-            @if (Model.PreviousCheckpoint is not null)
+          }
+        </div>
+        <div class="text-muted small">
+            @Model.FilteredStudents.Count student(s)
+            @if (!string.IsNullOrEmpty(Model.FilterMovement))
             {
-              <span class="text-muted small">· vs CP @Model.PreviousCheckpoint</span>
+                <span>(filtered from @Model.Students.Count total)</span>
             }
-          </div>
-          <div class="text-muted small">@Model.Students.Count student(s)</div>
         </div>
-
-        <div class="row g-3">
-  <!-- Quadrants column -->
-  <div class="col-md-4 quadrant-col">
-    <div class="orenda-kpi">
-      <div class="position-relative" style="min-height: 180px;">
-        <canvas id="quadrantCompare" height="180"></canvas>
       </div>
-      <div class="small mt-1">
-    @if (Model.PreviousQuadrantCounts is not null)
-    {
-            var signCls   = Model.AboveDeltaPp >= 0 ? "text-success" : "text-danger";
-            var deltaText = ((Model.AboveNow - Model.AbovePrev) >= 0 ? "+" : "") + (Model.AboveNow - Model.AbovePrev).ToString();
 
-            // If you ever want to limit how many moves you show, do it here:
-            var moves = Model.MovementMatrix ?? new List<ORSV2.Pages.GuidanceAlignment.CompareCPModel.MovementRow>();
-            // Only show actual movers (Model.MovementMatrix was already filtered to From != To in the model)
+      <div class="row g-3">
+        <!-- Quadrants column -->
+        <div class="col-md-4 quadrant-col">
+          <div class="orenda-kpi">
+            <div class="position-relative" style="min-height: 180px;">
+              <canvas id="quadrantCompare" height="180"></canvas>
+            </div>
+            <div class="small mt-1">
+              @if (Model.PreviousQuadrantCounts is not null)
+              {
+                var signCls = Model.AboveDeltaPp >= 0 ? "text-success" : "text-danger";
+                var deltaText = ((Model.AboveNow - Model.AbovePrev) >= 0 ? "+" : "") + (Model.AboveNow -
+                Model.AbovePrev).ToString();
 
-        <div class="text-muted">
-            From checkpoint @Model.PreviousCheckpoint to @Model.CurrentCheckpoint,
-            students <strong>above the line</strong> changed by
-            <strong class="@signCls">@Model.AboveDeltaPp.ToString("+#0.0;-#0.0;0.0") pp</strong>
-            (<strong class="@signCls">@deltaText</strong> students).
-        </div>
+                // If you ever want to limit how many moves you show, do it here:
+                var moves = Model.MovementMatrix ?? new List<ORSV2.Pages.GuidanceAlignment.CompareCPModel.MovementRow>();
+                // Only show actual movers (Model.MovementMatrix was already filtered to From != To in the model)
 
-        <div class="mt-1">
-            <span class="me-3"><strong class="text-success">@Model.MovementUp</strong> moved up</span>
-            <span class="me-3"><strong class="text-danger">@Model.MovementDown</strong> moved down</span>
-            <span><strong class="text-muted">@Model.MovementSame</strong> stayed the same</span>
-        </div>
+                <div class="text-muted">
+                  From checkpoint @Model.CompareFromCheckpoint to @Model.CompareToCheckpoint,
+                  students <strong>above the line</strong> changed by
+                  <strong class="@signCls">@Model.AboveDeltaPp.ToString("+#0.0;-#0.0;0.0") pp</strong>
+                  (<strong class="@signCls">@deltaText</strong> students).
+                </div>
 
-        @if (moves.Count > 0)
-        {
-            <div class="mt-1">
-                <div class="text-muted">All moves:</div>
-                <div class="d-flex flex-wrap justify-content-center gap-2 mt-1">
-                    @foreach (var move in moves)
+                @if (moves.Count > 0)
 {
-    string ColorForQuadrant(string q) => q switch
-    {
-        "Intensive" => "text-danger",    // red
-        "Strategic" => "text-warning",   // orange/yellow
-        "Benchmark" => "text-success",   // green
-        "Challenge" => "text-primary",   // blue
-        _ => "text-muted"
-    };
+    <div class="mt-1">
+        <a href="?@(GetQueryStringWithFilter("up"))" 
+          class="text-decoration-none @(Model.FilterMovement == "up" ? "fw-bold" : "")">
+            <span class="me-3">
+                <strong class="text-success">@Model.MovementUp</strong> moved up
+            </span>
+        </a>
+        <a href="?@(GetQueryStringWithFilter("down"))" 
+          class="text-decoration-none @(Model.FilterMovement == "down" ? "fw-bold" : "")">
+            <span class="me-3">
+                <strong class="text-danger">@Model.MovementDown</strong> moved down
+            </span>
+        </a>
+        <a href="?@(GetQueryStringWithFilter("same"))" 
+          class="text-decoration-none @(Model.FilterMovement == "same" ? "fw-bold" : "")">
+            <span>
+                <strong class="text-muted">@Model.MovementSame</strong> stayed the same
+            </span>
+        </a>
+        @if (moves.Count > 0)
+{
+    <div class="mt-2">
+    <div class="text-muted small">All moves:</div>
+    <div class="mt-1" style="font-size: 0.85rem; line-height: 1.8;">
+        @foreach (var move in moves)
+        {
+            string ColorForQuadrant(string q) => q switch
+            {
+                "Intensive" => "text-danger",
+                "Strategic" => "text-warning",
+                "Benchmark" => "text-success",
+                "Challenge" => "text-primary",
+                _ => "text-muted"
+            };
 
-    <span>
-        <strong>@move.Count</strong>
-        <span class="@ColorForQuadrant(move.From)">@move.From</span>
-        →
-        <span class="@ColorForQuadrant(move.To)">@move.To</span>
-        <br/>
-    </span>
+            <span class="text-nowrap me-3">
+                <strong>@move.Count</strong>
+                <span class="@ColorForQuadrant(move.From)">@move.From</span>
+                →
+                <span class="@ColorForQuadrant(move.To)">@move.To</span>
+            </span>
+            if (moves.IndexOf(move) < moves.Count - 1)
+            {
+                <br/>
+            }
+        }
+    </div>
+</div>
+}
+    </div>
 }
 
-                </div>
-            </div>
-        }
-    }
-    else
+@functions {
+    string GetQueryStringWithFilter(string? filter)
     {
-        <div class="text-muted">
-            No previous checkpoint yet. Current distribution:
-            @foreach (var kv in Model.CurrentQuadrantCounts)
-            {
-                <span class="ms-2"><span class="badge rounded-pill">@kv.Key</span> @kv.Value</span>
-            }
-        </div>
-    }
-</div>
-
-
-    </div>
-  </div>
-
-  <!-- Indicators % met + trend -->
-  <div class="col-md-8">
-    <div class="orenda-kpi">
-      <div class="d-flex flex-wrap gap-2">
-        @foreach (var ind in Model.CurrentIndicatorSummaries)
+        var qs = new Dictionary<string, string>();
+        
+        if (Model.IsGroupMode && Model.CurrentGroup != null)
+            qs["id"] = Model.CurrentGroup.Id.ToString();
+        else
         {
-          <div class="orenda-chip" data-ind="@ind.Name">
-            <strong>@ind.Name</strong>
-            <span class="ms-2">@ind.PercentMet.ToString("0")% <span class="text-muted">(@ind.CountMet)</span></span>
-          </div>
+            qs["schoolId"] = Model.SchoolId.ToString();
+            qs["grade"] = Model.Grade.ToString();
         }
-      </div>
-    </div>
+        
+        if (Model.CompareFrom.HasValue)
+            qs["compareFrom"] = Model.CompareFrom.Value.ToString();
+        if (Model.CompareTo.HasValue)
+            qs["compareTo"] = Model.CompareTo.Value.ToString();
+            
+        if (!string.IsNullOrEmpty(filter))
+            qs["filterMovement"] = filter;
+            
+        return string.Join("&", qs.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+    }
+}
+              }
+              else
+              {
+                <div class="text-muted">
+                  No previous checkpoint yet. Current distribution:
+                  @foreach (var kv in Model.CurrentQuadrantCounts)
+                  {
+                    <span class="ms-2"><span class="badge rounded-pill">@kv.Key</span> @kv.Value</span>
+                  }
+                </div>
+              }
+            </div>
 
-      <div class="mt-2">
-        <canvas id="indicatorTrend" height="140"></canvas>
-      </div>
-  </div>
-</div>
-
-      </div>
-    </div>
-
-    <!-- Indicator Heatmap -->
-    <div class="orenda-card mt-3">
-      <div class="orenda-card-body">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <div class="orenda-kpi-title mb-0">Indicator status by student (CP @Model.CurrentCheckpoint)</div>
-          <div class="text-muted small">✓ Met · ✗ Not Met · – N/A</div>
+          </div>
         </div>
-        <div class="orenda-table-wrapper">
-          <table class="table orenda-table table-sm align-middle" id="heatmapTable">
-            <thead>
+
+        <!-- Indicators % met + trend -->
+        <div class="col-md-8">
+          <div class="orenda-kpi">
+            <div class="d-flex flex-wrap gap-2">
+              @foreach (var ind in Model.CurrentIndicatorSummaries)
+              {
+                <div class="orenda-chip" data-ind="@ind.Name">
+                  <strong>@ind.Name</strong>
+                  <span class="ms-2">@ind.PercentMet.ToString("0")% <span class="text-muted">(@ind.CountMet)</span></span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <canvas id="indicatorTrend" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Indicator Heatmap -->
+  <div class="orenda-card mt-3">
+    <div class="orenda-card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="orenda-kpi-title mb-0">
+          @if (!string.IsNullOrEmpty(Model.FilterMovement))
+        {
+            <a href="?@(GetQueryStringWithFilter(null))" class="ms-3 btn btn-sm btn-outline-secondary">
+                Clear Filter
+            </a>
+        }
+        </div>
+        <div class="text-muted small">✓ Met · ✗ Not Met · – N/A</div>
+      </div>
+      <div class="orenda-table-wrapper">
+        <table class="table orenda-table table-sm align-middle" id="heatmapTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Gr</th>
+              @foreach (var ind in Model.IndicatorNames)
+              {
+                <th class="text-center">
+                  @ind
+                  <br/>
+                  <small class="text-muted fw-normal" style="font-size: 0.7rem;">CP@(Model.CompareFromCheckpoint) → CP@(Model.CompareToCheckpoint)</small>
+                </th>
+              }
+              <th class="text-center">Quadrant</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var student in Model.FilteredStudents)
+            {
               <tr>
-                <th>Name</th>
-                <th>ID</th>
-                <th>Gr</th>
+                <td>@student.LastName, @student.FirstName</td>
+                <td><span class="badge bg-secondary">@student.LocalStudentId</span></td>
+                <td>@student.Grade</td>
                 @foreach (var ind in Model.IndicatorNames)
                 {
-                  <th class="text-center">@ind</th>
-                }
-                <th class="text-center">Quadrant</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach (var s in Model.Students)
-              {
-                <tr>
-                  <td>@s.LastName, @s.FirstName</td>
-                  <td><span class="badge bg-secondary">@s.LocalStudentId</span></td>
-                  <td>@s.Grade</td>
-                  @foreach (var ind in Model.IndicatorNames)
-                  {
-                    var v = s.Indicators[ind];
-                    <td class="text-center">
-                      @if (v == true) { <span class="badge bg-success">✓</span> }
-                      else if (v == false) { <span class="badge bg-danger">✗</span> }
-                      else { <span class="badge bg-light text-muted">–</span> }
-                    </td>
-                  }
+                  var v = student.Indicators[ind];
+                  var vPrev = student.PreviousIndicators[ind];
+                  var change = student.IndicatorChange[ind];
+                  
                   <td class="text-center">
-                      @if (!string.IsNullOrEmpty(s.Quadrant))
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                      @if (vPrev == true) { <span class="badge bg-success" style="font-size: 0.65rem;">✓</span> }
+                      else if (vPrev == false) { <span class="badge bg-danger" style="font-size: 0.65rem;">✗</span> }
+                      else { <span class="badge bg-light text-muted" style="font-size: 0.65rem;">–</span> }
+                      
+                      @if (change == 1)
                       {
-                          <span class="badge 
-                                    @(s.Quadrant == "Challenge" ? "bg-primary" :
-                                    s.Quadrant == "Benchmark" ? "bg-success" :
-                                    s.Quadrant == "Strategic" ? "bg-warning text-dark" :
-                                    s.Quadrant == "Intensive" ? "bg-danger" :
-                                    "bg-secondary")" style="font-size: 0.7rem; padding: 2px 6px;">
-                                    @(s.Quadrant ?? "-")
-                            </span>
+                        <span class="text-success fw-bold" title="Improved">↑</span>
+                      }
+                      else if (change == -1)
+                      {
+                        <span class="text-danger fw-bold" title="Declined">↓</span>
                       }
                       else
                       {
-                          <span class="text-muted">–</span>
+                        <span class="text-muted">→</span>
                       }
+                      
+                      @if (v == true) { <span class="badge bg-success" style="font-size: 0.65rem;">✓</span> }
+                      else if (v == false) { <span class="badge bg-danger" style="font-size: 0.65rem;">✗</span> }
+                      else { <span class="badge bg-light text-muted" style="font-size: 0.65rem;">–</span> }
+                    </div>
                   </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+                }
+                <td class="text-center">
+                @if (!string.IsNullOrEmpty(student.PreviousQuadrant) && student.PreviousQuadrant != student.Quadrant)
+                {
+                    var prevRank = student.PreviousQuadrant switch { "Challenge" => 3, "Benchmark" => 2, "Strategic" => 1, "Intensive" => 0, _ => -1 };
+                    var curRank = student.Quadrant switch { "Challenge" => 3, "Benchmark" => 2, "Strategic" => 1, "Intensive" => 0, _ => -1 };
+                    var quadDelta = curRank - prevRank;
+                  
+                  <div class="d-flex align-items-center justify-content-center gap-2">
+                    <div class="text-center">
+                      <div class="text-muted" style="font-size: 0.6rem;">CP@(Model.CompareFromCheckpoint)</div>
+                      <span class="badge 
+                                @(student.PreviousQuadrant == "Challenge" ? "bg-primary" :
+                                student.PreviousQuadrant == "Benchmark" ? "bg-success" :
+                                student.PreviousQuadrant == "Strategic" ? "bg-warning text-dark" :
+                                student.PreviousQuadrant == "Intensive" ? "bg-danger" :
+                                "bg-secondary")" style="font-size: 0.65rem; padding: 2px 4px;">
+                            @student.PreviousQuadrant
+                      </span>
+                    </div>
+                    
+                    @if (quadDelta > 0)
+                    {
+                      <span class="text-success fw-bold fs-5" title="Moved Up">→</span>
+                    }
+                    else if (quadDelta < 0)
+                    {
+                      <span class="text-danger fw-bold fs-5" title="Moved Down">→</span>
+                    }
+                    
+                    <div class="text-center">
+                      <div class="text-muted" style="font-size: 0.6rem;">CP@(Model.CompareToCheckpoint)</div>
+                      <span class="badge 
+                                @(student.Quadrant == "Challenge" ? "bg-primary" :
+                                student.Quadrant == "Benchmark" ? "bg-success" :
+                                student.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                                student.Quadrant == "Intensive" ? "bg-danger" :
+                                "bg-secondary")" style="font-size: 0.65rem; padding: 2px 4px;">
+                            @student.Quadrant
+                      </span>
+                    </div>
+                  </div>
+                }
+                else if (!string.IsNullOrEmpty(student.Quadrant))
+                {
+                    <span class="badge 
+                              @(student.Quadrant == "Challenge" ? "bg-primary" :
+                              student.Quadrant == "Benchmark" ? "bg-success" :
+                              student.Quadrant == "Strategic" ? "bg-warning text-dark" :
+                              student.Quadrant == "Intensive" ? "bg-danger" :
+                              "bg-secondary")" style="font-size: 0.7rem; padding: 2px 6px;">
+                          @student.Quadrant
+                      </span>
+                }
+                else
+                {
+                    <span class="text-muted">–</span>
+                }
+              </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
 }
 
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    (function(){
-      const indicatorNames      = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
-      const currentSummaries    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
-      const previousSummaries   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousIndicatorSummaries));
-      const currentQuadrants    = @Html.Raw(JsonSerializer.Serialize(Model.CurrentQuadrantCounts));
-      const previousQuadrants   = @Html.Raw(JsonSerializer.Serialize(Model.PreviousQuadrantCounts));
-      const cpNow               = @Model.CurrentCheckpoint;
-      const cpPrev              = @(Model.PreviousCheckpoint?.ToString() ?? "null");
+    function updateComparison() {
+      const fromSelect = document.getElementById('compareFromSelect');
+      const toSelect = document.getElementById('compareToSelect');
+      const loadingIndicator = document.getElementById('loadingIndicator');
 
-      function ensureSingleChart(el){
+      const fromValue = fromSelect.value;
+      const toValue = toSelect.value;
+
+      // Prevent comparing checkpoint to itself
+      if (fromValue === toValue) {
+        alert('Please select two different checkpoints to compare.');
+        return;
+      }
+
+      // Show loading
+      loadingIndicator.style.display = 'inline-block';
+      fromSelect.disabled = true;
+      toSelect.disabled = true;
+
+      // Build URL
+      const urlParams = new URLSearchParams(window.location.search);
+      urlParams.set('compareFrom', fromValue);
+      urlParams.set('compareTo', toValue);
+
+      window.location.href = window.location.pathname + '?' + urlParams.toString();
+    }
+    (function () {
+      const indicatorNames = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
+      const currentSummaries = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
+      const previousSummaries = @Html.Raw(JsonSerializer.Serialize(Model.PreviousIndicatorSummaries));
+      const currentQuadrants = @Html.Raw(JsonSerializer.Serialize(Model.CurrentQuadrantCounts));
+      const previousQuadrants = @Html.Raw(JsonSerializer.Serialize(Model.PreviousQuadrantCounts));
+      const cpNow = @Model.CompareToCheckpoint;
+      const cpPrev = @Model.CompareFromCheckpoint;
+
+      function ensureSingleChart(el) {
         const ctx = el.getContext('2d');
         if (el._chart) { el._chart.destroy(); el._chart = null; }
         return ctx;
       }
 
       // ---- Quadrant comparison chart ----
-      (function(){
+      (function () {
         const el = document.getElementById('quadrantCompare');
         if (!el) return;
 
@@ -257,8 +433,8 @@ else
         }));
 
         const totals = hasPrev
-          ? [Object.values(prev).reduce((a,b)=>a+b,0), Object.values(cur).reduce((a,b)=>a+b,0)]
-          : [Object.values(cur).reduce((a,b)=>a+b,0)];
+          ? [Object.values(prev).reduce((a, b) => a + b, 0), Object.values(cur).reduce((a, b) => a + b, 0)]
+          : [Object.values(cur).reduce((a, b) => a + b, 0)];
 
         const ctx = ensureSingleChart(el);
         el._chart = new Chart(ctx, {
@@ -291,7 +467,7 @@ else
       })();
 
       // ---- Indicator trend chart ----
-      (function(){
+      (function () {
         const labels = indicatorNames || [];
         const hasPrev = !!previousSummaries;
 
@@ -300,7 +476,7 @@ else
           return item ? item.PercentMet : 0;
         };
 
-        const cur  = labels.map(n => findPct(currentSummaries, n));
+        const cur = labels.map(n => findPct(currentSummaries, n));
         const prev = hasPrev ? labels.map(n => findPct(previousSummaries, n)) : null;
 
         const el = document.getElementById('indicatorTrend');
@@ -309,12 +485,12 @@ else
         const ctx = ensureSingleChart(el);
         const datasets = hasPrev
           ? [
-              { label: 'CP ' + cpPrev, data: prev },
-              { label: 'CP ' + cpNow,  data: cur  }
-            ]
+            { label: 'CP ' + cpPrev, data: prev },
+            { label: 'CP ' + cpNow, data: cur }
+          ]
           : [
-              { label: 'CP ' + cpNow, data: cur }
-            ];
+            { label: 'CP ' + cpNow, data: cur }
+          ];
 
         el._chart = new Chart(ctx, {
           type: 'bar',
@@ -349,4 +525,3 @@ else
     })();
   </script>
 }
-
