@@ -34,6 +34,10 @@ namespace ORSV2.Models
         [MaxLength(255)]
         public string? OneRosterSecret { get; set; }
 
+        [Display(Name = "Logo Image")]
+        [MaxLength(255)]
+        public string? LogoImagePath { get; set; }
+
         [MaxLength(500)]
         public string? Notes { get; set; }
 

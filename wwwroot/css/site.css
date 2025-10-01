@@ -356,13 +356,28 @@ a:hover {
   display: flex; flex-direction: column;
 }
 
+/* MODIFIED: Increased padding and added text-align for the new stacked layout */
 .district-card-header {
   background: #fff;
   color: var(--orenda-primary);
-  padding: 1rem 1.25rem;
+  /* Updated padding for more vertical space */
+  padding: 1.25rem; 
   border-bottom: 1px solid var(--orenda-border-subtle);
+  /* Added to center the stacked logo and title */
+  text-align: center; 
 }
 .district-card-header h4 { font-weight: 600; font-size: 1.15rem; }
+
+/* ADDED: New style rule for the stacked district logo */
+.district-logo-stacked {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    display: inline-block; /* Helps with centering */
+    margin-bottom: 0.75rem; /* Space between logo and title */
+}
 
 .district-card-body {
   padding: 1.25rem;
@@ -445,6 +460,31 @@ a:hover {
   position: relative; height: 34px;
   background: #fff; border-radius: 10px; border: 1px solid var(--orenda-border-subtle);
 }
+.ga-gantt-today {
+    position: absolute;
+    top: -8px; /* Start slightly above the track */
+    bottom: -8px; /* End slightly below the track */
+    width: 2px;
+    background-color: #dc3545; /* Bootstrap's danger red */
+    z-index: 10;
+    transform: translateX(-50%);
+    pointer-events: none; /* Make it unclickable */
+}
+
+.ga-gantt-today .today-label {
+    position: absolute;
+    top: -12px; /* Position the label above the top of the line */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #dc3545;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .ga-span {
   position: absolute; height: 100%; border-radius: 8px;
   display: flex; align-items: center; padding-left: .5rem;
@@ -460,6 +500,28 @@ a:hover {
 .ga-span.cp-cp3 { background: var(--quad-strategic-bg); color: var(--quad-strategic-fg); }
 .ga-span.cp-cp4 { background: var(--quad-intensive-bg); color: var(--quad-intensive-fg); }
 .ga-span.cp-cp5 { background: #eef2ff; color: #3730a3; }
+
+/* --- Collapsible Gantt Chart Header --- */
+.gantt-header-toggle {
+    cursor: pointer;
+    padding: .5rem;
+    margin: -.5rem; /* Offsets padding to make the clickable area fill the corners */
+    border-radius: 8px;
+    transition: background-color .2s ease;
+}
+
+.gantt-header-toggle:hover {
+    background-color: var(--orenda-bg-subtle);
+}
+
+.gantt-header-toggle .collapse-icon {
+    transition: transform 0.3s ease;
+}
+
+/* Rotates the icon 180 degrees when the section is collapsed */
+.gantt-header-toggle[aria-expanded="false"] .collapse-icon {
+    transform: rotate(-180deg);
+}
 
 /* =========================================================
    5. Responsive Adjustments

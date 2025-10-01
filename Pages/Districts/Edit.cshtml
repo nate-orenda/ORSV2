@@ -6,9 +6,18 @@
 
 <h1>Edit District</h1>
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="District.Id" />
 
+    @if (!string.IsNullOrEmpty(Model.District.LogoImagePath))
+    {
+        <div class="form-group">
+            <label>Current Logo:</label>
+            <div>
+                <img src="@Model.District.LogoImagePath" alt="District Logo" style="max-width: 200px; max-height: 200px;" />
+            </div>
+        </div>
+    }
     <div class="form-group">
         <label asp-for="District.Name"></label>
         <input asp-for="District.Name" class="form-control" />
@@ -25,6 +34,12 @@
         <input asp-for="District.SISBaseUrl" class="form-control" />
     </div>
 
+    <div class="form-group">
+        <label asp-for="UploadedLogo" class="control-label">Upload New Logo</label>
+        <input asp-for="UploadedLogo" type="file" class="form-control" />
+        <span asp-validation-for="UploadedLogo" class="text-danger"></span>
+        <small class="form-text text-muted">Leave blank to keep the current logo.</small>
+    </div>
     <div class="form-group">
         <label asp-for="District.SISApiKey"></label>
         <input asp-for="District.SISApiKey" class="form-control" type="password" autocomplete="off" />

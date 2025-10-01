@@ -29,6 +29,7 @@ namespace ORSV2.Pages
         {
             public int DistrictId { get; set; }
             public string DistrictName { get; set; } = string.Empty;
+            public string? LogoImagePath { get; set; }
             public List<SchoolCard> Schools { get; set; } = new();
         }
 
@@ -145,11 +146,12 @@ namespace ORSV2.Pages
 
             // ===== Build blocks =====
             DistrictBlocks = schools
-                .GroupBy(s => new { s.DistrictId, s.District!.Name })
+                .GroupBy(s => new { s.DistrictId, s.District!.Name, s.District.LogoImagePath })
                 .Select(g => new DistrictBlock
                 {
                     DistrictId = g.Key.DistrictId,
                     DistrictName = g.Key.Name,
+                    LogoImagePath = g.Key.LogoImagePath,
                     Schools = g.Select(s => new SchoolCard
                     {
                         SchoolId = s.Id,
