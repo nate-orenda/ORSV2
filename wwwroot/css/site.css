@@ -1,16 +1,52 @@
 /* =========================================================
-   ORSV2 — Global Styles (cleaned + unified)
-   - Brand tokens + shadows
-   - Gradient buttons as default (login-button look)
-   - Header, cards, tables, students page specifics
+   ORSV2 — Global Styles (Updated & Refined)
+   - A more subtle color palette using blue as an accent.
+   - Optimized selectors and consolidated styles.
+   - Modernized header, cards, and buttons.
    ========================================================= */
 
-/* ===== Base ===== */
+/* =========================================================
+   1. CSS Variables & Base Styles
+   ========================================================= */
+:root {
+  /* Refined Brand Palette */
+  --orenda-primary: #0022C5;
+  --orenda-primary-hover: #001aa0;
+  --orenda-text-primary: #1e293b;      /* Dark Slate */
+  --orenda-text-secondary: #64748b;    /* Medium Slate */
+  --orenda-accent-light: #eef2ff;      /* Light Lavender Blue */
+  --orenda-bg-subtle: #f8fafc;         /* Very Light Gray */
+  --orenda-border-subtle: #e2e8f0;     /* Light Gray Border */
+  --orenda-text-white: #fff;
+
+  /* Shadows */
+  --orenda-shadow: rgba(0, 34, 197, .08);
+  --orenda-shadow-hover: rgba(0, 34, 197, .15);
+  --orenda-shadow-lg: 0 8px 25px rgba(0, 34, 197, .1);
+
+  /* Gradient Tokens */
+  --orenda-grad-start: #0022C5;
+  --orenda-grad-end: #1a4fb8;
+  --orenda-grad-hover-start: #001aa0;
+  --orenda-grad-hover-end: #1640a0;
+
+  /* Quadrant Colors (for chips/gantt) */
+  --quad-challenge-bg: #ecfdf5;  /* light green */
+  --quad-challenge-fg: #065f46;
+  --quad-benchmark-bg: #eff6ff;  /* light blue */
+  --quad-benchmark-fg: #1e40af;
+  --quad-strategic-bg: #fffbeb;  /* light yellow */
+  --quad-strategic-fg: #92400e;
+  --quad-intensive-bg: #fef2f2;  /* light red */
+  --quad-intensive-fg: #991b1b;
+}
+
 html {
   font-size: 14px;
   position: relative;
   min-height: 100%;
 }
+
 @media (min-width: 768px) {
   html { font-size: 16px; }
 }
@@ -20,264 +56,198 @@ body {
   font-family: 'Poppins', sans-serif;
   font-size: 12pt;
   font-weight: 400;
+  color: var(--orenda-text-primary);
+  background-color: var(--orenda-bg-subtle);
 }
 
-.btn:focus,
-.btn:active:focus,
-.btn-link.nav-link:focus,
-.form-control:focus,
-.form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem #258cfb;
+a {
+  color: var(--orenda-primary);
+  text-decoration: none;
 }
-
-.form-floating > .form-control-plaintext::placeholder,
-.form-floating > .form-control::placeholder { color: var(--bs-secondary-color); text-align: end; }
-.form-floating > .form-control-plaintext:focus::placeholder,
-.form-floating > .form-control:focus::placeholder { text-align: start; }
-
-a { color: #0077cc; }
-a.navbar-brand { white-space: normal; text-align: center; word-break: break-all; }
-
-.breadcrumb a { color: #0022C5; text-decoration: none; }
-
-.border-top { border-top: 1px solid #e5e5e5; }
-.border-bottom { border-bottom: 1px solid #e5e5e5; }
-.box-shadow { box-shadow: 0 .25rem .75rem rgba(0,0,0,.05); }
-button.accept-policy { font-size: 1rem; line-height: inherit; }
-.footer { white-space: nowrap; }
-
-.hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important; transition: box-shadow .3s ease-in-out; }
-
-.ga-section { opacity: 0; transform: translateY(40px); transition: opacity .4s ease, transform .4s ease; }
-.ga-section.visible { opacity: 1; transform: translateY(0); }
-.d-none { display: none !important; }
-
-/* ===== CSS Vars (unified) ===== */
-:root{
-  /* Brand colors */
-  --orenda-primary:#0022C5;
-  --orenda-primary-hover:#001aa0;
-  --orenda-primary-light:#1a4fb8;
-  --orenda-secondary:#f8f9fb;
-  --orenda-border:#e9ecef;
-  --orenda-text-white:#fff;
-
-  /* Shadows */
-  --orenda-shadow:rgba(0,34,197,.15);
-  --orenda-shadow-hover:rgba(0,34,197,.25);
-  --orenda-shadow-lg:0 1rem 3rem rgba(0,0,0,.175);
-
-  /* Gradient tokens (login look) */
-  --orenda-grad-start:#0022C5;
-  --orenda-grad-end:#1a4fb8;
-  --orenda-grad-hover-start:#001aa0;
-  --orenda-grad-hover-end:#1640a0;
-
-  /* Button tokens */
-  --btn-radius:.5rem;
-  --btn-pad-y:.5rem;
-  --btn-pad-x:1rem;
-  --btn-font:.95rem;
-  --btn-shadow:0 4px 12px var(--orenda-shadow);
-  --btn-shadow-hover:0 8px 20px var(--orenda-shadow-hover);
-  --btn-ring:0 0 0 .2rem rgba(0,34,197,.15);
-
-  --quad-challenge-bg: #ecfdf5;  /* light green */
-  --quad-challenge-fg: #065f46;
-
-  --quad-benchmark-bg: #eff6ff;  /* light blue */
-  --quad-benchmark-fg: #1e40af;
-
-  --quad-strategic-bg: #fffbeb;  /* light yellow */
-  --quad-strategic-fg: #92400e;
-
-  --quad-intensive-bg: #fef2f2;  /* light red */
-  --quad-intensive-fg: #991b1b;
+a:hover {
+  color: var(--orenda-primary-hover);
 }
 
 /* =========================================================
-   Buttons — DEFAULT = Gradient (matches login page)
+   2. Layout & Containers (Header, Footer, Cards)
    ========================================================= */
 
-/* Base (shared) */
-.btn,
-.btn-orenda {
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:.5rem;
-  border:none;
-  border-radius: var(--btn-radius);
-  padding: var(--btn-pad-y) var(--btn-pad-x);
-  font-weight: 600;
-  font-size: var(--btn-font);
-  line-height: 1.2;
-  transition: transform .15s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
-  box-shadow: var(--btn-shadow);
-  text-decoration:none;
-  cursor:pointer;
-  will-change: transform, box-shadow;
-  position:relative; /* for shimmer/spinner */
-  overflow:hidden;   /* for shimmer */
-  color:#fff;
+/* --- Main Header & Navigation (Refined for light background) --- */
+.main-header {
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
+  border-bottom: 1px solid var(--orenda-border-subtle);
+  padding: 0;
+  min-height: 60px;
+}
+.main-header .navbar { padding: 0; min-height: 60px; }
+.main-header .container-fluid { padding: .375rem 1rem; align-items: center; min-height: 60px; }
+.brand-logo { height: 48px; transition: transform .3s ease; }
+.brand-logo:hover { transform: scale(1.05); }
+
+.nav-main { gap: .125rem; }
+.nav-main .nav-link,
+.nav-main .dropdown-toggle {
+  color: var(--orenda-text-primary) !important;
+  font-weight: 500;
+  padding: .5rem .75rem;
+  border-radius: .375rem;
+  transition: all .2s ease;
+  font-size: .9rem;
+  border: none;
+  background: transparent;
+}
+.nav-main .nav-link:hover,
+.nav-main .dropdown-toggle:hover {
+  background: var(--orenda-accent-light);
+  color: var(--orenda-primary) !important;
 }
 
-/* Primary defaults -> Gradient (btn, btn-orenda, btn-primary) */
-.btn,
-.btn-orenda,
-.btn-primary,
-.btn-orenda-primary {
-  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
-  color:#fff;
+.user-profile .dropdown-toggle {
+  color: var(--orenda-text-secondary);
+  font-weight: 500;
+  font-size: .875rem;
+  transition: color .2s ease;
 }
-.btn:hover,
-.btn-orenda:hover,
-.btn-primary:hover,
-.btn-orenda-primary:hover {
+.user-profile .dropdown-toggle:hover {
+  color: var(--orenda-primary);
+}
+
+.navbar-toggler {
+  border: 1px solid var(--orenda-border-subtle);
+}
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2830,41,59,.7%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='m4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* --- Dropdowns --- */
+.dropdown-menu {
+  border: 1px solid var(--orenda-border-subtle);
+  box-shadow: var(--orenda-shadow-lg);
+  border-radius: .5rem;
+  padding: .5rem 0;
+}
+.dropdown-item {
+  padding: .6rem 1.25rem;
+  font-weight: 500;
+  transition: all .2s ease;
+  color: var(--orenda-text-primary);
+}
+.dropdown-item:hover {
+  background: var(--orenda-primary);
+  color: var(--orenda-text-white);
+}
+.dropdown-item i {
+  width: 1.25rem;
+  opacity: .7;
+}
+.dropdown-item:hover i {
+  opacity: 1;
+}
+
+/* --- Main Content & Cards --- */
+.orenda-container, .orenda-container-sm {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.orenda-container-sm { max-width: 900px; }
+
+/* Welcome Header - Updated with a subtle background color */
+.orenda-header {
+  background: var(--orenda-accent-light); /* Changed from #fff */
+  color: var(--orenda-text-primary);
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 1px solid #e0e7ff; /* A slightly darker border to complement the background */
+  /* border-left property removed */
+  box-shadow: var(--orenda-shadow);
+}
+.orenda-header h2 { 
+  color: var(--orenda-primary); 
+  font-weight: 600; 
+}
+.orenda-header p { 
+  color: var(--orenda-text-secondary); 
+}
+
+/* Base Card Style */
+.orenda-card,
+.orenda-table-wrapper {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .03);
+  border: 1px solid var(--orenda-border-subtle);
+  transition: all .3s ease;
+}
+.orenda-card:hover {
+  box-shadow: var(--orenda-shadow-lg);
+  transform: translateY(-2px);
+}
+.orenda-card-body { padding: 1.5rem; }
+
+/* =========================================================
+   3. Components (Buttons, Tables, Badges)
+   ========================================================= */
+
+/* --- Buttons --- */
+/* Base styles for all buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border: none;
+  border-radius: .5rem;
+  padding: .5rem 1rem;
+  font-weight: 600;
+  font-size: .95rem;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 .2rem var(--orenda-accent-light);
+}
+
+/* Default Button: Soft Blue */
+.btn {
+  background: var(--orenda-accent-light);
+  color: var(--orenda-primary);
+}
+.btn:hover {
+  background: #e0e7ff; /* slightly darker */
+  color: var(--orenda-primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Primary Button: Gradient */
+.btn-primary {
+  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
+  color: var(--orenda-text-white) !important;
+  box-shadow: 0 4px 12px var(--orenda-shadow);
+}
+.btn-primary:hover {
   background: linear-gradient(135deg, var(--orenda-grad-hover-start) 0%, var(--orenda-grad-hover-end) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,34,197,.30);
-}
-.btn:active,
-.btn-orenda:active,
-.btn-primary:active,
-.btn-orenda-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 3px 10px rgba(0,34,197,.25);
+  box-shadow: 0 8px 20px var(--orenda-shadow-hover);
 }
 
-/* Optional shimmer (add .btn-shimmer) */
-.btn.btn-shimmer::before,
-.btn-orenda.btn-shimmer::before {
-  content:'';
-  position:absolute;
-  top:0; left:-100%;
-  width:100%; height:100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-  transition:left .5s ease;
-}
-.btn.btn-shimmer:hover::before,
-.btn-orenda.btn-shimmer:hover::before { left:100%; }
-
-/* Outline variant */
-.btn-outline-primary,
-.btn-orenda-outline {
+/* Outline Button */
+.btn-outline-primary {
   background: transparent;
   color: var(--orenda-primary);
   border: 2px solid var(--orenda-primary);
   box-shadow: none;
 }
-.btn-outline-primary:hover,
-.btn-orenda-outline:hover {
-  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
-  color: #fff;
-  box-shadow: var(--btn-shadow-hover);
+.btn-outline-primary:hover {
+  background: var(--orenda-primary);
+  color: var(--orenda-text-white);
 }
 
-/* Soft (subtle filled) */
-.btn-orenda-soft {
-  background: rgba(0,34,197,.08);
-  color: var(--orenda-primary);
-  box-shadow: none;
-}
-.btn-orenda-soft:hover {
-  background: rgba(0,34,197,.14);
-  box-shadow: var(--btn-shadow);
-}
-
-/* Ghost (text-like) */
-.btn-orenda-ghost {
-  background: transparent;
-  color: var(--orenda-primary);
-  box-shadow: none;
-}
-.btn-orenda-ghost:hover {
-  background: rgba(0,34,197,.1);
-}
-
-/* Success / Danger */
-.btn-orenda-success { background:#16a34a; color:#fff; }
-.btn-orenda-success:hover { background:#128a3f; box-shadow: var(--btn-shadow-hover); transform: translateY(-1px); }
-.btn-orenda-danger { background:#dc3545; color:#fff; }
-.btn-orenda-danger:hover { background:#c12d3a; box-shadow: var(--btn-shadow-hover); transform: translateY(-1px); }
-
-/* Sizes */
-.btn-xs { padding:.25rem .5rem; font-size:.78rem; border-radius:.375rem; }
-.btn-sm { padding:.35rem .75rem; font-size:.85rem; border-radius:.45rem; }
-.btn-lg { padding:.75rem 1.25rem; font-size:1.05rem; border-radius:.65rem; }
-
-/* Full-width */
-.btn-block { width:100%; }
-
-/* Icon-only */
-.btn-icon { padding:.5rem; width:2.25rem; height:2.25rem; border-radius:.5rem; }
-
-/* Busy/Disabled */
-.btn:disabled,
-.btn[aria-disabled="true"],
-.btn.btn-busy,
-.btn-orenda:disabled,
-.btn-orenda[aria-disabled="true"],
-.btn-orenda.btn-busy,
-.btn-orenda-outline:disabled,
-.btn-orenda-outline[aria-disabled="true"],
-.btn-orenda-outline.btn-busy {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-  filter: grayscale(1);
-  box-shadow:none;
-}
-
-/* Loading spinner (aria-busy) */
-.btn[aria-busy="true"],
-.btn-orenda[aria-busy="true"] { color:transparent !important; }
-.btn[aria-busy="true"]::after,
-.btn-orenda[aria-busy="true"]::after{
-  content:'';
-  position:absolute;
-  width:16px; height:16px;
-  top:50%; left:50%;
-  margin:-8px 0 0 -8px;
-  border-radius:50%;
-  border:2px solid rgba(255,255,255,.85);
-  border-right-color:transparent;
-  animation: btnspin 1s linear infinite;
-}
-@keyframes btnspin{ to{ transform: rotate(360deg); } }
-
-/* Focus ring (accessible) */
-.btn:focus-visible,
-.btn-orenda:focus-visible,
-.btn-orenda-outline:focus-visible,
-.btn-orenda-soft:focus-visible,
-.btn-orenda-ghost:focus-visible {
-  outline: none;
-  box-shadow: var(--btn-ring), var(--btn-shadow);
-}
-
-/* Force button text to stay white for primary/gradient buttons */
-.btn,
-.btn-orenda,
-.btn-primary,
-.btn-orenda-primary {
-  color: #fff !important;
-}
-
-.btn:hover,
-.btn-orenda:hover,
-.btn-primary:hover,
-.btn-orenda-primary:hover,
-.btn:active,
-.btn-orenda:active,
-.btn-primary:active,
-.btn-orenda-primary:active {
-  color: #fff !important;
-}
-
-/* =========================================================
-   Compact Action Set Buttons (Edit / Save / Cancel)
-   ========================================================= */
+/* --- Compact Action Buttons (for Edit, Print, etc.) --- */
 .btn-action {
   font-weight: 500;
   letter-spacing: .3px;
@@ -290,1300 +260,229 @@ button.accept-policy { font-size: 1rem; line-height: inherit; }
   font-size: .8rem;
   line-height: 1.1;
   transition: all .2s ease;
-  min-width: 68px; /* keeps widths consistent */
+  min-width: 68px;
   white-space: nowrap;
+  border: 1px solid transparent;
 }
-
-/* icons scale down slightly for compact look */
 .btn-action i {
   font-size: .85rem;
 }
 
-/* Edit = neutral/soft */
-.btn-action-edit {
-  background: rgba(0,34,197,.08);
+/* Edit Button Style */
+.btn-edit {
+  background: var(--orenda-accent-light);
   color: var(--orenda-primary);
-  border: 1px solid var(--orenda-border);
+  border-color: var(--orenda-border-subtle);
 }
-.btn-action-edit:hover {
-  background: rgba(0,34,197,.14);
+.btn-edit:hover {
+  background: #e0e7ff;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px var(--orenda-shadow);
 }
 
-/* Save = primary gradient */
-.btn-action-save {
-  background: linear-gradient(135deg, var(--orenda-grad-start), var(--orenda-grad-end));
-  color: #fff !important;
-  border: none;
+/* Print Button Style */
+.btn-print {
+  background: #fff;
+  color: var(--orenda-text-secondary);
+  border-color: var(--orenda-border-subtle);
 }
-.btn-action-save:hover {
-  background: linear-gradient(135deg, var(--orenda-grad-hover-start), var(--orenda-grad-hover-end));
+.btn-print:hover {
+  background: var(--orenda-bg-subtle);
+  color: var(--orenda-text-primary);
+  border-color: #ced4da;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,34,197,.3);
 }
 
-/* Cancel/Delete = outline (consolidated) */
-.btn-action-cancel,
-.btn-action-delete {
-  background: transparent;
-  color: var(--orenda-primary);
-  border: 1px solid var(--orenda-primary);
+/* --- Tables --- */
+.orenda-table {
+  margin-bottom: 0;
+  font-size: .95rem;
 }
-.btn-action-cancel:hover,
-.btn-action-delete:hover {
-  background: var(--orenda-primary);
-  color: #fff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,34,197,.3);
-}
-
-/* Reduce motion */
-@media (prefers-reduced-motion: reduce){
-  .btn, .btn-orenda { transition: none; }
-}
-
-/* Buttons designed for dark/gradient backgrounds */
-.btn-inverse {
-  background: transparent;
-  color: #fff !important;
-  border: 1.5px solid rgba(255,255,255,.9);
-  box-shadow: none;
-}
-.btn-inverse:hover {
-  background: rgba(255,255,255,.12);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0,0,0,.25);
-}
-
-/* Solid white on dark header (alt option) */
-.btn-inverse-solid {
-  background:#fff;
-  color: var(--orenda-primary) !important;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
-}
-.btn-inverse-solid:hover {
-  background:#f2f5ff;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(0,0,0,.2);
-}
-
-/* =========================================================
-   Header / Nav
-   ========================================================= */
-.main-header{
-  background:linear-gradient(135deg,var(--orenda-primary) 0%,var(--orenda-primary-hover) 100%);
-  box-shadow:var(--orenda-shadow-lg);
-  border-bottom:3px solid rgba(255,255,255,.1);
-  padding:0;
-  min-height:60px;
-}
-.main-header .navbar{ padding:0; min-height:60px; }
-.main-header .container-fluid{ padding:.375rem 1rem; align-items:center; min-height:60px; }
-
-.brand-logo{ height:48px; transition:transform .3s ease; }
-.brand-logo:hover{ transform:scale(1.05); }
-.main-header .navbar-brand{ padding:0; margin:0; line-height:1; }
-
-.nav-main{ gap:0; margin:0; }
-.nav-main .nav-link,
-.nav-main .dropdown-toggle{
-  color:var(--orenda-text-white)!important;
-  font-weight:500;
-  padding:.375rem .625rem;
-  border-radius:.25rem;
-  transition:all .3s ease;
-  text-decoration:none;
-  position:relative;
-  overflow:hidden;
-  font-size:.9rem;
-  line-height:1.2;
-  margin:0 .125rem;
-  border:none;
-  background:transparent;
-}
-.nav-main .nav-link:hover,
-.nav-main .dropdown-toggle:hover{ background:rgba(255,255,255,.15); transform:translateY(-1px); }
-.nav-main .dropdown-menu{
-  background:#fff; border:none; box-shadow:0 .5rem 1rem rgba(0,0,0,.15);
-  border-radius:.375rem; padding:.5rem 0; margin-top:.25rem;
-}
-.nav-main .dropdown-item{ padding:.5rem 1rem; font-size:.875rem; color:#495057; transition:all .2s ease; }
-.nav-main .dropdown-item:hover{ background:var(--orenda-primary); color:#fff; }
-.nav-main .dropdown-item i{ width:1.25rem; }
-.nav-main .nav-link::before{
-  content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
-  background:rgba(255,255,255,.1); transition:left .3s ease;
-}
-.nav-main .nav-link:hover::before{ left:0; }
-.nav-main .nav-link:hover{ transform:translateY(-2px); }
-
-.user-profile{
-  background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.2);
-  border-radius:.25rem; padding:.25rem .5rem; backdrop-filter:blur(10px); margin:0;
-}
-.user-profile .dropdown-toggle{
-  border:none; background:transparent; color:var(--orenda-text-white);
-  font-weight:500; font-size:.875rem; padding:.25rem; line-height:1;
-}
-.user-profile .dropdown-toggle:focus{ box-shadow:0 0 0 .25rem rgba(255,255,255,.25); }
-
-.navbar-toggler{
-  border:1px solid rgba(255,255,255,.3);
-  border-radius:.25rem; padding:.125rem .25rem; font-size:.75rem; margin:0;
-}
-.navbar-toggler:focus{ box-shadow:0 0 0 .25rem rgba(255,255,255,.25); }
-.navbar-toggler-icon{
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='m4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-}
-.navbar-collapse{
-  background:var(--orenda-primary); border-radius:.5rem; margin-top:1rem;
-  box-shadow:0 .25rem .75rem rgba(0,0,0,.05);
-}
-@media (max-width: 991.98px){
-  .navbar-collapse{ padding:.75rem; margin-top:.375rem; }
-  .nav-main{ flex-direction:column; gap:.125rem; }
-  .nav-main .nav-link{ padding:.5rem; text-align:left; border-radius:.25rem; font-size:.9rem; }
-  .user-profile{ margin-top:.75rem; padding:.5rem; text-align:center; }
-}
-@media (max-width:575.98px){
-  .container-fluid{ padding-left:.75rem; padding-right:.75rem; }
-  .brand-logo{ height:28px; }
-  .nav-main .nav-link, .nav-main .dropdown-toggle{ font-size:.85rem; padding:.375rem .5rem; }
-  .main-header, .main-header .navbar, .main-header .container-fluid{ min-height:55px; }
-}
-
-/* Dropdown (global) */
-.dropdown-menu{ border:none; box-shadow:var(--orenda-shadow-lg); border-radius:.5rem; overflow:hidden; }
-.dropdown-item{ padding:.75rem 1.25rem; font-weight:500; transition:all .2s ease; }
-.dropdown-item:hover{ background:var(--orenda-primary); color:var(--orenda-text-white); }
-
-/* =========================================================
-   Containers / Cards
-   ========================================================= */
-.orenda-container{ max-width:1200px; margin:0 auto; }
-.orenda-container-sm{ max-width:900px; margin:0 auto; }
-
-.orenda-header{
-  background:linear-gradient(135deg,var(--orenda-primary) 0%,var(--orenda-primary-light) 100%);
-  color:#fff; padding:2rem; border-radius:12px; margin-bottom:2rem; box-shadow:0 4px 20px var(--orenda-shadow);
-}
-.orenda-header h2{ margin-bottom:.5rem; font-weight:600; }
-.orenda-header p{ margin-bottom:0; opacity:.9; }
-
-.orenda-card,
-.orenda-table-wrapper,
-.protocols-table-wrapper{
-  background:#fff; border-radius:12px; overflow:hidden;
-  box-shadow:0 2px 12px rgba(0,0,0,.08);
-  border:1px solid var(--orenda-border);
-}
-.orenda-card-body{ padding:2rem; }
-
-/* =========================================================
-   Tables
-   ========================================================= */
-.orenda-table,
-.protocols-table { margin-bottom:0; font-size:.95rem; }
-.orenda-table th,
-.protocols-table th {
-  background:linear-gradient(135deg,var(--orenda-secondary) 0%,var(--orenda-border) 100%);
-  color:#495057; font-weight:600; padding:1rem .75rem; border:none;
-  text-transform:uppercase; font-size:.8rem; letter-spacing:.5px; white-space:nowrap;
-}
-.orenda-table td,
-.protocols-table td { padding:1rem .75rem; border:none; border-bottom:1px solid #f1f3f4; vertical-align:middle; }
-.orenda-table tbody tr,
-.protocols-table tbody tr { transition:all .2s ease; }
-.orenda-table tbody tr:hover,
-.protocols-table tbody tr:hover { background:#f8f9ff; transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,34,197,.1); }
-.orenda-table tbody tr:last-child td,
-.protocols-table tbody tr:last-child td { border-bottom:none; }
-
-/* Badges */
-.school-badge{
-  background:linear-gradient(135deg,var(--orenda-primary) 0%,var(--orenda-primary-light) 100%);
-  color:#fff; padding:.4rem .8rem; border-radius:20px; font-size:.85rem; font-weight:500; display:inline-block;
-  max-width:100%; white-space:normal; word-wrap:break-word;
-}
-.checkpoint-badge{
-  background:linear-gradient(135deg,#28a745 0%,#20c997 100%);
-  color:#fff; padding:.3rem .7rem; border-radius:15px; font-size:.75rem; font-weight:500;
-  white-space: nowrap;
-}
-
-/* Compact badge variant */
-.badge-compact {
+.orenda-table th {
+  background: var(--orenda-bg-subtle);
+  color: var(--orenda-text-secondary);
   font-weight: 600;
-  padding: .2rem .5rem;
-  font-size: .75rem;
-  border-radius: .375rem;
-  line-height: 1.1;
-}
-
-/* Calendar Badge */
-.orenda-card .badge.bg-light.text-dark {
-  background: linear-gradient(135deg, var(--orenda-primary) 0%, var(--orenda-primary-light) 100%) !important;
-  color: white !important;
-  font-weight: 600;
-  padding: .35em .75em;
-  border-radius: 999px;
+  padding: 1rem .75rem;
   border: none;
-}
-
-/* Active filter badge to look more tag-like */
-.orenda-badge-filter,
-.badge.bg-light.text-dark {
-  font-weight: 600;
-  border: 1px solid #dee2e6;
-  border-radius: 999px;
-  padding: 0.35em 0.75em;
-}
-
-/* =========================================================
-   Students page specific
-   ========================================================= */
-
-/* Smaller table header text + tighter padding */
-#studentsTable thead th{
-  font-size:.72rem;
-  padding:.5rem .5rem;
-}
-
-/* Sticky header */
-#studentsTable > thead th{
-  position:sticky; top:0; z-index:10; background:#f8f9fa;
-  box-shadow: inset 0 -2px 0 #dee2e6;
-}
-
-/* Keep drag helper above everything while dragging */
-.ui-draggable-dragging{
-  z-index:200000 !important;
-  pointer-events:none;
-}
-
-/* Avoid stacking-context issues that can hide the helper */
-.table-scroll-container,
-.card,
-#groupingArea,
-#studentsToolbar{
-  transform:none !important;
-  will-change:auto !important;
-}
-
-/* Grouping area baseline */
-#groupingArea{ position:relative; z-index:1; }
-
-/* Sticky toolbar above table scroll area */
-.students-toolbar{
-  position:sticky; top:0; z-index:1025; background:#fff;
-  padding:.5rem .75rem; border:1px solid var(--orenda-border);
-  border-radius:8px; margin-bottom:.5rem;
-  display:flex; gap:.5rem; align-items:center; justify-content:space-between;
-}
-.students-toolbar .left,
-.students-toolbar .right{ display:flex; gap:.5rem; align-items:center; }
-.students-toolbar input.form-control{ height:32px; padding:.25rem .5rem; font-size:.9rem; }
-
-/* Small button tweak (kept for toolbar harmony) */
-.btn-orenda.btn-sm,
-.btn-orenda-outline.btn-sm {
-  padding: .25rem .5rem;
+  border-bottom: 1px solid var(--orenda-border-subtle);
+  text-transform: uppercase;
   font-size: .8rem;
-  border-radius: .25rem;
+  letter-spacing: .5px;
 }
+.orenda-table td {
+  padding: 1rem .75rem;
+  border: none;
+  border-bottom: 1px solid var(--orenda-border-subtle);
+  vertical-align: middle;
+}
+.orenda-table tbody tr:last-child td { border-bottom: none; }
+.orenda-table tbody tr:hover { background: #fcfdff; }
 
-/* Modal polish */
-.modal-content.shadow-orenda { border-radius: 12px; }
-.modal-header.bg-orenda-primary { border-bottom: none; }
-.modal-footer { border-top: none; }
 
-.check-mini { transform: scale(0.85); pointer-events: none; }
+/* --- Badges & Chips --- */
+.program-badge {
+  display: inline-flex; align-items: center;
+  padding: .25rem .5rem; border-radius: .375rem;
+  font-size: .75rem; font-weight: 600;
+  border: 1px solid;
+}
+.program-ga { background: var(--orenda-accent-light); color: var(--orenda-primary); border-color: rgba(0,34,197,.2); }
+.program-ca { background: rgba(40,167,69,.08); color: #28a745; border-color: rgba(40,167,69,.2); }
+.program-none { background: rgba(108,117,125,.08); color: #6c757d; border-color: rgba(108,117,125,.2); }
 
-/* Targets Page */
-.quadrant-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-/** Index status **/
-.status-row { display:flex; align-items:center; gap:.5rem; }
-.status-icon { width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; }
-.status-true { color:#198754; } /* green */
-.status-false { color:#dc3545; } /* red */
-.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-
-/* ===== Unified Link Style ===== */
-.orenda-link {
-  color: var(--orenda-primary);
-  font-weight: 600; /* Bolder for emphasis and clarity */
-  text-decoration: none;
-  display: inline-block; /* Ensures transform and padding work correctly */
-  padding-bottom: 2px; /* Adds a little space for the border to breathe */
-  border-bottom: 1.5px solid transparent; /* Slightly thicker for visibility */
-  transition: color 0.2s ease,
-              transform 0.2s ease,
-              border-color 0.2s ease;
-}
-
-.orenda-link:hover {
-  color: var(--orenda-primary-hover);
-  transform: translateY(-1px); /* Subtle lift effect, matches your buttons */
-  border-bottom-color: var(--orenda-primary-hover); /* Reveals border on hover */
-}
-
-/* Make the select feel lighter but still clickable */
-.orenda-select {
-  min-width: 220px;
-  border-radius: 10px;
-  border-color: #dee2e6;
-  font-size: 0.9rem;
-}
-
-/* Focus highlight */
-.orenda-select:focus {
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .25);
-}
-
-/* ===== GA Calendar ===== */
-.ga-calendar { width:100%; }
-.ga-cal-grid {
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap:.5rem;
-  grid-auto-rows: 120px; /* equal-height day boxes */
-}
-.ga-cal-head {
-  font-weight:700;
-  font-size:.85rem;
-  text-align:center;
-  color:#6c757d;
-  padding:.25rem 0;
-}
-.ga-cal-cell {
-  border:1px solid var(--orenda-border);
-  border-radius:12px;
-  min-height:96px;
-  padding:.5rem;
-  background:#fff;
-  box-shadow:0 1px 6px rgba(0,0,0,.04);
-  display:flex;
-  flex-direction:column;
-  overflow: hidden; /* prevent overflow growth */
-}
-.ga-cal-cell.is-out { opacity:.45; }
-.ga-cal-cell.is-today {
-  border-color: var(--orenda-primary);
-  box-shadow: 0 2px 12px rgba(0,34,197,.10);
-}
-.ga-cal-date {
-  font-weight:700;
-  font-size:.9rem;
-  color:#343a40;
-  margin-bottom:.25rem;
-}
-.ga-cal-chips { 
-  display: flex; 
-  flex-direction: column; /* stack chips vertically */
-  gap: .25rem; 
-  overflow: hidden;
-}
-
-/* Chips by CP */
 .ga-chip {
-  display:inline-block;
-  padding:.15rem .45rem;
-  border-radius:999px;
-  font-size:.72rem;
-  font-weight:700;
-  line-height:1.1;
-  border:1px solid rgba(0,0,0,.06);
-  background: #f8f9fb;
-  color:#495057;
-  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-  max-width: 100%;
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis;
+  display: inline-block; padding: .15rem .45rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; line-height: 1.1;
+  border: 1px solid rgba(0,0,0,.06);
 }
-.ga-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-
-/* subtle, distinct hues per checkpoint */
 .ga-chip.cp-cp1 { background: var(--quad-benchmark-bg); color: var(--quad-benchmark-fg); }
 .ga-chip.cp-cp2 { background: var(--quad-challenge-bg); color: var(--quad-challenge-fg); }
 .ga-chip.cp-cp3 { background: var(--quad-strategic-bg); color: var(--quad-strategic-fg); }
 .ga-chip.cp-cp4 { background: var(--quad-intensive-bg); color: var(--quad-intensive-fg); }
 .ga-chip.cp-cp5 { background: #eef2ff; color: #3730a3; } /* soft indigo */
-.ga-chip.district-chip {
-  background: var(--quad-benchmark-bg);
-  color: var(--quad-benchmark-fg);
-  font-weight: 600;
+
+.program-mini {
+  font-size: .65rem; font-weight: 700; padding: .1rem .3rem; border-radius: .2rem;
 }
+.program-ga-mini { background: var(--orenda-accent-light); color: var(--orenda-primary); }
+.program-ca-mini { background: rgba(40,167,69,.1); color: #28a745; }
 
 /* =========================================================
-   District Cards & Enhanced Components
+   4. Page-Specific Styles (Index Page)
    ========================================================= */
 
+/* --- District Cards --- */
 .district-card-v2 {
-  display: flex;
-  flex-direction: column; /* Stacks header, body, and footer vertically */
-  transition: all .3s ease;
-  position: relative;
-}
-
-.district-card-v2:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,.1);
+  display: flex; flex-direction: column;
 }
 
 .district-card-header {
-  /* The signature Orenda gradient for strong branding */
-  background: linear-gradient(135deg, var(--orenda-grad-start) 0%, var(--orenda-grad-end) 100%);
-  color: var(--orenda-text-white);
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #fff;
+  color: var(--orenda-primary);
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--orenda-border-subtle);
 }
-
-.district-card-header h4 {
-  font-weight: 600;
-  font-size: 1.15rem;
-}
+.district-card-header h4 { font-weight: 600; font-size: 1.15rem; }
 
 .district-card-body {
-  padding: 1.5rem;
-  flex-grow: 1; /* This is key: it pushes the footer to the bottom */
+  padding: 1.25rem;
+  flex-grow: 1;
 }
 
 .district-card-footer {
   padding: .75rem;
-  background-color: var(--orenda-secondary);
-  border-top: 1px solid var(--orenda-border);
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
+  background-color: var(--orenda-bg-subtle);
+  border-top: 1px solid var(--orenda-border-subtle);
+  display: flex; flex-direction: column; gap: .5rem;
 }
 
 .action-link {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: .5rem .75rem;
-  border-radius: 8px;
-  color: var(--orenda-primary);
-  font-weight: 600;
-  text-decoration: none;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .5rem .75rem; border-radius: 8px;
+  color: var(--orenda-primary); font-weight: 600;
   transition: all .2s ease;
-  margin: 0;
 }
-
 .action-link:hover {
-  background-color: rgba(0, 34, 197, .08); /* A subtle highlight */
-  color: var(--orenda-primary-hover);
-  transform: scale(1.02); /* Slight zoom for a modern feel */
+  background-color: var(--orenda-accent-light);
+  transform: scale(1.02);
 }
 
-.action-link .arrow {
-  transition: transform .2s ease;
+/* --- Compact District Stats & School List --- */
+.district-overview {
+  background: var(--orenda-bg-subtle);
+  border-radius: .5rem; padding: .75rem;
+  border: 1px solid var(--orenda-border-subtle);
 }
-
-.action-link:hover .arrow {
-  transform: translateX(4px); /* Arrow moves right on hover */
+.compact-stat {
+  display: flex; align-items: center; gap: .375rem;
+  font-size: .85rem; color: var(--orenda-text-secondary);
 }
-
-.district-card-footer .action-link:not(:last-child) {
-  border-bottom: 1px solid rgba(0,34,197,.1);
-}
-
-/* District Stats (Schools/Students counts) */
-.district-stat {
-  text-align: center;
-  padding: .75rem .5rem;
-  background: rgba(0,34,197,.04);
-  border-radius: .5rem;
-  border: 1px solid rgba(0,34,197,.08);
-}
-
-.district-stat-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--orenda-primary);
-  line-height: 1;
-  margin-bottom: .25rem;
-}
-
-.district-stat-label {
-  font-size: .75rem;
-  font-weight: 500;
-  color: #6c757d;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-
-/* School Preview List */
-.district-schools-preview {
-  background: rgba(248,249,251,.6);
-  border-radius: .5rem;
-  padding: .75rem;
-  border: 1px solid #e9ecef;
-}
-
-.school-preview-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: .375rem 0;
-  border-bottom: 1px solid rgba(0,0,0,.05);
-  font-size: .85rem;
-}
-
-.school-preview-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.school-preview-item.school-preview-more {
-  justify-content: center;
-  padding-top: .5rem;
-  border-top: 1px solid rgba(0,0,0,.08);
-  border-bottom: none;
-}
-
-.school-name {
-  font-weight: 500;
-  color: #495057;
-  flex-grow: 1;
-  margin-right: .5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.school-enrollment {
-  font-weight: 600;
-  color: var(--orenda-primary);
-  font-size: .8rem;
-  flex-shrink: 0;
-}
-
-/* Program Badges */
-.district-programs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  align-items: center;
-}
-
-.program-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: .25rem .5rem;
-  border-radius: .375rem;
-  font-size: .75rem;
-  font-weight: 600;
-  line-height: 1.1;
-  border: 1px solid;
-  transition: all .2s ease;
-}
-
-.program-badge i {
-  font-size: .7rem;
-}
-
-/* GA Program Badge */
-.program-ga {
-  background: rgba(0,34,197,.08);
-  color: var(--orenda-primary);
-  border-color: rgba(0,34,197,.2);
-}
-
-.program-ga:hover {
-  background: rgba(0,34,197,.12);
-  transform: translateY(-1px);
-}
-
-/* CA Program Badge */
-.program-ca {
-  background: rgba(40,167,69,.08);
-  color: #28a745;
-  border-color: rgba(40,167,69,.2);
-}
-
-.program-ca:hover {
-  background: rgba(40,167,69,.12);
-  transform: translateY(-1px);
-}
-
-/* No Programs Badge */
-.program-none {
-  background: rgba(108,117,125,.08);
-  color: #6c757d;
-  border-color: rgba(108,117,125,.2);
-}
-
-/* Hover Effects for District Cards */
-.district-card-v2:hover .district-stat {
-  background: rgba(0,34,197,.08);
-  border-color: rgba(0,34,197,.15);
-}
-
-.district-card-v2:hover .district-stat-number {
-  color: var(--orenda-primary-hover);
-}
-
-.district-card-v2:hover .school-enrollment {
-  color: var(--orenda-primary-hover);
-}
-
-/* =========================================================
-   Breadcrumbs & Navigation
-   ========================================================= */
-.breadcrumb {
-  background: transparent;
-  padding: 0;
-  margin-bottom: 1rem;
-}
-
-.breadcrumb-item + .breadcrumb-item::before {
-  content: "›";
-  color: var(--orenda-primary);
-  font-weight: 600;
-}
-
-.page-header {
-  border-bottom: 1px solid var(--orenda-border);
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  color: var(--orenda-primary);
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-/* =========================================================
-   Utilities
-   ========================================================= */
-.text-orenda-primary{ color:var(--orenda-primary) !important; }
-.bg-orenda-primary{ background:var(--orenda-primary) !important; }
-.border-orenda-primary{ border-color:var(--orenda-primary) !important; }
-.shadow-orenda{ box-shadow:0 4px 20px var(--orenda-shadow) !important; }
-.shadow-orenda-hover:hover{ box-shadow:0 4px 20px var(--orenda-shadow-hover) !important; transition:box-shadow .3s ease; }
-.smooth-transition{ transition:all .3s ease; }
-
-/* =========================================================
-   Responsive tweaks
-   ========================================================= */
-@media (max-width:768px){
-  .orenda-header{ padding:1.5rem; }
-  .orenda-card-body{ padding:1.5rem; }
-  .orenda-container, .orenda-container-sm{ margin:0 1rem; max-width:none; }
-  .protocols-table th, .protocols-table td{ padding:.75rem .5rem; }
-  
-  .district-card-v2:hover {
-    transform: translateY(-2px);
-  }
-  
-  .district-stat {
-    padding: .5rem .25rem;
-  }
-  
-  .district-stat-number {
-    font-size: 1.25rem;
-  }
-  
-  .district-stat-label {
-    font-size: .7rem;
-  }
-  
-  .district-schools-preview {
-    padding: .5rem;
-  }
-  
-  .school-preview-item {
-    font-size: .8rem;
-    padding: .25rem 0;
-  }
-  
-  .program-badge {
-    font-size: .7rem;
-    padding: .2rem .4rem;
-  }
-}
-
-/* =========================================================
-   Expandable School Lists
-   ========================================================= */
-
-.schools-expandable {
-  /* This contains the hidden schools */
-  transition: all 0.3s ease;
-}
-
-/* Toggle button styling */
-.school-preview-toggle {
-  padding-top: .5rem;
-  border-top: 1px solid rgba(0,0,0,.08);
-  display: flex;
-  justify-content: center;
-  margin-top: .25rem;
-}
+.compact-stat i { color: var(--orenda-primary); font-size: 1rem; }
+.compact-stat .stat-number { font-weight: 700; color: var(--orenda-primary); }
 
 .school-expand-btn {
-  background: transparent;
-  border: none;
-  color: var(--orenda-primary);
-  font-size: .8rem;
-  font-weight: 500;
-  padding: .25rem .5rem;
-  border-radius: .375rem;
-  cursor: pointer;
+  background: transparent; border: none;
+  color: var(--orenda-primary); font-size: .8rem; font-weight: 500;
+  padding: .25rem .5rem; border-radius: .375rem; cursor: pointer;
   transition: all .2s ease;
-  display: flex;
-  align-items: center;
-  gap: .25rem;
 }
-
 .school-expand-btn:hover {
-  background: rgba(0,34,197,.08);
-  color: var(--orenda-primary-hover);
+  background: var(--orenda-accent-light);
   transform: translateY(-1px);
 }
+.expand-icon { transition: transform 0.3s ease; }
 
-.school-expand-btn:active {
-  transform: translateY(0);
-}
-
-/* Icon rotation animation */
-.expand-icon {
-  transition: transform 0.3s ease;
-  font-size: .7rem;
-}
-
-/* Text switching */
-.expand-text,
-.collapse-text {
-  transition: opacity 0.2s ease;
-}
-
-/* Enhanced school preview items for better interaction */
-.school-preview-item {
-  transition: background-color 0.2s ease;
-}
-
-.schools-expandable .school-preview-item {
-  opacity: 0;
-  animation: fadeInSchool 0.3s ease forwards;
-}
-
-.schools-expandable .school-preview-item:nth-child(1) { animation-delay: 0.1s; }
-.schools-expandable .school-preview-item:nth-child(2) { animation-delay: 0.15s; }
-.schools-expandable .school-preview-item:nth-child(3) { animation-delay: 0.2s; }
-.schools-expandable .school-preview-item:nth-child(4) { animation-delay: 0.25s; }
-.schools-expandable .school-preview-item:nth-child(5) { animation-delay: 0.3s; }
-
-@keyframes fadeInSchool {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Hover effect for individual schools */
-.school-preview-item:hover {
-  background: rgba(0,34,197,.04);
-  border-radius: .25rem;
-  margin: 0 -.25rem;
-  padding-left: .25rem;
-  padding-right: .25rem;
-}
-
-/* Better visual hierarchy when expanded */
-.district-card-v2 .schools-expandable {
-  margin-top: .5rem;
-  padding-top: .5rem;
-  border-top: 1px solid rgba(0,0,0,.05);
-}
-
-/* Mobile adjustments for expandable schools */
-@media (max-width: 768px) {
-  .school-expand-btn {
-    font-size: .75rem;
-    padding: .2rem .4rem;
-  }
-  
-  .expand-icon {
-    font-size: .65rem;
-  }
-  
-  .school-preview-item:hover {
-    margin: 0 -.15rem;
-    padding-left: .15rem;
-    padding-right: .15rem;
-  }
-}
-
-/* Accessibility improvements */
-.school-expand-btn:focus {
-  outline: 2px solid var(--orenda-primary);
-  outline-offset: 2px;
-}
-
-.school-expand-btn:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Loading state (optional enhancement) */
-.school-expand-btn.loading {
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.school-expand-btn.loading .expand-icon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* =========================================================
-   Compact District Card Components (Replaces Previous)
-   ========================================================= */
-
-/* District Overview - Compact Stats */
-.district-overview {
-  background: rgba(248,249,251,.6);
-  border-radius: .5rem;
-  padding: .75rem;
-  border: 1px solid #e9ecef;
-}
-
-.compact-stat {
-  display: flex;
-  align-items: center;
-  gap: .375rem;
-  font-size: .85rem;
-  color: #495057;
-}
-
-.compact-stat i {
-  color: var(--orenda-primary);
-  font-size: 1rem;
-}
-
-.compact-stat .stat-number {
-  font-weight: 700;
-  color: var(--orenda-primary);
-}
-
-.compact-stat .stat-label {
-  font-weight: 500;
-  color: #6c757d;
-  font-size: .8rem;
-}
-
-/* Schools Toggle Button */
-.schools-toggle-btn {
-  background: transparent;
-  border: 1px solid var(--orenda-primary);
-  color: var(--orenda-primary);
-  font-size: .8rem;
-  font-weight: 500;
-  padding: .375rem .75rem;
-  border-radius: .375rem;
-  cursor: pointer;
-  transition: all .2s ease;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  white-space: nowrap;
-}
-
-.schools-toggle-btn:hover {
-  background: var(--orenda-primary);
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,34,197,.2);
-}
-
-.schools-toggle-btn.expanded {
-  background: var(--orenda-primary);
-  color: #fff;
-}
-
-.schools-toggle-btn .toggle-icon {
-  transition: transform 0.3s ease;
-  font-size: .75rem;
-}
-
-/* Schools Detail Section */
 .schools-detail-section {
-  margin-top: 1rem;
-  padding: .75rem;
+  margin-top: .75rem; padding: .5rem;
   background: rgba(0,34,197,.02);
-  border: 1px solid rgba(0,34,197,.1);
-  border-radius: .5rem;
-  transition: all 0.3s ease;
-}
-
-.schools-detail-header h6 {
-  color: var(--orenda-primary);
-  font-weight: 600;
-  font-size: .9rem;
-  margin-bottom: .75rem;
-  border-bottom: 1px solid rgba(0,34,197,.1);
-  padding-bottom: .5rem;
-}
-
-.schools-detail-list {
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-}
-
-.school-detail-item {
-  background: #fff;
-  border: 1px solid #e9ecef;
+  border: 1px solid rgba(0,34,197,.08);
   border-radius: .375rem;
-  padding: .75rem;
-  transition: all .2s ease;
-  opacity: 0;
-  animation: fadeInSchoolDetail 0.4s ease forwards;
 }
-
-.school-detail-item:hover {
-  border-color: var(--orenda-primary);
-  box-shadow: 0 2px 8px rgba(0,34,197,.1);
-  transform: translateY(-1px);
-}
-
-.school-detail-item:nth-child(1) { animation-delay: 0.1s; }
-.school-detail-item:nth-child(2) { animation-delay: 0.15s; }
-.school-detail-item:nth-child(3) { animation-delay: 0.2s; }
-.school-detail-item:nth-child(4) { animation-delay: 0.25s; }
-.school-detail-item:nth-child(5) { animation-delay: 0.3s; }
-.school-detail-item:nth-child(n+6) { animation-delay: 0.35s; }
-
-@keyframes fadeInSchoolDetail {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.school-name {
-  font-weight: 600;
-  color: #343a40;
-  font-size: .9rem;
-  display: block;
-  margin-bottom: .25rem;
-}
-
-.school-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.school-detail-item-compact {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .25rem .5rem; border-bottom: 1px solid rgba(0,0,0,.05);
   gap: .5rem;
 }
-
-.enrollment {
-  font-size: .8rem;
-  color: var(--orenda-primary);
-  font-weight: 500;
-}
-
-.school-programs {
-  display: flex;
-  gap: .25rem;
-}
-
-.program-mini {
-  font-size: .65rem;
-  font-weight: 700;
-  padding: .15rem .35rem;
-  border-radius: .25rem;
-  line-height: 1;
-}
-
-.program-ga-mini {
-  background: rgba(0,34,197,.1);
-  color: var(--orenda-primary);
-}
-
-.program-ca-mini {
-  background: rgba(40,167,69,.1);
-  color: #28a745;
-}
-
-/* Hover Effects for District Cards */
-.district-card-v2:hover .compact-stat i {
-  color: var(--orenda-primary-hover);
-}
-
-.district-card-v2:hover .compact-stat .stat-number {
-  color: var(--orenda-primary-hover);
-}
-
-.district-card-v2:hover .enrollment {
-  color: var(--orenda-primary-hover);
-}
-
-/* Mobile Responsive Adjustments */
-@media (max-width: 768px) {
-  .district-overview {
-    padding: .5rem;
-  }
-  
-  .district-stats-compact .d-flex {
-    flex-direction: column;
-    gap: .75rem;
-    align-items: stretch !important;
-  }
-  
-  .compact-stat {
-    font-size: .8rem;
-    gap: .25rem;
-  }
-  
-  .compact-stat i {
-    font-size: .9rem;
-  }
-  
-  .schools-toggle-btn {
-    font-size: .75rem;
-    padding: .3rem .6rem;
-    justify-content: center;
-  }
-  
-  .schools-detail-section {
-    padding: .5rem;
-  }
-  
-  .school-detail-item {
-    padding: .5rem;
-  }
-  
-  .school-name {
-    font-size: .85rem;
-  }
-  
-  .enrollment {
-    font-size: .75rem;
-  }
-  
-  .school-meta {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: .25rem;
-  }
-}
-
-/* Accessibility improvements */
-.schools-toggle-btn:focus {
-  outline: 2px solid var(--orenda-primary);
-  outline-offset: 2px;
-}
-
-.schools-toggle-btn:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Loading state */
-.schools-toggle-btn.loading {
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.schools-toggle-btn.loading .toggle-icon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* =========================================================
-   Compact School List Styling (Add to site.css)
-   ========================================================= */
-
-/* Tightened school detail section */
-.schools-detail-section {
-    margin-top: .75rem;
-    padding: .5rem;
-    background: rgba(0,34,197,.02);
-    border: 1px solid rgba(0,34,197,.08);
-    border-radius: .375rem;
-    transition: all 0.3s ease;
-}
-
-/* Compact school items */
-.school-detail-item-compact {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: .25rem .5rem;
-    border-bottom: 1px solid rgba(0,0,0,.05);
-    transition: all .2s ease;
-    opacity: 0;
-    animation: fadeInSchoolDetail 0.4s ease forwards;
-    gap: .5rem;
-}
-
-.school-detail-item-compact:last-child {
-    border-bottom: none;
-}
-
-.school-detail-item-compact:hover {
-    background: rgba(0,34,197,.05);
-    border-radius: .25rem;
-    transform: translateY(-1px);
-}
-
-.school-detail-item-compact:nth-child(1) { animation-delay: 0.1s; }
-.school-detail-item-compact:nth-child(2) { animation-delay: 0.15s; }
-.school-detail-item-compact:nth-child(3) { animation-delay: 0.2s; }
-.school-detail-item-compact:nth-child(4) { animation-delay: 0.25s; }
-.school-detail-item-compact:nth-child(5) { animation-delay: 0.3s; }
-.school-detail-item-compact:nth-child(n+6) { animation-delay: 0.35s; }
-
-/* School name styling */
+.school-detail-item-compact:last-child { border-bottom: none; }
 .school-detail-item-compact .school-name {
-    font-weight: 500;
-    color: #343a40;
-    font-size: .85rem;
-    flex-grow: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  font-weight: 500; font-size: .85rem; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; flex-grow: 1;
 }
+.school-meta-inline { display: flex; align-items: center; gap: .375rem; flex-shrink: 0; }
+.school-meta-inline .enrollment { font-size: .75rem; color: var(--orenda-primary); font-weight: 600; }
 
-/* Inline meta container */
-.school-meta-inline {
-    display: flex;
-    align-items: center;
-    gap: .375rem;
-    flex-shrink: 0;
-}
+/* --- GA Gantt Chart --- */
+.ga-gantt-card { margin-bottom: 3rem; }
+.ga-gantt-scale { position: relative; margin-left: 220px; }
+.ga-gantt-scale-track { position: relative; height: 24px; }
+.ga-gantt-tick { position: absolute; top: 0; transform: translateX(-50%); height: 24px; border-left: 1px dashed var(--orenda-border-subtle); }
+.ga-gantt-tick span { position: absolute; top: 0; left: 6px; font-size: .75rem; color: var(--orenda-text-secondary); transform: translateX(-50%); }
 
-/* Compact chips and badges */
-.school-meta-inline .ga-chip {
-    font-size: .65rem;
-    padding: .1rem .3rem;
-    font-weight: 600;
-    border-radius: .25rem;
-    line-height: 1.1;
-}
-
-.school-meta-inline .program-mini {
-    font-size: .65rem;
-    font-weight: 600;
-    padding: .1rem .3rem;
-    border-radius: .2rem;
-    line-height: 1;
-}
-
-.school-meta-inline .enrollment {
-    font-size: .75rem;
-    color: var(--orenda-primary);
-    font-weight: 600;
-}
-
-/* Mobile adjustments */
-@media (max-width: 768px) {
-    .school-detail-item-compact {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: .375rem .5rem;
-        gap: .25rem;
-    }
-    
-    .school-detail-item-compact .school-name {
-        width: 100%;
-        margin-bottom: .125rem;
-    }
-    
-    .school-meta-inline {
-        width: 100%;
-        justify-content: space-between;
-    }
-}
-
-/* === GA Checkpoint Gantt === */
-.ga-gantt-card { overflow: hidden; margin-bottom: 3rem; }
-
-.ga-gantt-scale { position: relative; margin-left: 220px; } /* leaves room for y-labels */
-.ga-gantt-scale-track {
-  position: relative;
-  height: 24px;
-}
-.ga-gantt-tick {
-  position: absolute; top: 0; transform: translateX(-50%);
-  height: 24px; border-left: 1px dashed #e2e8f0;
-}
-.ga-gantt-tick span {
-  position: absolute; top: 0; left: 6px; font-size: .75rem; color: #6c757d;
-  transform: translateX(-50%);
-}
-
-.ga-gantt {
-  display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem;
-}
+.ga-gantt { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
 .ga-gantt-row { display: grid; grid-template-columns: 210px 1fr; gap: .5rem; align-items: center; }
-.ga-gantt-label {
-  font-weight: 600; color: var(--orenda-primary);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.ga-gantt-label { font-weight: 600; color: var(--orenda-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ga-gantt-track {
-  position: relative; height: 34px; border: 1px solid var(--orenda-border);
-  background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.04);
+  position: relative; height: 34px;
+  background: #fff; border-radius: 10px; border: 1px solid var(--orenda-border-subtle);
 }
-
-/* Bars */
 .ga-span {
-  position: absolute; height: 100%;
-  border-radius: 8px; display: flex; align-items: center;
-  justify-content: flex-start; padding-left: .5rem;
-  font-size: .8rem; font-weight: 700; letter-spacing: .2px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  position: absolute; height: 100%; border-radius: 8px;
+  display: flex; align-items: center; padding-left: .5rem;
+  font-size: .8rem; font-weight: 700;
   border: 1px solid rgba(0,0,0,.06);
   transition: transform .15s ease, box-shadow .15s ease;
 }
-.ga-span:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+.ga-span:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 .ga-span-label { text-shadow: 0 1px 0 rgba(255,255,255,.4); }
 
-/* Colors match your chip palette */
 .ga-span.cp-cp1 { background: var(--quad-benchmark-bg); color: var(--quad-benchmark-fg); }
 .ga-span.cp-cp2 { background: var(--quad-challenge-bg); color: var(--quad-challenge-fg); }
 .ga-span.cp-cp3 { background: var(--quad-strategic-bg); color: var(--quad-strategic-fg); }
 .ga-span.cp-cp4 { background: var(--quad-intensive-bg); color: var(--quad-intensive-fg); }
 .ga-span.cp-cp5 { background: #eef2ff; color: #3730a3; }
 
-/* Responsive */
-@media (max-width: 992px){
+/* =========================================================
+   5. Responsive Adjustments
+   ========================================================= */
+@media (max-width: 991.98px) {
+  .navbar-collapse {
+    background: #fff; border-radius: .5rem;
+    margin-top: .5rem; padding: .75rem;
+    border: 1px solid var(--orenda-border-subtle);
+  }
   .ga-gantt-scale { margin-left: 180px; }
   .ga-gantt-row { grid-template-columns: 170px 1fr; }
-  .ga-gantt-track { height: 30px; }
-  .ga-span { font-size: .75rem; }
 }
+
+@media (max-width: 768px) {
+  .orenda-header, .orenda-card-body { padding: 1.5rem; }
+  .orenda-container, .orenda-container-sm { margin: 0; padding: 0 .75rem; max-width: none; }
+}
+
 @media (max-width: 576px){
-  .ga-gantt-scale { display:none; } /* hide month ticks on very small screens */
+  .brand-logo { height: 32px; }
+  .main-header, .main-header .navbar, .main-header .container-fluid { min-height: 55px; }
+  .ga-gantt-scale { display: none; }
   .ga-gantt-row { grid-template-columns: 1fr; }
   .ga-gantt-label { margin-bottom: .25rem; }
 }
-
