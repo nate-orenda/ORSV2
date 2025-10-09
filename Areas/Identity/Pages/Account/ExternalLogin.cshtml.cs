@@ -287,7 +287,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                     "New ORSV2 registration (Google)",
                                     adminBody);
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 // Log but don't fail the registration
                                 // Add logging here if you have ILogger injected
