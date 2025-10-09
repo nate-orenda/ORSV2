@@ -79,6 +79,23 @@ namespace ORSV2.Areas.Identity.Pages.Account
             public bool ReadOnlyAccess { get; set; }
             public bool CommunicationGroup { get; set; }
         }
+        private readonly IConfiguration _configuration;
+        public ExternalLoginModel(
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            IUserStore<ApplicationUser> userStore,
+            IEmailSender emailSender,
+            ApplicationDbContext context,
+            IConfiguration configuration)  // <-- ADD THIS
+        {
+            _signInManager = signInManager;
+            _userManager = userManager;
+            _userStore = userStore;
+            _emailStore = GetEmailStore();
+            _emailSender = emailSender;
+            _context = context;
+            _configuration = configuration;  // <-- ADD THIS
+        }
 
         public IActionResult OnGet() => RedirectToPage("./Login");
 
@@ -253,6 +270,19 @@ namespace ORSV2.Areas.Identity.Pages.Account
 
                         await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                             $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+                        // Send admin notification email
+                        var adminEmail = _configuration["SMTP-ADMIN"];
+                        if (!string.IsNullOrWhiteSpace(adminEmail))
+                        {
+                            await _emailSender.SendEmailAsync(
+                                adminEmail,
+                                "New User Registration",
+                                $"<p>A new user has registered via Google authentication:</p>" +
+                                $"<p><strong>Email:</strong> {Input.Email}<br />" +
+                                $"<strong>Name:</strong> {Input.FirstName} {Input.LastName}<br />" +
+                                $"<strong>Registration Method:</strong> Google OAuth</p>");
+                        }
 
                         if (_userManager.Options.SignIn.RequireConfirmedAccount)
                         {
