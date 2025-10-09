@@ -33,13 +33,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
-
+        private readonly IConfiguration _configuration;
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             IEmailSender emailSender,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IConfiguration configuration)  // <-- ADD THIS
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -47,6 +48,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailStore = GetEmailStore();
             _emailSender = emailSender;
             _context = context;
+            _configuration = configuration;  // <-- ADD THIS
         }
 
         [BindProperty]
@@ -78,23 +80,6 @@ namespace ORSV2.Areas.Identity.Pages.Account
             public int SchoolCode { get; set; }
             public bool ReadOnlyAccess { get; set; }
             public bool CommunicationGroup { get; set; }
-        }
-        private readonly IConfiguration _configuration;
-        public ExternalLoginModel(
-            SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager,
-            IUserStore<ApplicationUser> userStore,
-            IEmailSender emailSender,
-            ApplicationDbContext context,
-            IConfiguration configuration)  // <-- ADD THIS
-        {
-            _signInManager = signInManager;
-            _userManager = userManager;
-            _userStore = userStore;
-            _emailStore = GetEmailStore();
-            _emailSender = emailSender;
-            _context = context;
-            _configuration = configuration;  // <-- ADD THIS
         }
 
         public IActionResult OnGet() => RedirectToPage("./Login");
