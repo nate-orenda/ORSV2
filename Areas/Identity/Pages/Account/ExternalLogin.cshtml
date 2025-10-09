@@ -10,8 +10,7 @@
 
 <p id="external-login-description" class="text-info">
     You've successfully authenticated with <strong>@Model.ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+    Please confirm your info and click Register to finish.
 </p>
 
 <div class="row">
@@ -19,22 +18,30 @@
         <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <div class="mb-3">
-                    <label asp-for="Input.FirstName" class="form-label"></label>
-                    <input asp-for="Input.FirstName" class="form-control orenda-input" />
-                    <span asp-validation-for="Input.FirstName" class="text-danger"></span>
-                    </div>
 
-                <div class="mb-3">
-                    <label asp-for="Input.LastName" class="form-label"></label>
-                    <input asp-for="Input.LastName" class="form-control orenda-input" />
-                    <span asp-validation-for="Input.LastName" class="text-danger"></span>
-                </div>
-                <input asp-for="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
+            <div class="mb-3">
+                <label asp-for="Input.FirstName" class="form-label"></label>
+                <input asp-for="Input.FirstName" class="form-control orenda-input" />
+                <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.LastName" class="form-label"></label>
+                <input asp-for="Input.LastName" class="form-control orenda-input" />
+                <span asp-validation-for="Input.LastName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Input.Email" class="form-label"></label>
+                <!-- Show it as read-only so users don’t “fat-finger” it -->
+                <input asp-for="Input.Email" class="form-control orenda-input"
+                       type="email" autocomplete="email" placeholder="Please enter your email."
+                       readonly />
+                <!-- Mirror to guarantee it posts even if some browsers ignore readonly -->
+                <input asp-for="Input.Email" type="hidden" />
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
+
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </form>
     </div>

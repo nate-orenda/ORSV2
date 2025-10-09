@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using ORSV2.Data;
 using ORSV2.Models;
 using ORSV2.Services;
@@ -36,21 +37,19 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 // Add HttpContextAccessor for session access in services
 builder.Services.AddHttpContextAccessor();
 
-// --- CORRECTED IDENTITY CONFIGURATION ---
-// Set up Identity with roles and custom claims factory
+// --- IDENTITY CONFIGURATION ---
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders()
-.AddRoles<ApplicationRole>(); // Ensure roles are registered
+.AddRoles<ApplicationRole>();
 
-// Register your custom factory AFTER setting up Identity
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, CustomClaimsPrincipalFactory>();
 // --- END IDENTITY CONFIGURATION ---
 
-// Add Razor Pages
+// Global antiforgery for Razor Pages
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
@@ -61,7 +60,22 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ConfirmEmail");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/RegisterConfirmation");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ResendEmailConfirmation");
-    options.Conventions.AllowAnonymousToAreaFolder("Identity", "/Account");
+})
+.AddMvcOptions(o =>
+{
+    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
+
+// Global antiforgery for MVC controllers (since you MapControllers)
+builder.Services.AddControllers(o =>
+{
+    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
+
+// (Optional) Explicit header name for AJAX
+builder.Services.AddAntiforgery(o =>
+{
+    o.HeaderName = "RequestVerificationToken";
 });
 
 // Configure application cookie
@@ -98,6 +112,7 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
     options.AddPolicy("CanViewCurriculumForms", policy =>
     {
         policy.RequireAuthenticatedUser();
@@ -114,11 +129,11 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.Configure<FunctionEndpointsOptions>(
     builder.Configuration.GetSection("FunctionEndpoints"));
-    
+
 builder.Services.AddHttpClient("ImportsClient")
     .ConfigureHttpClient(c =>
     {
-        c.Timeout = TimeSpan.FromMinutes(10); // extend to 10 minutes
+        c.Timeout = TimeSpan.FromMinutes(10);
     });
 
 builder.Services.AddSingleton<string>(

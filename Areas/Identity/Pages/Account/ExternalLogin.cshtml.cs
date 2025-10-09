@@ -33,14 +33,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly string _notificationEmail;
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             IEmailSender emailSender,
             ApplicationDbContext context,
-            IConfiguration configuration)  // <-- ADD THIS
+            string notificationEmail)  // Add this parameter
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -48,7 +48,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailStore = GetEmailStore();
             _emailSender = emailSender;
             _context = context;
-            _configuration = configuration;  // <-- ADD THIS
+            _notificationEmail = notificationEmail;  // Add this assignment
         }
 
         [BindProperty]
@@ -167,6 +167,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostConfirmationAsync(string returnUrl = null)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
+            
+            // Retrieve the info we stored in TempData
             var loginProvider = TempData["LoginProvider"] as string;
             var providerKey = TempData["ProviderKey"] as string;
             var providerDisplayName = TempData["ProviderDisplayName"] as string;
@@ -177,22 +179,13 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 return RedirectToPage("./Login");
             }
 
-            // Create ExternalLoginInfo with proper claims
-            var claims = new List<Claim>
+            // Get the external login info again
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
             {
-                new Claim(ClaimTypes.Email, Input.Email),
-                new Claim(ClaimTypes.GivenName, Input.FirstName ?? ""),
-                new Claim(ClaimTypes.Surname, Input.LastName ?? "")
-            };
-            var identity = new ClaimsIdentity(claims);
-            var principal = new ClaimsPrincipal(identity);
-
-            var info = new ExternalLoginInfo(
-                principal, 
-                loginProvider, 
-                providerKey, 
-                providerDisplayName ?? loginProvider
-            );
+                ErrorMessage = "Error loading external login information during confirmation.";
+                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+            }
 
             if (ModelState.IsValid)
             {
@@ -258,24 +251,49 @@ namespace ORSV2.Areas.Identity.Pages.Account
                         var callbackUrl = Url.Page(
                             "/Account/ConfirmEmail",
                             pageHandler: null,
-                            values: new { area = "Identity", userId, code, returnUrl },
-                            protocol: Request.Scheme);
+                            values: new { area = "Identity", userId, code },
+                            Request.Scheme);
 
+                        // Send confirmation email
                         await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                             $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
-                        // Send admin notification email
-                        var adminEmail = _configuration["SMTP-ADMIN"];
-                        if (!string.IsNullOrWhiteSpace(adminEmail))
+                        // --- Admin notification (single mailbox) ---
+                        if (!string.IsNullOrWhiteSpace(_notificationEmail))
                         {
-                            await _emailSender.SendEmailAsync(
-                                adminEmail,
-                                "New User Registration",
-                                $"<p>A new user has registered via Google authentication:</p>" +
-                                $"<p><strong>Email:</strong> {Input.Email}<br />" +
-                                $"<strong>Name:</strong> {Input.FirstName} {Input.LastName}<br />" +
-                                $"<strong>Registration Method:</strong> Google OAuth</p>");
+                            var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
+                            var locked = user.LockoutEnd.HasValue
+                                ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
+                                : "Unlocked";
+
+                            var adminUrl =
+                                Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme)
+                                ?? Url.Content("~/Admin/Users?search=" + user.Email);
+
+                            var adminBody = $@"
+                        <h3>New ORSV2 Registration (Google Login)</h3>
+                        <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                        <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                        <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                        <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                        <p><strong>Status:</strong> {locked}</p>
+                        <p><strong>Provider:</strong> {HtmlEncoder.Default.Encode(info.LoginProvider)}</p>
+                        <p><a href=""{HtmlEncoder.Default.Encode(adminUrl)}"">Open user admin</a></p>";
+
+                            try
+                            {
+                                await _emailSender.SendEmailAsync(
+                                    _notificationEmail,
+                                    "New ORSV2 registration (Google)",
+                                    adminBody);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log but don't fail the registration
+                                // Add logging here if you have ILogger injected
+                            }
                         }
+                        // --- end admin notification ---
 
                         if (_userManager.Options.SignIn.RequireConfirmedAccount)
                         {
@@ -293,7 +311,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
             }
 
-            ProviderDisplayName = providerDisplayName ?? loginProvider;
+            ProviderDisplayName = info.ProviderDisplayName;
             ReturnUrl = returnUrl;
             return Page();
         }
