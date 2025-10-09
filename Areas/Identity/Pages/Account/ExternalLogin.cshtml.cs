@@ -169,6 +169,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             returnUrl = returnUrl ?? Url.Content("~/");
             var loginProvider = TempData["LoginProvider"] as string;
             var providerKey = TempData["ProviderKey"] as string;
+            var providerDisplayName = TempData["ProviderDisplayName"] as string;
 
             if (loginProvider == null || providerKey == null)
             {
@@ -176,15 +177,22 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 return RedirectToPage("./Login");
             }
 
-            var info = new ExternalLoginInfo(
-                new ClaimsPrincipal(), loginProvider, providerKey, loginProvider
-            );
-
-            if (info == null)
+            // Create ExternalLoginInfo with proper claims
+            var claims = new List<Claim>
             {
-                ErrorMessage = "Error loading external login information during confirmation.";
-                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
-            }
+                new Claim(ClaimTypes.Email, Input.Email),
+                new Claim(ClaimTypes.GivenName, Input.FirstName ?? ""),
+                new Claim(ClaimTypes.Surname, Input.LastName ?? "")
+            };
+            var identity = new ClaimsIdentity(claims);
+            var principal = new ClaimsPrincipal(identity);
+
+            var info = new ExternalLoginInfo(
+                principal, 
+                loginProvider, 
+                providerKey, 
+                providerDisplayName ?? loginProvider
+            );
 
             if (ModelState.IsValid)
             {
@@ -285,7 +293,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
             }
 
-            ProviderDisplayName = info.ProviderDisplayName;
+            ProviderDisplayName = providerDisplayName ?? loginProvider;
             ReturnUrl = returnUrl;
             return Page();
         }
