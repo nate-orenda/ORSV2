@@ -32,7 +32,7 @@ namespace ORSV2.Data
         public DbSet<TargetGroup> TargetGroups { get; set; }
         public DbSet<TargetGroupStudent> TargetGroupStudents { get; set; }
         public DbSet<ReportCardGrades> ReportCardGrades { get; set; }
-
+        public DbSet<ReportingPeriods> ReportingPeriods { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

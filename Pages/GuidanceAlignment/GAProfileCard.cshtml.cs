@@ -233,6 +233,18 @@ namespace ORSV2.Pages.GuidanceAlignment
                             r.SchoolId == Student.SchoolId)
                     .ToListAsync();
 
+                // Join with ReportingPeriods in memory to avoid parse issues
+                var currentPeriods = await _context.ReportingPeriods
+                    .AsNoTracking()
+                    .Where(rp => rp.IsCurrent == true && rp.DistrictId == districtId && rp.SchoolId == Student.SchoolId)
+                    .ToListAsync();
+
+                var currentPeriodIds = currentPeriods.Select(rp => rp.MarkingPeriod).ToHashSet();
+
+                rcRaw = rcRaw
+                    .Where(r => r.Term != null && int.TryParse(r.Term, out var mp) && currentPeriodIds.Contains(mp))
+                    .ToList();
+
                 var courseNumbers = rcRaw.Select(r => r.CourseNumber).Distinct().ToList();
                 var courses = await _context.Courses
                     .AsNoTracking()
