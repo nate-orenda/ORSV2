@@ -258,7 +258,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                         await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                             $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
-                        // --- Admin notification (single mailbox) ---
+                        // --- Admin notification (multiple mailboxes) ---
                         if (!string.IsNullOrWhiteSpace(_notificationEmail))
                         {
                             var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
@@ -271,26 +271,35 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                 ?? Url.Content("~/Admin/Users?search=" + user.Email);
 
                             var adminBody = $@"
-                        <h3>New ORSV2 Registration (Google Login)</h3>
-                        <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
-                        <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
-                        <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
-                        <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
-                        <p><strong>Status:</strong> {locked}</p>
-                        <p><strong>Provider:</strong> {HtmlEncoder.Default.Encode(info.LoginProvider)}</p>
-                        <p><a href=""{HtmlEncoder.Default.Encode(adminUrl)}"">Open user admin</a></p>";
+                                        <h3>New ORSV2 Registration (Google Login)</h3>
+                                        <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                                        <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                                        <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                                        <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                                        <p><strong>Status:</strong> {locked}</p>
+                                        <p><strong>Provider:</strong> {HtmlEncoder.Default.Encode(info.LoginProvider)}</p>
+                                        <p><a href=""{adminUrl}"">Open user admin</a></p>";
 
-                            try
+                            var notificationEmails = _notificationEmail
+                                .Split(',')
+                                .Select(email => email.Trim())
+                                .Where(email => !string.IsNullOrWhiteSpace(email))
+                                .ToList();
+
+                            foreach (var email in notificationEmails)
                             {
-                                await _emailSender.SendEmailAsync(
-                                    _notificationEmail,
-                                    "New ORSV2 registration (Google)",
-                                    adminBody);
-                            }
-                            catch (Exception)
-                            {
-                                // Log but don't fail the registration
-                                // Add logging here if you have ILogger injected
+                                try
+                                {
+                                    await _emailSender.SendEmailAsync(
+                                        email,
+                                        "New ORSV2 registration (Google)",
+                                        adminBody);
+                                }
+                                catch (Exception)
+                                {
+                                    // Log but don't fail the registration
+                                    // Add logging here if you have ILogger injected
+                                }
                             }
                         }
                         // --- end admin notification ---

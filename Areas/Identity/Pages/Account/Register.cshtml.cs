@@ -180,7 +180,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                         $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
                     
-                    // --- Admin notification (single mailbox) ---
+                    // --- Admin notification (multiple mailboxes) ---
                     if (!string.IsNullOrWhiteSpace(_notificationEmail))
                     {
                         // Keep PII concise and useful for provisioning
@@ -195,24 +195,33 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             ?? Url.Content("~/Admin/Users?search=" + user.Email);
 
                         var adminBody = $@"
-                    <h3>New ORSV2 Registration</h3>
-                    <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
-                    <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
-                    <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
-                    <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
-                    <p><strong>Status:</strong> {locked}</p>
-                    <p><a href=""{HtmlEncoder.Default.Encode(adminUrl)}"">Open user admin</a></p>";
+                                    <h3>New ORSV2 Registration</h3>
+                                    <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                                    <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                                    <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                                    <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                                    <p><strong>Status:</strong> {locked}</p>
+                                    <p><a href=""{adminUrl}"">Open user admin</a></p>";
 
-                        try
+                        var notificationEmails = _notificationEmail
+                            .Split(',')
+                            .Select(email => email.Trim())
+                            .Where(email => !string.IsNullOrWhiteSpace(email))
+                            .ToList();
+
+                        foreach (var email in notificationEmails)
                         {
-                            await _emailSender.SendEmailAsync(
-                                _notificationEmail,
-                                "New ORSV2 registration",
-                                adminBody);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed sending new user notification to {Admin}", _notificationEmail);
+                            try
+                            {
+                                await _emailSender.SendEmailAsync(
+                                    email,
+                                    "New ORSV2 registration",
+                                    adminBody);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
+                            }
                         }
                     }
                     // --- end admin notification ---
