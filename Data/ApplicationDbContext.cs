@@ -31,6 +31,7 @@ namespace ORSV2.Data
         public DbSet<ORSV2.Models.Standard> Standards { get; set; }
         public DbSet<TargetGroup> TargetGroups { get; set; }
         public DbSet<TargetGroupStudent> TargetGroupStudents { get; set; }
+        public DbSet<ReportCardGrades> ReportCardGrades { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

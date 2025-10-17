@@ -13,7 +13,6 @@ namespace ORSV2.Pages.GuidanceAlignment
         public GAProfileCardModel(ApplicationDbContext context) : base(context)
         {
         }
-
         public GAResults Student { get; set; } = default!;
         public List<IndicatorSummary> StudentIndicators { get; set; } = new();
         public int? AttendanceAbsences { get; set; }
@@ -111,7 +110,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             AttendanceAbsences = attendanceAbsences;
 
             // Process grades and schedule data
-            await ProcessGradesAndScheduleAsync(school.DistrictId);
+            await ProcessGradesAndScheduleAsync(school.DistrictId, cp);
 
             return Page();
         }
@@ -194,7 +193,7 @@ namespace ORSV2.Pages.GuidanceAlignment
             }
         }
 
-        private async Task ProcessGradesAndScheduleAsync(int districtId)
+        private async Task ProcessGradesAndScheduleAsync(int districtId, int cp)
         {
             var subjectMap = new Dictionary<string, string>
             {
@@ -207,9 +206,9 @@ namespace ORSV2.Pages.GuidanceAlignment
                 ["G"] = "College-Prep Elective"
             };
 
-            var validSubjectCodes = subjectMap.Keys.ToHashSet(); // Use HashSet for O(1) lookups
+            var validSubjectCodes = subjectMap.Keys.ToHashSet();
 
-            // Get all grades data in one optimized query
+            // Get regular transcript grades
             var gradesData = await _context.Grades
                 .AsNoTracking()
                 .Where(g => g.StudentId == Student.StudentId && g.DistrictId == districtId)
@@ -223,7 +222,43 @@ namespace ORSV2.Pages.GuidanceAlignment
                     })
                 .ToListAsync();
 
-            // Process A-G grades
+            // Get report card grades for CP 2 or 4 only - fetch raw data first, then join in memory
+            var reportCardData = new List<object>();
+            if (cp == 2 || cp == 4)
+            {
+                var rcRaw = await _context.ReportCardGrades
+                    .AsNoTracking()
+                    .Where(r => r.StudentId == Student.StudentId && 
+                            r.DistrictId == districtId && 
+                            r.SchoolId == Student.SchoolId)
+                    .ToListAsync();
+
+                var courseNumbers = rcRaw.Select(r => r.CourseNumber).Distinct().ToList();
+                var courses = await _context.Courses
+                    .AsNoTracking()
+                    .Where(c => c.DistrictId == districtId && courseNumbers.Contains(c.CourseNumber))
+                    .ToListAsync();
+
+                var courseMap = courses.ToDictionary(c => c.CourseNumber);
+
+                reportCardData = rcRaw
+                    .Where(r => !string.IsNullOrWhiteSpace(r.CourseNumber) && courseMap.ContainsKey(r.CourseNumber))
+                    .Select(r => {
+                        var course = courseMap[r.CourseNumber!];
+                        return new {
+                            Term = r.Term,
+                            CN = r.CourseNumber,
+                            Title = course.Title,
+                            Mark = r.Mark,
+                            CreditsEarned = r.CreditsEarned,
+                            SubjectCode = course.CSU_SubjectAreaCode ?? course.UC_SubjectAreaCode
+                        };
+                    })
+                    .Cast<object>()
+                    .ToList();
+            }
+
+            // Process A-G grades from transcript
             var agGrades = gradesData
                 .Where(x => !string.IsNullOrEmpty(x.SubjectCode) && validSubjectCodes.Contains(x.SubjectCode))
                 .GroupBy(g => g.SubjectCode!)
@@ -246,10 +281,37 @@ namespace ORSV2.Pages.GuidanceAlignment
                 }).OrderByDescending(x => x.SchoolYear).ThenBy(x => x.Term).ToList()
             }).ToList();
 
-            // Process Non-A-G grades
+            // Append report card grades to matching A-G subject areas
+            if (reportCardData.Any())
+            {
+                foreach (var rcItem in reportCardData)
+                {
+                    dynamic rc = rcItem;
+                    string? subjectCode = rc.SubjectCode;
+
+                    if (!string.IsNullOrEmpty(subjectCode) && validSubjectCodes.Contains(subjectCode))
+                    {
+                        var subjectGroup = SubjectGradesByArea.FirstOrDefault(s => s.SubjectCode == subjectCode);
+                        if (subjectGroup != null)
+                        {
+                            subjectGroup.Grades.Add(new SubjectGrade
+                            {
+                                Term = rc.Term?.ToString() ?? "",
+                                CourseNumber = rc.CN,
+                                Title = rc.Title,
+                                Mark = rc.Mark,
+                                Type = "Report Card",
+                                CreditsEarned = rc.CreditsEarned
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Process Non-A-G grades (unchanged)
             NonAGGrades = gradesData
                 .Where(g => string.IsNullOrEmpty(g.SubjectCode) && 
-                           int.TryParse(g.GradeLevel, out var gl) && gl > 8)
+                        int.TryParse(g.GradeLevel, out var gl) && gl > 8)
                 .Select(g => new SubjectGrade
                 {
                     SchoolYear = g.SchoolYear,
