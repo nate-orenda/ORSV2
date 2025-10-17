@@ -338,7 +338,7 @@ function initializeModal() {
                 { extend: 'print', text: '<i class="fas fa-print"></i> Print', className: 'btn btn-secondary btn-sm condensed-btn', exportOptions: { columns: ':visible' } },
                 {
                     text: '<i class="fas fa-download"></i> Export Selected',
-                    className: 'btn btn-primary btn-sm condensed-btn',
+                    className: 'btn btn-secondary btn-sm condensed-btn',
                     action: function (e, dt) {
                         dt.button('.buttons-csv', { exportOptions: { modifier: { selected: true } } }).trigger();
                     }

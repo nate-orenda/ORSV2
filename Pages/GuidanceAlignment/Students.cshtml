@@ -346,8 +346,8 @@
         <div class="grouping-area" id="groupingArea" 
              data-placeholder="Drag column headers here to group students by that field">
         </div>
-        <div id="studentsToolbar" class="students-toolbar">
-            <div class="left">
+        <div id="studentsToolbar" class="students-toolbar d-flex align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
                 <div id="dtButtons"></div>
                 <button id="createTargetGroupBtn" class="btn btn-orenda-primary btn-sm condensed-btn" disabled>
                     <i class="bi bi-bullseye"></i> Create Focus Group
@@ -364,10 +364,8 @@
                     Compare Checkpoints
                 </a>
             </div>
-            <div class="right">
-                <input id="studentsSearch" class="form-control form-control-sm" placeholder="Search students…" />
-            </div>
-        </div>
+        <input id="studentsSearch" class="form-control form-control-sm ms-auto" style="max-width: 250px;" placeholder="Search students…" />
+    </div>
         <!-- Container for scrolling -->
         <div class="table-scroll-container">
             <table class="table table-sm table-hover table-striped mb-0" id="studentsTable">
