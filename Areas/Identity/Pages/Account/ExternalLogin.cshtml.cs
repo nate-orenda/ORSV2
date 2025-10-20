@@ -267,9 +267,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                 : "Unlocked";
 
                             var adminUrl =
-                                Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme)
+                                Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme, host: Request.Host.Value)
                                 ?? Url.Content("~/Admin/Users?search=" + user.Email);
-
                             var adminBody = $@"
                                         <h3>New ORSV2 Registration (Google Login)</h3>
                                         <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>

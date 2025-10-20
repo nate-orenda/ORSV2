@@ -191,17 +191,17 @@ namespace ORSV2.Areas.Identity.Pages.Account
 
                         // Admin page link (prefer Page() when available; fall back to Content)
                         var adminUrl =
-                            Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme)
+                            Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme, host: Request.Host.Value)
                             ?? Url.Content("~/Admin/Users?search=" + user.Email);
 
                         var adminBody = $@"
-                                    <h3>New ORSV2 Registration</h3>
-                                    <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
-                                    <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
-                                    <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
-                                    <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
-                                    <p><strong>Status:</strong> {locked}</p>
-                                    <p><a href=""{adminUrl}"">Open user admin</a></p>";
+                            <h3>New ORSV2 Registration</h3>
+                            <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                            <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                            <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                            <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                            <p><strong>Status:</strong> {locked}</p>
+                            <p><a href=""{adminUrl}"">Open user admin</a></p>";
 
                         var notificationEmails = _notificationEmail
                             .Split(',')
