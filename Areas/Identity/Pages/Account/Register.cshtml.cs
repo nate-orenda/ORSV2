@@ -190,9 +190,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             : "Unlocked";
 
                         // Admin page link (prefer Page() when available; fall back to Content)
-                        var adminUrl =
-                            Url.Page("/Admin/Users", pageHandler: null, values: new { search = user.Email }, protocol: Request.Scheme, host: Request.Host.Value)
-                            ?? Url.Content("~/Admin/Users?search=" + user.Email);
+                        var adminUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users?search={Uri.EscapeDataString(user.Email)}";
 
                         var adminBody = $@"
                             <h3>New ORSV2 Registration</h3>
