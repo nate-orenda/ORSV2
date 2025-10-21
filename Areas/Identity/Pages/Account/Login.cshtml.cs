@@ -23,12 +23,6 @@ namespace ORSV2.Areas.Identity.Pages.Account
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
-
-        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
-        {
-            _signInManager = signInManager;
-            _logger = logger;
-        }
         private readonly UserManager<ApplicationUser> _userManager;
         public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, UserManager<ApplicationUser> userManager)
         {
