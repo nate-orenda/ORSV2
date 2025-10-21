@@ -142,6 +142,8 @@ builder.Services.AddSingleton<string>(
 
 var app = builder.Build();
 
+app.UseMiddleware<DatabaseWakeupMiddleware>();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");

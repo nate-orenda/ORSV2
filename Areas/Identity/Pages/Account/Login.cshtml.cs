@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using Microsoft.Data.SqlClient;
 
 namespace ORSV2.Areas.Identity.Pages.Account
 {
@@ -102,47 +103,63 @@ namespace ORSV2.Areas.Identity.Pages.Account
             ReturnUrl = returnUrl;
         }
 
+        // In your Login.cshtml.cs OnPostAsync method, wrap the sign-in logic:
+
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
-
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-                if (result.Succeeded)
+                try
                 {
-                    _logger.LogInformation("User logged in.");
-                    if (Url.IsLocalUrl(returnUrl) && !returnUrl.Contains("/Account/Login", StringComparison.OrdinalIgnoreCase))
+                    var result = await _signInManager.PasswordSignInAsync(
+                        Input.Email, 
+                        Input.Password, 
+                        Input.RememberMe, 
+                        lockoutOnFailure: false);
+
+                    if (result.Succeeded)
                     {
+                        _logger.LogInformation("User {Email} logged in successfully.", Input.Email);
                         return LocalRedirect(returnUrl);
+                    }
+                    
+                    if (result.IsLockedOut)
+                    {
+                        _logger.LogWarning("User {Email} account locked.", Input.Email);
+                        return RedirectToPage("./Lockout");
                     }
                     else
                     {
-                        return RedirectToPage("/Index"); // or use Redirect("~/")
+                        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                        return Page();
                     }
-
                 }
-                if (result.RequiresTwoFactor)
+                catch (InvalidOperationException ex) when (ex.Message.Contains("No database provider"))
                 {
-                    return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
+                    _logger.LogError(ex, "Database connection failed during login attempt");
+                    ModelState.AddModelError(string.Empty, 
+                        "The system is temporarily unavailable. Please try again in a few moments.");
+                    return Page();
                 }
-                if (result.IsLockedOut)
+                catch (SqlException ex) when (ex.Number == -2 || ex.Number == -1 || ex.Number == -40197)
                 {
-                    _logger.LogWarning("User account locked out.");
-                    return RedirectToPage("./Lockout");
+                    // -2: Timeout, -1: Connection refused, -40197: Transient error
+                    _logger.LogError(ex, "Database timeout/unavailable during login");
+                    ModelState.AddModelError(string.Empty, 
+                        "The system is temporarily unavailable. Please try again in a few moments.");
+                    return Page();
                 }
-                else
+                catch (Exception ex)
                 {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    _logger.LogError(ex, "Unexpected error during login");
+                    ModelState.AddModelError(string.Empty, "An unexpected error occurred. Please try again.");
                     return Page();
                 }
             }
 
-            // If we got this far, something failed, redisplay form
             return Page();
         }
     }
