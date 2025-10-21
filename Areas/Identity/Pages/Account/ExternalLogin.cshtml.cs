@@ -128,6 +128,17 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 return RedirectToPage("./Lockout");
             }
 
+            // Check if user exists but email is unconfirmed
+            if (!result.Succeeded && info.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
+            {
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null && !user.EmailConfirmed)
+                {
+                    return RedirectToPage("./ResendEmailConfirmation", new { email = email });
+                }
+            }
+
             ReturnUrl = returnUrl;
             ProviderDisplayName = info.ProviderDisplayName;
 
@@ -193,7 +204,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
 
-                var staff = await _context.Staff.FirstOrDefaultAsync(s => s.EmailAddress == Input.Email);
+                var staff = await _context.Staff
+                    .FirstOrDefaultAsync(s => s.EmailAddress == Input.Email);
+
                 if (staff != null && staff.Inactive != true)
                 {
                     user.FirstName = staff.FirstName;
@@ -201,14 +214,24 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     user.DistrictId = staff.DistrictId;
                     user.StaffId = staff.StaffId;
 
-                    var primarySchool = await _context.Schools.FirstOrDefaultAsync(s =>
-                        s.LocalSchoolId.ToString() == staff.PrimarySchool && s.DistrictId == staff.DistrictId);
+                    // Load all schools for this district ONCE
+                    var schoolsForDistrict = await _context.Schools
+                        .Where(s => s.DistrictId == staff.DistrictId)
+                        .ToListAsync();
 
-                    if (primarySchool != null)
+                    // Primary school - in-memory lookup
+                    if (!string.IsNullOrWhiteSpace(staff.PrimarySchool))
                     {
-                        user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
+                        var primarySchool = schoolsForDistrict.FirstOrDefault(s => 
+                            s.LocalSchoolId.ToString() == staff.PrimarySchool);
+                        
+                        if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
+                        {
+                            user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
+                        }
                     }
 
+                    // SchoolAccess - in-memory lookups
                     if (!string.IsNullOrWhiteSpace(staff.SchoolAccess))
                     {
                         try
@@ -218,8 +241,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             {
                                 foreach (var entry in accessList)
                                 {
-                                    var school = await _context.Schools.FirstOrDefaultAsync(s =>
-                                        s.LocalSchoolId == entry.SchoolCode.ToString() && s.DistrictId == staff.DistrictId);
+                                    var school = schoolsForDistrict.FirstOrDefault(s => 
+                                        s.LocalSchoolId == entry.SchoolCode.ToString());
 
                                     if (school != null && !user.UserSchools.Any(us => us.SchoolId == school.Id))
                                     {

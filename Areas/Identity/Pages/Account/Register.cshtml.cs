@@ -123,14 +123,24 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     user.DistrictId = staff.DistrictId;
                     user.StaffId = staff.StaffId;
 
-                    // Add Primary School
-                    var primarySchool = await _context.Schools.FirstOrDefaultAsync(s => s.LocalSchoolId.ToString() == staff.PrimarySchool && s.DistrictId == staff.DistrictId);
-                    if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
+                    // Load all schools for this district ONCE
+                    var schoolsForDistrict = await _context.Schools
+                        .Where(s => s.DistrictId == staff.DistrictId)
+                        .ToListAsync();
+
+                    // Add Primary School - in-memory lookup
+                    if (!string.IsNullOrWhiteSpace(staff.PrimarySchool))
                     {
-                        user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
+                        var primarySchool = schoolsForDistrict.FirstOrDefault(s => 
+                            s.LocalSchoolId.ToString() == staff.PrimarySchool);
+                        
+                        if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
+                        {
+                            user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
+                        }
                     }
 
-                    // Add from SchoolAccess
+                    // Add from SchoolAccess - in-memory lookups
                     if (!string.IsNullOrWhiteSpace(staff.SchoolAccess))
                     {
                         try
@@ -140,7 +150,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             {
                                 foreach (var entry in accessList)
                                 {
-                                    var school = await _context.Schools.FirstOrDefaultAsync(s => s.LocalSchoolId == entry.SchoolCode.ToString() && s.DistrictId == staff.DistrictId);
+                                    var school = schoolsForDistrict.FirstOrDefault(s => 
+                                        s.LocalSchoolId == entry.SchoolCode.ToString());
+                                    
                                     if (school != null && !user.UserSchools.Any(us => us.SchoolId == school.Id))
                                     {
                                         user.UserSchools.Add(new UserSchool { SchoolId = school.Id, User = user });
