@@ -29,6 +29,13 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
         }
+        private readonly UserManager<ApplicationUser> _userManager;
+        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, UserManager<ApplicationUser> userManager)
+        {
+            _signInManager = signInManager;
+            _logger = logger;
+            _userManager = userManager;
+        }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -114,6 +121,13 @@ namespace ORSV2.Areas.Identity.Pages.Account
             {
                 try
                 {
+                    // Check if user exists and email is unconfirmed
+                    var user = await _userManager.FindByEmailAsync(Input.Email);
+                    if (user != null && !user.EmailConfirmed)
+                    {
+                        return RedirectToPage("./ResendEmailConfirmation", new { email = Input.Email });
+                    }
+
                     var result = await _signInManager.PasswordSignInAsync(
                         Input.Email, 
                         Input.Password, 
@@ -146,7 +160,6 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
                 catch (SqlException ex) when (ex.Number == -2 || ex.Number == -1 || ex.Number == -40197)
                 {
-                    // -2: Timeout, -1: Connection refused, -40197: Transient error
                     _logger.LogError(ex, "Database timeout/unavailable during login");
                     ModelState.AddModelError(string.Empty, 
                         "The system is temporarily unavailable. Please try again in a few moments.");

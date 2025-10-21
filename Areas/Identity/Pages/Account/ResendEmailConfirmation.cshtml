@@ -5,7 +5,15 @@
 }
 
 <h1>@ViewData["Title"]</h1>
-<h2>Enter your email.</h2>
+@if (!string.IsNullOrEmpty(Model.Email))
+{
+    <h2>Confirm your email address</h2>
+    <p>Your email address <strong>@Model.Email</strong> hasn't been confirmed yet.</p>
+}
+else
+{
+    <h2>Enter your email.</h2>
+}
 <hr />
 <div class="row">
     <div class="col-md-4">
@@ -20,6 +28,10 @@
         </form>
     </div>
 </div>
+
+<p class="mt-3">
+    <a asp-page="./Login">Back to login</a>
+</p>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
