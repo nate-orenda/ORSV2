@@ -140,6 +140,15 @@ builder.Services.AddSingleton<string>(
     _ => builder.Configuration.GetValue<string>("NotificationEmail")
          ?? throw new InvalidOperationException("NotificationEmail is not configured"));
 
+// Azure Blob Storage for district logos
+var blobContainerUri = new Uri("https://orsfiles.blob.core.windows.net/district-logos");
+builder.Services.AddSingleton(x => 
+    new Azure.Storage.Blobs.BlobContainerClient(
+        blobContainerUri, 
+        new Azure.Identity.DefaultAzureCredential()
+    )
+);
+
 var app = builder.Build();
 
 app.UseMiddleware<DatabaseWakeupMiddleware>();

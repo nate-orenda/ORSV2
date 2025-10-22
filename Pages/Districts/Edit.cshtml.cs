@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -10,12 +11,12 @@ namespace ORSV2.Pages.Districts
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly BlobContainerClient _blobContainer;
 
-        public EditModel(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public EditModel(ApplicationDbContext context, BlobContainerClient blobContainer)
         {
             _context = context;
-            _webHostEnvironment = webHostEnvironment;
+            _blobContainer = blobContainer;
         }
 
         [BindProperty]
@@ -47,35 +48,41 @@ namespace ORSV2.Pages.Districts
             // Handle new logo upload
             if (UploadedLogo != null)
             {
-                 if (UploadedLogo.Length > 5 * 1024 * 1024) // 5 MB limit
+                if (UploadedLogo.Length > 5 * 1024 * 1024) // 5 MB limit
                 {
                     ModelState.AddModelError("UploadedLogo", "The file size cannot exceed 5MB.");
                     return Page();
                 }
 
-                // Delete the old file if it exists
+                // Delete the old blob if it exists
                 if (!string.IsNullOrEmpty(districtToUpdate.LogoImagePath))
                 {
-                    var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath, districtToUpdate.LogoImagePath.TrimStart('/'));
-                    if (System.IO.File.Exists(oldFilePath))
+                    try
                     {
-                        System.IO.File.Delete(oldFilePath);
+                        var oldBlobName = ExtractBlobNameFromUri(districtToUpdate.LogoImagePath);
+                        if (!string.IsNullOrEmpty(oldBlobName))
+                        {
+                            var oldBlobClient = _blobContainer.GetBlobClient(oldBlobName);
+                            await oldBlobClient.DeleteIfExistsAsync();
+                        }
+                    }
+                    catch
+                    {
+                        // Log error but continue with upload
                     }
                 }
 
-                // Save the new file
-                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "district-logos");
-                Directory.CreateDirectory(uploadsFolder);
-                var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(UploadedLogo.FileName);
-                var newFilePath = Path.Combine(uploadsFolder, uniqueFileName);
+                // Upload the new blob
+                var blobName = $"district-{District.Id}-{Guid.NewGuid()}_{Path.GetFileName(UploadedLogo.FileName)}";
+                var blobClient = _blobContainer.GetBlobClient(blobName);
 
-                using (var fileStream = new FileStream(newFilePath, FileMode.Create))
+                using (var stream = UploadedLogo.OpenReadStream())
                 {
-                    await UploadedLogo.CopyToAsync(fileStream);
+                    await blobClient.UploadAsync(stream, overwrite: true);
                 }
-                districtToUpdate.LogoImagePath = Path.Combine("/uploads/district-logos", uniqueFileName).Replace('\\', '/');
-            }
 
+                districtToUpdate.LogoImagePath = blobClient.Uri.ToString();
+            }
 
             // Only update API fields if new values were provided
             if (!string.IsNullOrWhiteSpace(District.SISApiKey))
@@ -96,6 +103,19 @@ namespace ORSV2.Pages.Districts
 
             await _context.SaveChangesAsync();
             return RedirectToPage("Index");
+        }
+
+        private string? ExtractBlobNameFromUri(string uri)
+        {
+            try
+            {
+                var blobUri = new Uri(uri);
+                return blobUri.Segments.LastOrDefault()?.Trim('/');
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
