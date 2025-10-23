@@ -280,9 +280,14 @@ else
                 <td>
                   @if (student.ResultId > 0)
                   {
-                    <a href="javascript:void(0)" class="student-profile-link" data-student-id="@student.ResultId">
+                    <a href="javascript:void(0)"
+                      class="student-link"
+                      data-result-id="@student.ResultId"
+                      data-student-name="@($"{student.FirstName} {student.LastName}")"
+                      data-quadrant="@student.Quadrant">
                       @student.FirstName @student.LastName
                     </a>
+
                   }
                   else
                   {
@@ -389,20 +394,20 @@ else
   </div>
 }
 
-<!-- Student Profile Modal -->
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" id="profileModalBody">
-        <!-- Content loaded dynamically -->
-      </div>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="profileContent">Loading...</div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
+
 
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -575,134 +580,84 @@ else
 
       // ===== PROFILE CARD MODAL HANDLER (FIXED) =====
       (function () {
-        // Wait for DOM to be fully ready
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', initProfileModal);
-        } else {
-          initProfileModal();
+  // Run after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProfileModal);
+  } else {
+    initProfileModal();
+  }
+
+  function quadrantBadgeClass(q) {
+    const v = (q || '').toLowerCase();
+    if (v === 'challenge')  return 'badge bg-primary';
+    if (v === 'benchmark')  return 'badge bg-success';
+    if (v === 'strategic')  return 'badge bg-warning text-dark';
+    if (v === 'intensive')  return 'badge bg-danger';
+    return 'badge bg-secondary';
+  }
+
+  function initProfileModal() {
+    const modalEl  = document.getElementById('profileModal');
+    const titleEl  = document.getElementById('profileModalLabel');
+    const bodyEl   = document.getElementById('profileContent'); // uses your existing id
+    if (!modalEl || !titleEl || !bodyEl) return;
+
+    if (typeof bootstrap === 'undefined') {
+      console.error('Bootstrap JS is required for the modal.');
+      return;
+    }
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+    // Event delegation for all future .student-link clicks
+    document.addEventListener('click', async (e) => {
+      const link = e.target.closest('.student-link');
+      if (!link) return;
+      e.preventDefault();
+
+      const resultId    = link.dataset.resultId;
+      const studentName = link.dataset.studentName || 'Unknown Student';
+      const quadrant    = link.dataset.quadrant || 'Unknown';
+
+      // Update header (Name — Quadrant badge)
+      titleEl.innerHTML = `
+        ${studentName}
+        <span class="${quadrantBadgeClass(quadrant)}" style="margin-left:.5rem">${quadrant}</span>
+      `;
+
+      // Loading state
+      bodyEl.innerHTML = `
+        <div class="text-center p-5">
+          <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+          <div class="text-muted mt-2">Loading profile...</div>
+        </div>
+      `;
+
+      // Show modal now so it feels instant
+      modal.show();
+
+      try {
+        const resp = await fetch('/GuidanceAlignment/GAProfileCard?id=' + encodeURIComponent(resultId));
+        if (!resp.ok) {
+          bodyEl.innerHTML = `<div class="alert alert-danger m-3">Error: ${resp.status}</div>`;
+          return;
         }
+        bodyEl.innerHTML = await resp.text();
+      } catch (err) {
+        bodyEl.innerHTML = `
+          <div class="alert alert-danger m-3">
+            <strong>Error Loading Profile</strong>
+            <div class="small text-muted mt-2">${err.message}</div>
+          </div>`;
+      }
+    });
 
-        function initProfileModal() {
-          // Check if modal element exists
-          const profileModal = document.getElementById('profileModal');
-          if (!profileModal) {
-            console.error('Profile modal element not found. Ensure modal HTML is in the page.');
-            return;
-          }
-
-          // Check if Bootstrap is loaded
-          if (typeof bootstrap === 'undefined') {
-            console.error('Bootstrap is not loaded. Ensure Bootstrap JS is included before this script.');
-            return;
-          }
-
-          const profileLinks = document.querySelectorAll('.student-profile-link');
-          if (profileLinks.length === 0) {
-            console.warn('No student profile links found on this page.');
-            return;
-          }
-
-          // Initialize modal instance
-          let modal;
-          try {
-            modal = new bootstrap.Modal(profileModal, { 
-              backdrop: 'static', 
-              keyboard: false 
-            });
-          } catch (error) {
-            console.error('Failed to initialize Bootstrap modal:', error);
-            return;
-          }
-
-          const modalBody = document.getElementById('profileModalBody');
-          if (!modalBody) {
-            console.error('Modal body element not found.');
-            return;
-          }
-
-          // Add click handler to each profile link
-          profileLinks.forEach(link => {
-            link.addEventListener('click', async function (e) {
-              e.preventDefault();
-              
-              const studentId = this.getAttribute('data-student-id');
-              if (!studentId) {
-                console.error('Student ID not found on link element');
-                return;
-              }
-              
-              try {
-                // Show loading state
-                modalBody.innerHTML = 
-                  '<div class="text-center p-5">' +
-                  '  <div class="spinner-border text-primary" role="status">' +
-                  '    <span class="visually-hidden">Loading...</span>' +
-                  '  </div>' +
-                  '  <p class="text-muted mt-2">Loading profile...</p>' +
-                  '</div>';
-                
-                // Show modal
-                modal.show();
-
-                // Fetch the profile card
-                const response = await fetch(
-                  '/GuidanceAlignment/GAProfileCard?id=' + encodeURIComponent(studentId)
-                );
-                
-                if (!response.ok) {
-                  if (response.status === 403) {
-                    modalBody.innerHTML = 
-                      '<div class="alert alert-danger m-3">' +
-                      '  <strong>Access Denied</strong>' +
-                      '  <p class="mb-0">You do not have permission to view this student\'s profile.</p>' +
-                      '</div>';
-                  } else if (response.status === 404) {
-                    modalBody.innerHTML = 
-                      '<div class="alert alert-warning m-3">' +
-                      '  <strong>Not Found</strong>' +
-                      '  <p class="mb-0">Student profile could not be found.</p>' +
-                      '</div>';
-                  } else {
-                    throw new Error(`Server returned HTTP ${response.status}`);
-                  }
-                  return;
-                }
-
-                // Parse and load the HTML
-                // Parse and load the HTML
-                const html = await response.text();
-                
-                // Safety check
-                if (!html || html.trim().length === 0) {
-                  modalBody.innerHTML = 
-                    '<div class="alert alert-warning m-3">' +
-                    '  <strong>No Data</strong>' +
-                    '  <p class="mb-0">Profile data is empty.</p>' +
-                    '</div>';
-                  return;
-                }
-                
-                // Inject HTML - the profile is just static cards
-                modalBody.innerHTML = html;
-                
-              } catch (error) {
-                console.error('Error loading profile:', error);
-                modalBody.innerHTML = 
-                  '<div class="alert alert-danger m-3">' +
-                  '  <strong>Error Loading Profile</strong>' +
-                  '  <p class="mb-0">An error occurred while loading the student profile.</p>' +
-                  '  <small class="text-muted d-block mt-2">Error: ' + error.message + '</small>' +
-                  '</div>';
-              }
-            });
-          });
-
-          // Clean up modal on close
-          profileModal.addEventListener('hidden.bs.modal', function () {
-            modalBody.innerHTML = '';
-          });
-        }
-      })();
+    // Optional: clear modal content on close
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      bodyEl.innerHTML = '';
+      titleEl.textContent = 'Student Profile';
+    });
+  }
+})();
     })();
   </script>
 }

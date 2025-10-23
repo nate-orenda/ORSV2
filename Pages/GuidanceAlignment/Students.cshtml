@@ -212,6 +212,29 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        #profileModal .modal-header {
+      background-color: var(--orenda-accent-light);
+      border-bottom: 1px solid var(--orenda-border-subtle);
+    }
+
+    #profileModalLabel {
+      color: var(--orenda-primary);
+      font-weight: 600;
+    }
+
+    #profileModal .btn-close {
+      filter: invert(0.4);
+    }
+
+    #profileContent .spinner-border {
+      color: var(--orenda-primary);
+    }
+
+    @@media (max-width: 768px) {
+      #profileModal .modal-body {
+        max-height: 70vh;
+      }
+      }
 
     </style>
 }
@@ -423,7 +446,7 @@
                             }
                             data-quadrant="@(s.Quadrant ?? "")">
                             <td class="py-1">
-                                <a href="#profileModal"
+                                <a href="javascript:void(0)"
                                 class="fw-semibold text-decoration-none view-profile"
                                 data-bs-toggle="modal"
                                 data-bs-target="#profileModal"
@@ -484,19 +507,27 @@
     </div>
 </div>
 
-<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="profileContent">Loading...</div>
-            </div>
-        </div>
+<div class="modal fade"
+     id="profileModal"
+     tabindex="-1"
+     aria-labelledby="profileModalLabel"
+     aria-hidden="true"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="profileContent">Loading...</div>
+      </div>
     </div>
+  </div>
 </div>
+
+
 
 <div class="modal fade" id="createGroupModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
