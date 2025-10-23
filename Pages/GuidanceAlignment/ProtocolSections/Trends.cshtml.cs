@@ -329,28 +329,26 @@ public class TrendsModel : ProtocolSectionBaseModel
         var now = DateTime.UtcNow;
         var user = User?.Identity?.Name ?? "Unknown";
 
-        // Get existing section 6 responses
-        var existingResponses = await _context.GAProtocolSectionResponses
-            .Where(r => r.ProtocolId == Protocol.Id && r.SectionNumber == 6)
-            .ToListAsync();
-
-        foreach (var kvp in TrendQuestions)
+        // Only update/insert the fields that were submitted in TrendResponses
+        foreach (var kvp in TrendResponses.Where(x => !string.IsNullOrEmpty(x.Value?.Trim())))
         {
             var key = kvp.Key;
-            var responseText = TrendResponses.GetValueOrDefault(key, string.Empty)?.Trim();
+            var responseText = kvp.Value?.Trim();
 
-            var existingResponse = existingResponses.FirstOrDefault(r => r.SectionTitle == key);
+            var existing = await _context.GAProtocolSectionResponses
+                .FirstOrDefaultAsync(r => r.ProtocolId == Protocol.Id 
+                    && r.SectionNumber == 6 
+                    && r.SectionTitle == key);
 
-            if (existingResponse != null)
+            if (existing != null)
             {
-                // Update existing response
-                existingResponse.ResponseText = responseText;
-                existingResponse.UpdatedAt = now;
-                existingResponse.UpdatedBy = user;
+                existing.ResponseText = responseText;
+                existing.UpdatedAt = now;
+                existing.UpdatedBy = user;
+                _context.GAProtocolSectionResponses.Update(existing);
             }
-            else if (!string.IsNullOrWhiteSpace(responseText))
+            else
             {
-                // Create new response only if there's content
                 _context.GAProtocolSectionResponses.Add(new GAProtocolSectionResponse
                 {
                     ProtocolId = Protocol.Id,
