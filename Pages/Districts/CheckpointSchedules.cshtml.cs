@@ -16,15 +16,20 @@ namespace ORSV2.Pages.Districts
     
         [BindProperty(SupportsGet = true)]
         public int DistrictId { get; set; }
+        
         [BindProperty]
         public List<GACheckpointScheduleViewModel> Schedules { get; set; } = new();
+        
         public CheckpointSchedulesModel(ApplicationDbContext context)
         {
             _context = context;
         }
-        public string DistrictName { get; set; } = "";
+        
+        public string DistrictName { get; set; } = string.Empty;
+        
         [BindProperty]
         public List<DateTime?> CheckpointDates { get; set; } = new() { null, null, null, null, null };
+        
         public bool CanEdit => User.IsInRole("OrendaAdmin") || User.IsInRole("DistrictAdmin");
 
         public async Task<IActionResult> OnGetAsync()
@@ -35,18 +40,18 @@ namespace ORSV2.Pages.Districts
                 return NotFound();
             }
 
-            DistrictName = district.Name;
+            DistrictName = district.Name ?? string.Empty;
 
             Schedules = await _context.GACheckpointSchedule
                 .Include(s => s.School)
                 .Where(s => s.DistrictId == DistrictId)
-                .OrderBy(s => s.School.Name)
+                .OrderBy(s => s.School!.Name)
                 .Select(s => new GACheckpointScheduleViewModel
                 {
                     ScheduleId = s.ScheduleId,
                     DistrictId = s.DistrictId,
                     SchoolId = s.SchoolId,
-                    SchoolName = s.School.Name,
+                    SchoolName = s.School!.Name,
                     Checkpoint1Date = s.Checkpoint1Date,
                     Checkpoint2Date = s.Checkpoint2Date,
                     Checkpoint3Date = s.Checkpoint3Date,
@@ -83,6 +88,7 @@ namespace ORSV2.Pages.Districts
             TempData["Saved"] = true;
             return RedirectToPage(new { DistrictId });
         }
+        
         public async Task<IActionResult> OnPostApplyToAllAsync()
         {
             if (!CanEdit) return Forbid();
@@ -106,4 +112,4 @@ namespace ORSV2.Pages.Districts
             return RedirectToPage(new { DistrictId });
         }
     }
-} 
+}

@@ -48,15 +48,57 @@ namespace ORSV2.Data
             {
                 b.ToTable("Staff", t => t.ExcludeFromMigrations());
                 b.HasKey(s => s.StaffId);
+                
+                b.Property(x => x.FullTimePercentage).HasColumnType("decimal(5,2)");
+                b.Property(x => x.TotalYearsInThisDistrict).HasColumnType("decimal(5,2)");
+                b.Property(x => x.TotalYearsOfEduService).HasColumnType("decimal(5,2)");
             });
 
             builder.Entity<Courses>(b =>
             {
                 b.ToTable("Courses", t => t.ExcludeFromMigrations());
                 b.HasKey(c => c.Id);
+                
+                b.Property(x => x.CreditDefault).HasColumnType("decimal(5,2)");
             });
 
-            builder.Entity<GAAGProgress>().ToTable("GAAGProgress").HasNoKey();
+            builder.Entity<GAAGProgress>(e =>
+            {
+                e.ToTable("GAAGProgress", t => t.ExcludeFromMigrations());
+                e.HasNoKey();
+                
+                e.Property(x => x.CreditsEarned_ELA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_MATH).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_SCI).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_FL).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_VA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_HIS).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsEarned_PREP).HasColumnType("decimal(5,2)");
+                
+                e.Property(x => x.CreditsScheduled_ELA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_MATH).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_SCI).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_FL).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_VA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_HIS).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CreditsScheduled_PREP).HasColumnType("decimal(5,2)");
+                
+                e.Property(x => x.TargetEarned_ELA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_MATH).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_SCI).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_FL).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_VA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_HIS).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetEarned_PREP).HasColumnType("decimal(5,2)");
+                
+                e.Property(x => x.TargetScheduled_ELA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_MATH).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_SCI).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_FL).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_VA).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_HIS).HasColumnType("decimal(5,2)");
+                e.Property(x => x.TargetScheduled_PREP).HasColumnType("decimal(5,2)");
+            });
 
             builder.Entity<GACheckpointSchedule>()
                 .HasOne(s => s.School)
@@ -73,6 +115,32 @@ namespace ORSV2.Data
                  .WithMany()
                  .HasForeignKey(r => r.DistrictId)
                  .OnDelete(DeleteBehavior.Restrict);
+                
+                e.Property(x => x.Age).HasColumnType("decimal(4,1)");
+                e.Property(x => x.CreditsCompleted).HasColumnType("decimal(5,2)");
+                e.Property(x => x.YrsInProgram).HasColumnType("decimal(4,1)");
+            });
+
+            builder.Entity<Grades>(e =>
+            {
+                e.Property(x => x.CC).HasColumnType("decimal(5,2)");
+                e.Property(x => x.CR).HasColumnType("decimal(5,2)");
+            });
+
+            builder.Entity<MasterSchedule>(e =>
+            {
+                e.Property(x => x.Credit).HasColumnType("decimal(6,4)");
+            });
+
+            builder.Entity<ReportCardGrades>(e =>
+            {
+                e.Property(x => x.CreditsEarned).HasColumnType("decimal(4,2)");
+            });
+
+            builder.Entity<VwStudentResultsClasses>(e =>
+            {
+                e.Property(x => x.MaxPoints).HasColumnType("decimal(9,2)");
+                e.Property(x => x.Results).HasColumnType("decimal(9,2)");
             });
 
             // TargetGroups
@@ -158,6 +226,12 @@ namespace ORSV2.Data
                       .WithMany()
                       .HasForeignKey(a => a.DistrictId)
                       .HasConstraintName("FK_assessments_districts");
+            });
+
+            // GAProtocolTargets
+            builder.Entity<GAProtocolTarget>(e =>
+            {
+                e.Property(x => x.TargetValue).HasColumnType("decimal(5,2)");
             });
         }
     }

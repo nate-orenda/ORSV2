@@ -3,6 +3,29 @@
 @{
   ViewData["Title"] = Model.GroupName;
 }
+@section Styles {
+  <style>
+    #profileModal .modal-header {
+      background-color: var(--orenda-accent-light);
+      border-bottom: 1px solid var(--orenda-border-subtle);
+    }
+
+    #profileModalLabel {
+      color: var(--orenda-primary);
+      font-weight: 600;
+    }
+
+    #profileModalBody .spinner-border {
+      color: var(--orenda-primary);
+    }
+
+    @@media (max-width: 768px) {
+      #profileModal .modal-body {
+        max-height: 70vh;
+      }
+    }
+  </style>
+}
 
 <div class="orenda-page-header d-flex align-items-center justify-content-between">
   <div>
@@ -254,7 +277,18 @@ else
             @foreach (var student in Model.FilteredStudents)
             {
               <tr>
-                <td>@student.LastName, @student.FirstName</td>
+                <td>
+                  @if (student.ResultId > 0)
+                  {
+                    <a href="javascript:void(0)" class="student-profile-link" data-student-id="@student.ResultId">
+                      @student.FirstName @student.LastName
+                    </a>
+                  }
+                  else
+                  {
+                    <span class="text-muted">@student.FirstName @student.LastName</span>
+                  }
+                </td>
                 <td><span class="badge bg-secondary">@student.LocalStudentId</span></td>
                 <td>@student.Grade</td>
                 @foreach (var ind in Model.IndicatorNames)
@@ -355,6 +389,21 @@ else
   </div>
 }
 
+<!-- Student Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">Student Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="profileModalBody">
+        <!-- Content loaded dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -384,6 +433,7 @@ else
 
       window.location.href = window.location.pathname + '?' + urlParams.toString();
     }
+    
     (function () {
       const indicatorNames = @Html.Raw(JsonSerializer.Serialize(Model.IndicatorNames));
       const currentSummaries = @Html.Raw(JsonSerializer.Serialize(Model.CurrentIndicatorSummaries));
@@ -521,6 +571,137 @@ else
             }
           }
         });
+      })();
+
+      // ===== PROFILE CARD MODAL HANDLER (FIXED) =====
+      (function () {
+        // Wait for DOM to be fully ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initProfileModal);
+        } else {
+          initProfileModal();
+        }
+
+        function initProfileModal() {
+          // Check if modal element exists
+          const profileModal = document.getElementById('profileModal');
+          if (!profileModal) {
+            console.error('Profile modal element not found. Ensure modal HTML is in the page.');
+            return;
+          }
+
+          // Check if Bootstrap is loaded
+          if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap is not loaded. Ensure Bootstrap JS is included before this script.');
+            return;
+          }
+
+          const profileLinks = document.querySelectorAll('.student-profile-link');
+          if (profileLinks.length === 0) {
+            console.warn('No student profile links found on this page.');
+            return;
+          }
+
+          // Initialize modal instance
+          let modal;
+          try {
+            modal = new bootstrap.Modal(profileModal, { 
+              backdrop: 'static', 
+              keyboard: false 
+            });
+          } catch (error) {
+            console.error('Failed to initialize Bootstrap modal:', error);
+            return;
+          }
+
+          const modalBody = document.getElementById('profileModalBody');
+          if (!modalBody) {
+            console.error('Modal body element not found.');
+            return;
+          }
+
+          // Add click handler to each profile link
+          profileLinks.forEach(link => {
+            link.addEventListener('click', async function (e) {
+              e.preventDefault();
+              
+              const studentId = this.getAttribute('data-student-id');
+              if (!studentId) {
+                console.error('Student ID not found on link element');
+                return;
+              }
+              
+              try {
+                // Show loading state
+                modalBody.innerHTML = 
+                  '<div class="text-center p-5">' +
+                  '  <div class="spinner-border text-primary" role="status">' +
+                  '    <span class="visually-hidden">Loading...</span>' +
+                  '  </div>' +
+                  '  <p class="text-muted mt-2">Loading profile...</p>' +
+                  '</div>';
+                
+                // Show modal
+                modal.show();
+
+                // Fetch the profile card
+                const response = await fetch(
+                  '/GuidanceAlignment/GAProfileCard?id=' + encodeURIComponent(studentId)
+                );
+                
+                if (!response.ok) {
+                  if (response.status === 403) {
+                    modalBody.innerHTML = 
+                      '<div class="alert alert-danger m-3">' +
+                      '  <strong>Access Denied</strong>' +
+                      '  <p class="mb-0">You do not have permission to view this student\'s profile.</p>' +
+                      '</div>';
+                  } else if (response.status === 404) {
+                    modalBody.innerHTML = 
+                      '<div class="alert alert-warning m-3">' +
+                      '  <strong>Not Found</strong>' +
+                      '  <p class="mb-0">Student profile could not be found.</p>' +
+                      '</div>';
+                  } else {
+                    throw new Error(`Server returned HTTP ${response.status}`);
+                  }
+                  return;
+                }
+
+                // Parse and load the HTML
+                // Parse and load the HTML
+                const html = await response.text();
+                
+                // Safety check
+                if (!html || html.trim().length === 0) {
+                  modalBody.innerHTML = 
+                    '<div class="alert alert-warning m-3">' +
+                    '  <strong>No Data</strong>' +
+                    '  <p class="mb-0">Profile data is empty.</p>' +
+                    '</div>';
+                  return;
+                }
+                
+                // Inject HTML - the profile is just static cards
+                modalBody.innerHTML = html;
+                
+              } catch (error) {
+                console.error('Error loading profile:', error);
+                modalBody.innerHTML = 
+                  '<div class="alert alert-danger m-3">' +
+                  '  <strong>Error Loading Profile</strong>' +
+                  '  <p class="mb-0">An error occurred while loading the student profile.</p>' +
+                  '  <small class="text-muted d-block mt-2">Error: ' + error.message + '</small>' +
+                  '</div>';
+              }
+            });
+          });
+
+          // Clean up modal on close
+          profileModal.addEventListener('hidden.bs.modal', function () {
+            modalBody.innerHTML = '';
+          });
+        }
       })();
     })();
   </script>

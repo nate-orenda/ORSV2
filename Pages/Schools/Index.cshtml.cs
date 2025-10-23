@@ -28,27 +28,26 @@ namespace ORSV2.Pages.Schools
         {
             DistrictId = districtId;
 
-            // ✅ Fetch district and school names from the DB
             var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId);
             
             if (district == null)
                 return NotFound();
 
-            var districtName = district.Name;
+            var districtName = district.Name ?? string.Empty;
 
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
-                new BreadcrumbItem { Title = district.Name } // current page
+                new BreadcrumbItem { Title = districtName }
             };
-
 
             var user = await _userManager.Users
                 .Include(u => u.UserSchools)
                 .ThenInclude(us => us.School)
                 .FirstOrDefaultAsync(u => u.UserName == User.Identity!.Name);
 
-            if (user == null) return Forbid();
+            if (user == null)
+                return Forbid();
 
             var roles = await _userManager.GetRolesAsync(user);
 
@@ -89,7 +88,5 @@ namespace ORSV2.Pages.Schools
 
             return Page();
         }
-
     }
-
 }

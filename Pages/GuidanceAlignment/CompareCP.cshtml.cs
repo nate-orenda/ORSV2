@@ -16,6 +16,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public sealed class StudentIndicatorRow
         {
             public int StuId { get; set; }
+            public int ResultId { get; set; }
             public string LocalStudentId { get; set; } = "";
             public string FirstName { get; set; } = "";
             public string LastName { get; set; } = "";
@@ -302,6 +303,7 @@ namespace ORSV2.Pages.GuidanceAlignment
                 var row = new StudentIndicatorRow
                 {
                     StuId = s.StuId,
+                    ResultId = cur?.ResultId ?? 0,
                     LocalStudentId = s.LocalStudentID ?? "",
                     FirstName = s.FirstName ?? "",
                     LastName = s.LastName ?? "",

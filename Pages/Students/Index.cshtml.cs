@@ -33,35 +33,36 @@ namespace ORSV2.Pages.Students
         [BindProperty(SupportsGet = true)]
         public bool ShowLang { get; set; }
 
-
         public List<STU> Students { get; set; } = new();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
-
 
         public async Task<IActionResult> OnGetAsync(int districtId, int schoolId)
         {
             var user = await _userManager.GetUserAsync(User);
-            var roles = await _userManager.GetRolesAsync(user!);
+            if (user == null)
+                return Unauthorized();
 
-            // ✅ Fetch district and school names from the DB
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Fetch district and school names from the DB
             var district = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId && !d.Inactive);
             var school = await _context.Schools.FirstOrDefaultAsync(s => s.Id == schoolId && !s.Inactive);
 
             if (district == null || school == null)
                 return NotFound();
 
-            var districtName = district.Name;
-            var schoolName = school.Name;
+            var districtName = district.Name ?? string.Empty;
+            var schoolName = school.Name ?? string.Empty;
 
-            // ✅ Then build breadcrumbs
+            // Build breadcrumbs
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
                 new BreadcrumbItem { Title = districtName, Url = Url.Page("/Schools/Index", new { districtId }) },
-                new BreadcrumbItem { Title = schoolName } // current page
+                new BreadcrumbItem { Title = schoolName }
             };
 
-            // 🔐 Access control
+            // Access control
             if (!roles.Contains("OrendaAdmin") && !roles.Contains("OrendaManager"))
             {
                 if (user.DistrictId.HasValue && user.DistrictId.Value != districtId)
@@ -76,7 +77,7 @@ namespace ORSV2.Pages.Students
                     return Forbid();
             }
 
-            // ✅ Load students
+            // Load students
             Students = await _context.STU
                 .Where(s => s.DistrictID == districtId && s.SchoolID == schoolId && !s.Inactive)
                 .OrderBy(s => s.LastName)
@@ -85,7 +86,5 @@ namespace ORSV2.Pages.Students
 
             return Page();
         }
-
-
     }
 }

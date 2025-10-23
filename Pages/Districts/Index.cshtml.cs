@@ -5,7 +5,6 @@ using ORSV2.Models;
 using ORSV2.Data;
 using Microsoft.AspNetCore.Identity;
 
-
 namespace ORSV2.Pages.Districts
 {
     [Authorize(Roles = "OrendaAdmin,OrendaManager,DistrictAdmin,SchoolAdmin")]
@@ -25,6 +24,9 @@ namespace ORSV2.Pages.Districts
         public async Task OnGetAsync()
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return;
+
             var roles = await _userManager.GetRolesAsync(user);
 
             if (roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager"))
@@ -46,8 +48,5 @@ namespace ORSV2.Pages.Districts
                 }
             }
         }
-
     }
-
-
 }
