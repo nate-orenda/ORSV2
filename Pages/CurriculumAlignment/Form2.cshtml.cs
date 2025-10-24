@@ -272,14 +272,43 @@ namespace ORSV2.Pages.CurriculumAlignment
             return list;
         }
 
-        private async Task<List<SelectListItem>> GetAssessmentsByUnitCycleAsync(SqlConnection conn, int districtId, string unitCycle)
+        private async Task<List<SelectListItem>> GetAssessmentsByUnitCycleAsync(
+            SqlConnection conn, 
+            int districtId, 
+            string unitCycle)
         {
             var list = new List<SelectListItem> { new SelectListItem("Select an assessment...", "") };
-            using var cmd = new SqlCommand("dbo.GetAssessmentsByUnitCycle", conn) { CommandType = CommandType.StoredProcedure };
+            using var cmd = new SqlCommand("dbo.GetAssessmentsByUnitCycle", conn) 
+            { 
+                CommandType = CommandType.StoredProcedure 
+            };
+            
             cmd.Parameters.AddWithValue("@DistrictId", districtId);
             cmd.Parameters.AddWithValue("@UnitCycle", unitCycle);
+            
+            // Add user scope parameters
+            string userRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "";
+            cmd.Parameters.AddWithValue("@UserRole", userRole);
+            
+            if (IsTeacher && UserStaffId.HasValue)
+                cmd.Parameters.AddWithValue("@UserStaffId", UserStaffId.Value);
+            else
+                cmd.Parameters.AddWithValue("@UserStaffId", DBNull.Value);
+            
+            if (IsSchoolAdmin && UserSchoolIds.Any())
+                cmd.Parameters.AddWithValue("@AllowedSchoolIds", string.Join(",", UserSchoolIds));
+            else
+                cmd.Parameters.AddWithValue("@AllowedSchoolIds", DBNull.Value);
+            
             using var rdr = await cmd.ExecuteReaderAsync();
-            while (await rdr.ReadAsync()) list.Add(new SelectListItem { Value = rdr["batch_id"].ToString(), Text = rdr["test_id"].ToString() });
+            while (await rdr.ReadAsync())
+            {
+                list.Add(new SelectListItem 
+                { 
+                    Value = rdr["batch_id"].ToString(), 
+                    Text = rdr["test_id"].ToString() 
+                });
+            }
             return list;
         }
 
