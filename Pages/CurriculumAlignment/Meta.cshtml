@@ -160,14 +160,9 @@
     <!-- Filter Section -->
     <div class="meta-filter-section">
         <form method="get" class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <label asp-for="SchoolId" class="form-label">School</label>
                 <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="BatchId" class="form-label">Assessment Batch</label>
-                <select asp-for="BatchId" asp-items="Model.AvailableBatches" class="form-select">
                 </select>
             </div>
             <div class="col-12">
@@ -178,21 +173,14 @@
         </form>
     </div>
 
-    @if (Model.ChartData?.Any() == true)
+    @if (Model.TableRows?.Any() == true)
     {
-        <!-- Chart Section -->
-        <div class="chart-container">
-            <h5>Proficiency by Grade</h5>
-            <canvas id="metaChart" height="80"></canvas>
-        </div>
-
         <!-- Table Section -->
         <div class="table-responsive">
             <table class="meta-table">
                 <thead>
                     <tr>
-                        <th colspan="3">Core Data</th>
-                        <th colspan="2">Participation</th>
+                        <th colspan="2">Core Data</th>
                         <th colspan="3" class="col-header-all">All Students</th>
                         <th colspan="3" class="col-header-el">EL</th>
                         <th colspan="3" class="col-header-swd">SWD</th>
@@ -203,9 +191,6 @@
                     <tr>
                         <th class="col-core">Subject</th>
                         <th class="col-core">Grade</th>
-                        <th class="col-core">Unit</th>
-                        <th class="col-participation">Enrolled</th>
-                        <th class="col-participation">Part %</th>
                         <!-- All Students -->
                         <th class="data-all">% Prof</th>
                         <th class="data-all"># Prof</th>
@@ -249,11 +234,6 @@
                         <tr>
                             <td class="col-core">@firstRow.Subject</td>
                             <td class="col-core">@(firstRow.Grade == 0 ? "—" : firstRow.Grade.ToString())</td>
-                            <td class="col-core">Unit 1</td>
-                            <td class="col-participation fw-bold">@firstRow.TotalEnrolled</td>
-                            <td class="col-participation">
-                                <span class="participation-badge">@firstRow.ParticipationRate%</span>
-                            </td>
                             
                             @{
                                 var demoOrder = new[] { "All", "EL", "SWD", "AA", "SED", "HISP" };
@@ -294,68 +274,11 @@
             </table>
         </div>
     }
-    else if (Model.SchoolId.HasValue && !string.IsNullOrEmpty(Model.BatchId))
+    else if (Model.SchoolId.HasValue)
     {
         <div class="no-data-alert">
             <i class="fas fa-info-circle me-2"></i>
-            No data available for the selected filters.
+            No data available for the selected school.
         </div>
     }
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        @if (Model.ChartData?.Any() == true)
-        {
-            <text>
-            var chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData.Select(d => new { 
-                d.Grade, 
-                d.Subject, 
-                d.PctProficient, 
-                d.DemographicLabel 
-            })));
-            
-            var ctx = document.getElementById('metaChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartData.map(d => d.demographicLabel),
-                    datasets: [{
-                        label: 'Proficiency %',
-                        data: chartData.map(d => parseFloat(d.pctProficient)),
-                        backgroundColor: '#3498db',
-                        borderRadius: 6,
-                        borderWidth: 0,
-                        hoverBackgroundColor: '#2980b9'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    indexAxis: 'x',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y.toFixed(2) + '%';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) { return value + '%'; }
-                            }
-                        }
-                    }
-                }
-            });
-            </text>
-        }
-    });
-</script>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ORSV2.Models;
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
@@ -16,13 +17,12 @@ namespace ORSV2.Pages.CurriculumAlignment
         public int? SchoolId { get; set; }
         
         [BindProperty(SupportsGet = true)]
-        public string? BatchId { get; set; }
+        public int DistrictId { get; set; }
         
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
-        public SelectList AvailableBatches { get; set; } = new SelectList(new List<SelectListItem>());
         public List<MetaTableRow> TableRows { get; set; } = new List<MetaTableRow>();
-        public List<ChartDataPoint> ChartData { get; set; } = new List<ChartDataPoint>();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new List<BreadcrumbItem>();
+        public string DistrictName { get; set; } = string.Empty;
 
         public MetaModel(IConfiguration config, ILogger<MetaModel> logger)
         {
@@ -32,12 +32,41 @@ namespace ORSV2.Pages.CurriculumAlignment
 
         public async Task OnGetAsync()
         {
+            // District must be provided
+            if (DistrictId == 0)
+            {
+                return;
+            }
+
+            await LoadDistrictInfoAsync();
             await LoadFiltersAsync();
             
-            if (SchoolId.HasValue && !string.IsNullOrEmpty(BatchId))
+            if (SchoolId.HasValue)
             {
                 await LoadMetaDataAsync();
                 BuildBreadcrumbs();
+            }
+        }
+
+        private async Task LoadDistrictInfoAsync()
+        {
+            using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
+            {
+                await conn.OpenAsync();
+                
+                using (var cmd = new SqlCommand(
+                    "SELECT Name FROM [dbo].[Districts] WHERE Id = @districtId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@districtId", DistrictId);
+                    
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            DistrictName = reader["Name"].ToString() ?? string.Empty;
+                        }
+                    }
+                }
             }
         }
 
@@ -47,10 +76,12 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 await conn.OpenAsync();
                 
-                // Schools for dropdown
+                // Schools for this district
                 using (var cmd = new SqlCommand(
-                    "SELECT DISTINCT school_id, school_name FROM [dbo].[schools] ORDER BY school_name", conn))
+                    "SELECT DISTINCT Id, Name FROM [dbo].[Schools] WHERE DistrictId = @districtId AND Inactive = 0 ORDER BY Name", conn))
                 {
+                    cmd.Parameters.AddWithValue("@districtId", DistrictId);
+                    
                     var schools = new List<SelectListItem> { new SelectListItem { Text = "-- Select School --", Value = "" } };
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -58,31 +89,12 @@ namespace ORSV2.Pages.CurriculumAlignment
                         {
                             schools.Add(new SelectListItem
                             {
-                                Text = reader["school_name"].ToString(),
-                                Value = reader["school_id"].ToString()
+                                Text = reader["Name"].ToString() ?? string.Empty,
+                                Value = reader["Id"].ToString() ?? string.Empty
                             });
                         }
                     }
                     AvailableSchools = new SelectList(schools, "Value", "Text", SchoolId?.ToString());
-                }
-                
-                // Batches for dropdown
-                using (var cmd = new SqlCommand(
-                    "SELECT DISTINCT batch_id FROM [dbo].[batch_student_snapshot] ORDER BY batch_id DESC", conn))
-                {
-                    var batches = new List<SelectListItem>();
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            batches.Add(new SelectListItem
-                            {
-                                Text = reader["batch_id"].ToString(),
-                                Value = reader["batch_id"].ToString()
-                            });
-                        }
-                    }
-                    AvailableBatches = new SelectList(batches, "Value", "Text", BatchId);
                 }
             }
         }
@@ -93,19 +105,24 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 await conn.OpenAsync();
                 
+                // Aggregate ALL batches for this school, grouped by subject/grade/demographic
                 using (var cmd = new SqlCommand(
-                    @"SELECT school_id, subject_norm, grade, demographic_group, 
-                             total_enrolled, total_tested, total_proficient
+                    @"SELECT 
+                        school_id, 
+                        subject_norm, 
+                        grade, 
+                        demographic_group, 
+                        SUM(total_enrolled) AS total_enrolled,
+                        SUM(total_tested) AS total_tested, 
+                        SUM(total_proficient) AS total_proficient
                       FROM [dbo].[MetaAggregation]
-                      WHERE batch_id = @batchId 
-                        AND (@schoolId = 0 OR school_id = @schoolId)
+                      WHERE school_id = @schoolId
+                      GROUP BY school_id, subject_norm, grade, demographic_group
                       ORDER BY subject_norm, grade, demographic_group", conn))
                 {
-                    cmd.Parameters.AddWithValue("@batchId", BatchId);
-                    cmd.Parameters.AddWithValue("@schoolId", SchoolId ?? 0);
+                    cmd.Parameters.AddWithValue("@schoolId", SchoolId!.Value);
                     
                     TableRows = new List<MetaTableRow>();
-                    ChartData = new List<ChartDataPoint>();
                     
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -126,18 +143,6 @@ namespace ORSV2.Pages.CurriculumAlignment
                             };
                             
                             TableRows.Add(row);
-                            
-                            // For chart: only "All" demographic for histogram by grade
-                            if (row.DemographicGroup == "All")
-                            {
-                                ChartData.Add(new ChartDataPoint
-                                {
-                                    Grade = row.Grade,
-                                    Subject = subject,
-                                    PctProficient = row.PctProficient,
-                                    DemographicLabel = $"Grade {row.Grade}"
-                                });
-                            }
                         }
                     }
                 }
@@ -148,8 +153,8 @@ namespace ORSV2.Pages.CurriculumAlignment
         {
             Breadcrumbs = new List<BreadcrumbItem>
             {
-                new BreadcrumbItem { Label = "Curriculum Alignment", Url = "/CurriculumAlignment/Index" },
-                new BreadcrumbItem { Label = "Meta Data", Url = "/CurriculumAlignment/Meta", IsActive = true }
+                new BreadcrumbItem { Title = "Curriculum Alignment", Url = "/CurriculumAlignment/Index" },
+                new BreadcrumbItem { Title = "Meta Data", Url = null }  // null = current page
             };
         }
     }
@@ -172,20 +177,5 @@ namespace ORSV2.Pages.CurriculumAlignment
         public decimal ParticipationRate => TotalEnrolled > 0 
             ? Math.Round(100m * TotalTested / TotalEnrolled, 2) 
             : 0m;
-    }
-
-    public class ChartDataPoint
-    {
-        public int Grade { get; set; }
-        public string Subject { get; set; } = string.Empty;
-        public decimal PctProficient { get; set; }
-        public string DemographicLabel { get; set; } = string.Empty;
-    }
-
-    public class BreadcrumbItem
-    {
-        public string Label { get; set; } = string.Empty;
-        public string Url { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
     }
 }
