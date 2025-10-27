@@ -91,8 +91,8 @@ namespace ORSV2.Pages.Districts
             }
             finally
             {
-                // Reset the timeout to the default (null) so it doesn't affect
-                // other database operations using this DbContext instance.
+                // IMPORTANT: Reset the timeout to the default (null)
+                // so it doesn't affect other database calls.
                 _context.Database.SetCommandTimeout(null);
             }
         }
