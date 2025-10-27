@@ -71,17 +71,29 @@ namespace ORSV2.Pages.Districts
             }
         }
 
+        // In RunImports.cshtml.cs
+
         public async Task<IActionResult> OnPostRunSpAsync([FromForm] int districtId)
         {
             try
             {
+                // Set a 5-minute (300 seconds) timeout for this specific command
+                _context.Database.SetCommandTimeout(300); 
+
                 var param = new SqlParameter("@DistrictId", districtId);
                 await _context.Database.ExecuteSqlRawAsync("EXEC sp_UpdateAllGuidanceAlignment @DistrictId", param);
+                
                 return new JsonResult(new { ok = true, output = $"sp_UpdateAllGuidanceAlignment completed for DistrictId={districtId}." });
             }
             catch (Exception ex)
             {
                 return new JsonResult(new { ok = false, output = $"SP error: {ex.Message}" }) { StatusCode = 500 };
+            }
+            finally
+            {
+                // Reset the timeout to the default (null) so it doesn't affect
+                // other database operations using this DbContext instance.
+                _context.Database.SetCommandTimeout(null);
             }
         }
 
