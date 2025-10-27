@@ -1,0 +1,361 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.MetaModel
+@{
+    ViewData["Title"] = "Meta Assessment Data - DRS";
+}
+
+<style>
+    .meta-filter-section {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .meta-filter-section .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .meta-filter-section .form-select {
+        border: 1px solid #bbb;
+        border-radius: 4px;
+    }
+    
+    .chart-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .chart-container h5 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .meta-table {
+        font-size: 0.9rem;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        width: 100%;
+    }
+    
+    .meta-table thead {
+        background-color: #2c3e50;
+        color: white;
+    }
+    
+    .meta-table th {
+        padding: 1rem 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-right: 1px solid #34495e;
+    }
+    
+    .meta-table th:last-child {
+        border-right: none;
+    }
+    
+    .meta-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+        text-align: center;
+    }
+    
+    .meta-table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease;
+    }
+    
+    /* Core data columns */
+    .col-core {
+        text-align: left;
+        font-weight: 500;
+    }
+    
+    .col-participation {
+        background-color: #e8f4f8;
+    }
+    
+    /* Demographic column headers with color coding */
+    .col-header-all { background-color: #b3d9ff; color: #003d99; }
+    .col-header-el { background-color: #ffb3d9; color: #990033; }
+    .col-header-swd { background-color: #ffffb3; color: #996600; }
+    .col-header-sed { background-color: #ffb366; color: #664400; }
+    .col-header-aa { background-color: #b3ffb3; color: #004d00; }
+    .col-header-hisp { background-color: #ffe6b3; color: #664d00; }
+    
+    /* Data cells with light tinting */
+    .data-all { background-color: rgba(179, 217, 255, 0.2); }
+    .data-el { background-color: rgba(255, 179, 217, 0.2); }
+    .data-swd { background-color: rgba(255, 255, 179, 0.2); }
+    .data-sed { background-color: rgba(255, 179, 102, 0.2); }
+    .data-aa { background-color: rgba(179, 255, 179, 0.2); }
+    .data-hisp { background-color: rgba(255, 230, 179, 0.2); }
+    
+    .proficiency-badge {
+        display: inline-block;
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        min-width: 55px;
+    }
+    
+    .proficiency-high { background-color: #d4edda; color: #155724; }
+    .proficiency-mid { background-color: #fff3cd; color: #856404; }
+    .proficiency-low { background-color: #f8d7da; color: #721c24; }
+    
+    .count-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        background-color: #e9ecef;
+        color: #2c3e50;
+    }
+    
+    .participation-badge {
+        display: inline-block;
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        background-color: #e8f4f8;
+        color: #0066cc;
+        min-width: 55px;
+    }
+    
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .no-data-alert {
+        background-color: #e7f3ff;
+        border-left: 4px solid #0066cc;
+        color: #003d99;
+        padding: 1rem;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="container-fluid my-4">
+    <h2 class="mb-4">
+        <i class="fas fa-chart-bar text-primary me-2"></i>
+        Meta Assessment Data
+    </h2>
+    
+    <!-- Filter Section -->
+    <div class="meta-filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="SchoolId" class="form-label">School</label>
+                <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="BatchId" class="form-label">Assessment Batch</label>
+                <select asp-for="BatchId" asp-items="Model.AvailableBatches" class="form-select">
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Load Data
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.ChartData?.Any() == true)
+    {
+        <!-- Chart Section -->
+        <div class="chart-container">
+            <h5>Proficiency by Grade</h5>
+            <canvas id="metaChart" height="80"></canvas>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-responsive">
+            <table class="meta-table">
+                <thead>
+                    <tr>
+                        <th colspan="3">Core Data</th>
+                        <th colspan="2">Participation</th>
+                        <th colspan="3" class="col-header-all">All Students</th>
+                        <th colspan="3" class="col-header-el">EL</th>
+                        <th colspan="3" class="col-header-swd">SWD</th>
+                        <th colspan="3" class="col-header-aa">AA</th>
+                        <th colspan="3" class="col-header-sed">SED</th>
+                        <th colspan="3" class="col-header-hisp">Hispanic</th>
+                    </tr>
+                    <tr>
+                        <th class="col-core">Subject</th>
+                        <th class="col-core">Grade</th>
+                        <th class="col-core">Unit</th>
+                        <th class="col-participation">Enrolled</th>
+                        <th class="col-participation">Part %</th>
+                        <!-- All Students -->
+                        <th class="data-all">% Prof</th>
+                        <th class="data-all"># Prof</th>
+                        <th class="data-all"># Tested</th>
+                        <!-- EL -->
+                        <th class="data-el">% Prof</th>
+                        <th class="data-el"># Prof</th>
+                        <th class="data-el"># Tested</th>
+                        <!-- SWD -->
+                        <th class="data-swd">% Prof</th>
+                        <th class="data-swd"># Prof</th>
+                        <th class="data-swd"># Tested</th>
+                        <!-- AA -->
+                        <th class="data-aa">% Prof</th>
+                        <th class="data-aa"># Prof</th>
+                        <th class="data-aa"># Tested</th>
+                        <!-- SED -->
+                        <th class="data-sed">% Prof</th>
+                        <th class="data-sed"># Prof</th>
+                        <th class="data-sed"># Tested</th>
+                        <!-- Hispanic -->
+                        <th class="data-hisp">% Prof</th>
+                        <th class="data-hisp"># Prof</th>
+                        <th class="data-hisp"># Tested</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var groupedData = Model.TableRows
+                            .GroupBy(r => new { r.Subject, r.Grade })
+                            .OrderBy(g => g.Key.Subject)
+                            .ThenBy(g => g.Key.Grade)
+                            .ToList();
+                    }
+                    
+                    @foreach (var subjectGroup in groupedData)
+                    {
+                        var demographics = subjectGroup.GroupBy(r => r.DemographicGroup).ToList();
+                        var firstRow = subjectGroup.First();
+                        
+                        <tr>
+                            <td class="col-core">@firstRow.Subject</td>
+                            <td class="col-core">@(firstRow.Grade == 0 ? "—" : firstRow.Grade.ToString())</td>
+                            <td class="col-core">Unit 1</td>
+                            <td class="col-participation fw-bold">@firstRow.TotalEnrolled</td>
+                            <td class="col-participation">
+                                <span class="participation-badge">@firstRow.ParticipationRate%</span>
+                            </td>
+                            
+                            @{
+                                var demoOrder = new[] { "All", "EL", "SWD", "AA", "SED", "HISP" };
+                            }
+                            
+                            @foreach (var demo in demoOrder)
+                            {
+                                var demoData = demographics.FirstOrDefault(d => d.Key == demo)?.First();
+                                var cssClass = demo.ToLower();
+                                var dataClass = $"data-{cssClass}";
+                                
+                                if (demoData != null && demoData.TotalTested > 0)
+                                {
+                                    var profClass = demoData.PctProficient >= 75 ? "proficiency-high"
+                                        : demoData.PctProficient >= 50 ? "proficiency-mid"
+                                        : "proficiency-low";
+                                    
+                                    <td class="@dataClass">
+                                        <span class="proficiency-badge @profClass">@demoData.PctProficient%</span>
+                                    </td>
+                                    <td class="@dataClass">
+                                        <span class="count-badge">@demoData.TotalProficient</span>
+                                    </td>
+                                    <td class="@dataClass">
+                                        <span class="count-badge">@demoData.TotalTested</span>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td class="@dataClass">—</td>
+                                    <td class="@dataClass">—</td>
+                                    <td class="@dataClass">—</td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (Model.SchoolId.HasValue && !string.IsNullOrEmpty(Model.BatchId))
+    {
+        <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            No data available for the selected filters.
+        </div>
+    }
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        @if (Model.ChartData?.Any() == true)
+        {
+            <text>
+            var chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartData.Select(d => new { 
+                d.Grade, 
+                d.Subject, 
+                d.PctProficient, 
+                d.DemographicLabel 
+            })));
+            
+            var ctx = document.getElementById('metaChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(d => d.demographicLabel),
+                    datasets: [{
+                        label: 'Proficiency %',
+                        data: chartData.map(d => parseFloat(d.pctProficient)),
+                        backgroundColor: '#3498db',
+                        borderRadius: 6,
+                        borderWidth: 0,
+                        hoverBackgroundColor: '#2980b9'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'x',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) { return value + '%'; }
+                            }
+                        }
+                    }
+                }
+            });
+            </text>
+        }
+    });
+</script>
