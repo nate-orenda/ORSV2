@@ -15,7 +15,7 @@ namespace ORSV2.Pages.Students
             _context = context;
         }
 
-        public STU Student { get; set; }
+        public STU? Student { get; set; }
 
         public async Task<IActionResult> OnGetAsync(int id)
         {

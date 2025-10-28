@@ -7,7 +7,7 @@
 @{
     ViewData["Title"] = "Schools";
     var user = await UserManager.GetUserAsync(User);
-    var roles = await UserManager.GetRolesAsync(user);
+    var roles = user != null ? await UserManager.GetRolesAsync(user) : new List<string>();
     bool canEdit = roles.Contains("OrendaAdmin") || roles.Contains("OrendaManager");
 }
 

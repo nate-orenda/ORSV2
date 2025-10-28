@@ -2,9 +2,37 @@
 @model ORSV2.Pages.CurriculumAlignment.MetaModel
 @{
     ViewData["Title"] = "Meta Assessment Data - DRS";
+    
+    // Helper function (unchanged)
+    Action<ORSV2.Pages.CurriculumAlignment.AggData, string> RenderDemoCells = (demoData, cssClass) =>
+    {
+        var dataClass = $"data-{cssClass}";
+        if (demoData != null && demoData.TotalTested > 0)
+        {
+            var profClass = demoData.PctProficient >= 75 ? "proficiency-high"
+                : demoData.PctProficient >= 50 ? "proficiency-mid"
+                : "proficiency-low";
+            <td class="@dataClass">
+                <span class="proficiency-badge @profClass">@demoData.PctProficient%</span>
+            </td>
+            <td class="@dataClass">
+                <span class="count-badge">@demoData.TotalProficient</span>
+            </td>
+            <td class="@dataClass">
+                <span class="count-badge">@demoData.TotalTested</span>
+            </td>
+        }
+        else
+        {
+            <td class="@dataClass">—</td>
+            <td class="@dataClass">—</td>
+            <td class="@dataClass">—</td>
+        }
+    };
 }
 
 <style>
+    /* ... (most styles are unchanged) ... */
     .meta-filter-section {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
@@ -19,25 +47,6 @@
         margin-bottom: 0.5rem;
     }
     
-    .meta-filter-section .form-select {
-        border: 1px solid #bbb;
-        border-radius: 4px;
-    }
-    
-    .chart-container {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 2rem;
-    }
-    
-    .chart-container h5 {
-        color: #2c3e50;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-    }
-    
     .meta-table {
         font-size: 0.9rem;
         border-collapse: collapse;
@@ -46,6 +55,7 @@
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         width: 100%;
+        margin-top: 1rem;
     }
     
     .meta-table thead {
@@ -63,9 +73,7 @@
         border-right: 1px solid #34495e;
     }
     
-    .meta-table th:last-child {
-        border-right: none;
-    }
+    .meta-table th:last-child { border-right: none; }
     
     .meta-table td {
         padding: 0.75rem;
@@ -78,17 +86,12 @@
         transition: background-color 0.2s ease;
     }
     
-    /* Core data columns */
     .col-core {
         text-align: left;
         font-weight: 500;
     }
     
-    .col-participation {
-        background-color: #e8f4f8;
-    }
-    
-    /* Demographic column headers with color coding */
+    /* ... (Header/Data cell colors are unchanged) ... */
     .col-header-all { background-color: #b3d9ff; color: #003d99; }
     .col-header-el { background-color: #ffb3d9; color: #990033; }
     .col-header-swd { background-color: #ffffb3; color: #996600; }
@@ -96,7 +99,6 @@
     .col-header-aa { background-color: #b3ffb3; color: #004d00; }
     .col-header-hisp { background-color: #ffe6b3; color: #664d00; }
     
-    /* Data cells with light tinting */
     .data-all { background-color: rgba(179, 217, 255, 0.2); }
     .data-el { background-color: rgba(255, 179, 217, 0.2); }
     .data-swd { background-color: rgba(255, 255, 179, 0.2); }
@@ -104,6 +106,7 @@
     .data-aa { background-color: rgba(179, 255, 179, 0.2); }
     .data-hisp { background-color: rgba(255, 230, 179, 0.2); }
     
+    /* ... (Badges are unchanged) ... */
     .proficiency-badge {
         display: inline-block;
         padding: 0.35rem 0.6rem;
@@ -112,11 +115,9 @@
         font-size: 0.85rem;
         min-width: 55px;
     }
-    
     .proficiency-high { background-color: #d4edda; color: #155724; }
     .proficiency-mid { background-color: #fff3cd; color: #856404; }
     .proficiency-low { background-color: #f8d7da; color: #721c24; }
-    
     .count-badge {
         display: inline-block;
         padding: 0.25rem 0.5rem;
@@ -126,28 +127,53 @@
         color: #2c3e50;
     }
     
-    .participation-badge {
-        display: inline-block;
-        padding: 0.35rem 0.6rem;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        background-color: #e8f4f8;
-        color: #0066cc;
-        min-width: 55px;
-    }
-    
-    .table-responsive {
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
+    /* ... (Alerts/Headers are unchanged) ... */
     .no-data-alert {
         background-color: #e7f3ff;
         border-left: 4px solid #0066cc;
         color: #003d99;
         padding: 1rem;
         border-radius: 4px;
+    }
+    
+    .unit-header {
+        background-color: #34495e; /* Darker blue-gray */
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px 6px 0 0;
+        margin-top: 2rem;
+    }
+    
+    .subject-header {
+        background-color: #eef2ff; /* Light Lavender Blue */
+        color: var(--orenda-primary);
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-bottom: 2px solid var(--orenda-primary-hover);
+    }
+    
+    /* --- MODIFIED STYLES for total rows --- */
+    .meta-table tr.sub-total-row {
+        background-color: #f8f9fa; /* Light gray */
+        font-weight: 600;
+        /* [MODIFIED] This adds the darker dividing lines */
+        border-top: 2px solid #adb5bd; 
+        border-bottom: 2px solid #adb5bd;
+    }
+    
+    .meta-table tr.sub-total-row .col-core {
+         color: #34495e;
+         padding-left: 1.5rem; /* Indent sub-totals */
+    }
+    
+    .meta-table tfoot tr.grand-total-row {
+        background-color: #e9ecef; /* Darker gray */
+        font-weight: 700;
+        border-top: 2px solid #34495e;
+    }
+    
+    .meta-table tfoot tr.grand-total-row .col-core {
+        color: #2c3e50;
     }
 </style>
 
@@ -157,15 +183,16 @@
         Meta Assessment Data
     </h2>
     
-    <!-- Filter Section -->
-    <div class="meta-filter-section">
+    <div class="meta-filter-section d-print-none">
         <form method="get" class="row g-3">
-            <div class="col-md-12">
+            <input type="hidden" asp-for="DistrictId" />
+            
+            <div class="col-md-6">
                 <label asp-for="SchoolId" class="form-label">School</label>
                 <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
                 </select>
             </div>
-            <div class="col-12">
+            <div class="col-md-6 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-search me-2"></i>Load Data
                 </button>
@@ -173,112 +200,119 @@
         </form>
     </div>
 
-    @if (Model.TableRows?.Any() == true)
+    @if (Model.UnitGroups.Any())
     {
-        <!-- Table Section -->
-        <div class="table-responsive">
-            <table class="meta-table">
-                <thead>
-                    <tr>
-                        <th colspan="2">Core Data</th>
-                        <th colspan="3" class="col-header-all">All Students</th>
-                        <th colspan="3" class="col-header-el">EL</th>
-                        <th colspan="3" class="col-header-swd">SWD</th>
-                        <th colspan="3" class="col-header-aa">AA</th>
-                        <th colspan="3" class="col-header-sed">SED</th>
-                        <th colspan="3" class="col-header-hisp">Hispanic</th>
-                    </tr>
-                    <tr>
-                        <th class="col-core">Subject</th>
-                        <th class="col-core">Grade</th>
-                        <!-- All Students -->
-                        <th class="data-all">% Prof</th>
-                        <th class="data-all"># Prof</th>
-                        <th class="data-all"># Tested</th>
-                        <!-- EL -->
-                        <th class="data-el">% Prof</th>
-                        <th class="data-el"># Prof</th>
-                        <th class="data-el"># Tested</th>
-                        <!-- SWD -->
-                        <th class="data-swd">% Prof</th>
-                        <th class="data-swd"># Prof</th>
-                        <th class="data-swd"># Tested</th>
-                        <!-- AA -->
-                        <th class="data-aa">% Prof</th>
-                        <th class="data-aa"># Prof</th>
-                        <th class="data-aa"># Tested</th>
-                        <!-- SED -->
-                        <th class="data-sed">% Prof</th>
-                        <th class="data-sed"># Prof</th>
-                        <th class="data-sed"># Tested</th>
-                        <!-- Hispanic -->
-                        <th class="data-hisp">% Prof</th>
-                        <th class="data-hisp"># Prof</th>
-                        <th class="data-hisp"># Tested</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{
-                        var groupedData = Model.TableRows
-                            .GroupBy(r => new { r.Subject, r.Grade })
-                            .OrderBy(g => g.Key.Subject)
-                            .ThenBy(g => g.Key.Grade)
-                            .ToList();
-                    }
-                    
-                    @foreach (var subjectGroup in groupedData)
-                    {
-                        var demographics = subjectGroup.GroupBy(r => r.DemographicGroup).ToList();
-                        var firstRow = subjectGroup.First();
-                        
-                        <tr>
-                            <td class="col-core">@firstRow.Subject</td>
-                            <td class="col-core">@(firstRow.Grade == 0 ? "—" : firstRow.Grade.ToString())</td>
-                            
-                            @{
-                                var demoOrder = new[] { "All", "EL", "SWD", "AA", "SED", "HISP" };
-                            }
-                            
-                            @foreach (var demo in demoOrder)
-                            {
-                                var demoData = demographics.FirstOrDefault(d => d.Key == demo)?.First();
-                                var cssClass = demo.ToLower();
-                                var dataClass = $"data-{cssClass}";
-                                
-                                if (demoData != null && demoData.TotalTested > 0)
-                                {
-                                    var profClass = demoData.PctProficient >= 75 ? "proficiency-high"
-                                        : demoData.PctProficient >= 50 ? "proficiency-mid"
-                                        : "proficiency-low";
-                                    
-                                    <td class="@dataClass">
-                                        <span class="proficiency-badge @profClass">@demoData.PctProficient%</span>
-                                    </td>
-                                    <td class="@dataClass">
-                                        <span class="count-badge">@demoData.TotalProficient</span>
-                                    </td>
-                                    <td class="@dataClass">
-                                        <span class="count-badge">@demoData.TotalTested</span>
-                                    </td>
-                                }
-                                else
-                                {
-                                    <td class="@dataClass">—</td>
-                                    <td class="@dataClass">—</td>
-                                    <td class="@dataClass">—</td>
-                                }
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="orenda-header shadow-orenda">
+            <h3 class="mb-0">@Model.SchoolName</h3>
+            <p class="mb-0">@Model.DistrictName</p>
         </div>
+
+        <div class="mb-3 d-print-none">
+            <button type="button" class="btn btn-action btn-print" onclick="window.print()">
+                <i class="fas fa-print"></i>Print Report
+            </button>
+            <a asp-page-handler="Excel"
+               asp-route-DistrictId="@Model.DistrictId"
+               asp-route-SchoolId="@Model.SchoolId"
+               class="btn btn-action btn-edit" style="background-color: #d4edda; color: #155724; border-color: #155724;">
+               <i class="fas fa-file-excel"></i>Download Excel
+            </a>
+        </div>
+
+        @foreach (var unitGroup in Model.UnitGroups)
+        {
+            <h3 class="unit-header">@unitGroup.UnitName</h3>
+
+            @foreach (var subjectGroup in unitGroup.SubjectGroups)
+            {
+                <div class="subject-header">@subjectGroup.SubjectName</div>
+                
+                <div class="table-responsive">
+                    <table class="meta-table">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th rowspan="2" class="col-core">Grade</th>
+                                <th colspan="3" class="col-header-all">All Students</th>
+                                <th colspan="3" class="col-header-el">EL</th>
+                                <th colspan="3" class="col-header-swd">SWD</th>
+                                <th colspan="3" class="col-header-aa">AA</th>
+                                <th colspan="3" class="col-header-sed">SED</th>
+                                <th colspan="3" class="col-header-hisp">Hispanic</th>
+                            </tr>
+                            <tr>
+                                <th class="data-all">% Prof</th>
+                                <th class.="data-all"># Prof</th>
+                                <th class="data-all"># Tested</th>
+                                <th class.="data-el">% Prof</th>
+                                <th class="data-el"># Prof</th>
+                                <th class="data-el"># Tested</th>
+                                <th class="data-swd">% Prof</th>
+                                <th class="data-swd"># Prof</th>
+                                <th class="data-swd"># Tested</th>
+                                <th class="data-aa">% Prof</th>
+                                <th class.="data-aa"># Prof</th>
+                                <th class="data-aa"># Tested</th>
+                                <th class="data-sed">% Prof</th>
+                                <th class="data-sed"># Prof</th>
+                                <th class="data-sed"># Tested</th>
+                                <th class.="data-hisp">% Prof</th>
+                                <th class="data-hisp"># Prof</th>
+                                <th class="data-hisp"># Tested</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var row in subjectGroup.BodyRows)
+                            {
+                                var rowClass = row.Type switch {
+                                    ORSV2.Pages.CurriculumAlignment.RowType.K2Total => "sub-total-row",
+                                    ORSV2.Pages.CurriculumAlignment.RowType.G3PlusTotal => "sub-total-row",
+                                    _ => ""
+                                };
+                                
+                                <tr class="@rowClass">
+                                    <td class="col-core">@row.RowLabel</td>
+                                    @{ RenderDemoCells(row.All, "all"); }
+                                    @{ RenderDemoCells(row.EL, "el"); }
+                                    @{ RenderDemoCells(row.SWD, "swd"); }
+                                    @{ RenderDemoCells(row.AA, "aa"); }
+                                    @{ RenderDemoCells(row.SED, "sed"); }
+                                    @{ RenderDemoCells(row.HISP, "hisp"); }
+                                </tr>
+                            }
+                        </tbody>
+
+                        @if (!subjectGroup.SubjectTotalRow.IsEmpty)
+                        {
+                            <tfoot>
+                                <tr class="grand-total-row">
+                                    <td class="col-core">@subjectGroup.SubjectTotalRow.RowLabel</td>
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.All, "all"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.EL, "el"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SWD, "swd"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.AA, "aa"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SED, "sed"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.HISP, "hisp"); }
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            }
+        }
     }
     else if (Model.SchoolId.HasValue)
     {
         <div class="no-data-alert">
             <i class="fas fa-info-circle me-2"></i>
-            No data available for the selected school.
+            No meta data available for the selected school or district.
+        </div>
+    }
+    else
+    {
+         <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Please select a school to load data.
         </div>
     }
 </div>

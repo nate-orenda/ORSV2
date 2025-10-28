@@ -5,19 +5,22 @@
 }
 
 <div>
-    <h4>@Model.Student.FirstName @Model.Student.LastName (@Model.Student.LocalStudentID)</h4>
-    <dl class="row mt-3">
-        <dt class="col-sm-4">Grade</dt><dd class="col-sm-8">@Model.Student.Grade</dd>
-        <dt class="col-sm-4">Ethnicity</dt><dd class="col-sm-8">@((Model.Student.Ethnicity == true) ? "Yes" : "No")</dd>
-        <dt class="col-sm-4">Race</dt><dd class="col-sm-8">@Model.Student.RaceCode</dd>
-        <dt class="col-sm-4">Language Fluency</dt><dd class="col-sm-8">@Model.Student.LanguageFluency</dd>
-        <dt class="col-sm-4">US School Enter Date</dt><dd class="col-sm-8">@Model.Student.USSchoolEnterDate?.ToShortDateString()</dd>
-        <dt class="col-sm-4">Credits Completed</dt><dd class="col-sm-8">@Model.Student.CreditsCompleted</dd>
-        <dt class="col-sm-4">Current GPA</dt><dd class="col-sm-8">@Model.Student.CurrentGPA</dd>
-        <dt class="col-sm-4">Cumulative GPA</dt><dd class="col-sm-8">@Model.Student.CumulativeGPA</dd>
-        <dt class="col-sm-4">Counselor</dt><dd class="col-sm-8">@Model.Student.Counselor</dd>
-    </dl>
-    <div class="text-end text-muted small mt-4">
-        Last Updated: @Model.Student.DateUpdated?.ToString("g")
-    </div>
+    @if (Model.Student != null)
+    {
+        <h4>@Model.Student.FirstName @Model.Student.LastName (@Model.Student.LocalStudentID)</h4>
+        <dl class="row mt-3">
+            <dt class="col-sm-4">Grade</dt><dd class="col-sm-8">@Model.Student.Grade</dd>
+            <dt class="col-sm-4">Ethnicity</dt><dd class="col-sm-8">@((Model.Student.Ethnicity == true) ? "Yes" : "No")</dd>
+            <dt class="col-sm-4">Race</dt><dd class="col-sm-8">@Model.Student.RaceCode</dd>
+            <dt class="col-sm-4">Language Fluency</dt><dd class="col-sm-8">@Model.Student.LanguageFluency</dd>
+            <dt class="col-sm-4">US School Enter Date</dt><dd class="col-sm-8">@Model.Student.USSchoolEnterDate?.ToShortDateString()</dd>
+            <dt class="col-sm-4">Credits Completed</dt><dd class="col-sm-8">@Model.Student.CreditsCompleted</dd>
+            <dt class="col-sm-4">Current GPA</dt><dd class="col-sm-8">@Model.Student.CurrentGPA</dd>
+            <dt class="col-sm-4">Cumulative GPA</dt><dd class="col-sm-8">@Model.Student.CumulativeGPA</dd>
+            <dt class="col-sm-4">Counselor</dt><dd class="col-sm-8">@Model.Student.Counselor</dd>
+        </dl>
+        <div class="text-end text-muted small mt-4">
+            Last Updated: @Model.Student.DateUpdated?.ToString("g")
+        </div>
+    }
 </div>
