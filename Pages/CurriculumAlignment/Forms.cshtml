@@ -43,15 +43,12 @@
         @if (Model.ShowAdvancedForms)
         {
             <div class="col-12 col-md-6 col-lg-4">
-                <div class="orenda-card h-100 is-disabled">
-                    <div class="orenda-card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h5 class="text-orenda-primary mb-0">Meta</h5>
-                            <span class="badge bg-light text-dark">Coming Soon</span>
+                    <a href="@Url.Page("/CurriculumAlignment/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                        <div class="orenda-card-body">
+                            <h5 class="text-orenda-primary">Meta</h5>
+                            <p class="text-muted small">Meta-analysis across multiple grades, demographic groups, and cycles/units.</p>
                         </div>
-                        <p class="text-muted small">Advanced meta-analysis across multiple assessments and time periods.</p>
-                    </div>
-                </div>
+                    </a>
             </div>
 
             <div class="col-12 col-md-6 col-lg-4">
