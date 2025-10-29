@@ -10,9 +10,17 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using ClosedXML.Excel;
 using System.IO; // Required for MemoryStream
+using System; // Required for DBNull
 
 namespace ORSV2.Pages.CurriculumAlignment
 {
+    public class SchoolTarget
+    {
+        public int Grade { get; set; }
+        public string DemographicGroup { get; set; } = string.Empty;
+        public decimal TargetPct { get; set; }
+    }
+    
     public class MetaModel : SecureReportPageModel
     {
         private readonly IConfiguration _config;
@@ -21,10 +29,26 @@ namespace ORSV2.Pages.CurriculumAlignment
         [BindProperty(SupportsGet = true)]
         public int? SchoolId { get; set; }
 
-        [BindProperty(SupportsGet = true)]
+        [BindProperty(SupportsGet =true)]
         public int? DistrictId { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public int? SchoolYear { get; set; }
+
+        [BindProperty]
+        public string? NewTargetGrade { get; set; }
+        [BindProperty]
+        public string? NewTargetDemographic { get; set; }
+        [BindProperty]
+        public decimal? NewTargetPercent { get; set; }
+
+        // ---
+        // CORRECTED: Explicitly initialize with a list to fix constructor error
+        // ---
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
+        public SelectList AvailableSchoolYears { get; set; } = new SelectList(new List<SelectListItem>());
+        public SelectList AvailableTargetGrades { get; set; } = new SelectList(new List<SelectListItem>());
+        public SelectList AvailableTargetDemographics { get; set; } = new SelectList(new List<SelectListItem>());
 
         public List<UnitDisplayGroup> UnitGroups { get; set; } = new List<UnitDisplayGroup>();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new List<BreadcrumbItem>();
@@ -32,6 +56,8 @@ namespace ORSV2.Pages.CurriculumAlignment
         public string SchoolName { get; set; } = string.Empty;
 
         private List<MetaDataRow> RawDataRows { get; set; } = new List<MetaDataRow>();
+        private List<SchoolTarget> CurrentTargets { get; set; } = new List<SchoolTarget>();
+
 
         // Constructor
         public MetaModel(IConfiguration config, ILogger<MetaModel> logger)
@@ -50,12 +76,11 @@ namespace ORSV2.Pages.CurriculumAlignment
                 return Forbid();
             }
 
-            // SECURITY: Enforce user's district scope
             if (UserDistrictId.HasValue)
             {
                 if (DistrictId.HasValue && DistrictId.Value != UserDistrictId.Value)
                 {
-                    return Forbid(); // User trying to access wrong district
+                    return Forbid();
                 }
                 DistrictId = UserDistrictId.Value;
             }
@@ -65,22 +90,22 @@ namespace ORSV2.Pages.CurriculumAlignment
                 return Page();
             }
 
-            // SECURITY: For SchoolAdmins, validate SchoolId is in their assigned schools
             if (IsSchoolAdmin && SchoolId.HasValue && SchoolId.Value != 0)
             {
                 if (!UserSchoolIds.Contains(SchoolId.Value))
                 {
-                    return Forbid(); // User trying to access unauthorized school
+                    return Forbid();
                 }
             }
 
             await LoadDistrictInfoAsync();
-            await LoadFiltersAsync();
+            await LoadFiltersAsync(); 
 
-            if (SchoolId.HasValue)
+            if (SchoolId.HasValue && SchoolYear.HasValue)
             {
+                await LoadSchoolTargetsAsync(); 
                 await LoadMetaDataAsync();
-                BuildDisplayGroups();
+                BuildDisplayGroups(); 
 
                 if (SchoolId.Value == 0)
                 {
@@ -88,7 +113,16 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
                 else
                 {
-                    SchoolName = AvailableSchools.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
+                    // ---
+                    // CORRECTED: Be more explicit about searching the SelectList's items
+                    // ---
+                    var items = AvailableSchools.Items?.Cast<SelectListItem>() ?? new List<SelectListItem>();
+                    SchoolName = items.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
+                }
+
+                if (UnitGroups.Any())
+                {
+                    LoadTargetUIData();
                 }
             }
 
@@ -96,22 +130,91 @@ namespace ORSV2.Pages.CurriculumAlignment
             return Page();
         }
 
-        // OnGetExcelAsync - UPDATED FOR CLOSEDXML
+        // OnPostSetTargetAsync
+        public async Task<IActionResult> OnPostSetTargetAsync()
+        {
+            InitializeUserDataScope();
+            
+            if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser) return Forbid();
+            if (UserDistrictId.HasValue) DistrictId = UserDistrictId.Value;
+
+            if (!SchoolId.HasValue || SchoolId.Value == 0) 
+            {
+                _logger.LogWarning("Target save failed: 'All Schools' (0) is not a valid school ID for targets.");
+                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
+            }
+            if (!SchoolYear.HasValue || !NewTargetPercent.HasValue || string.IsNullOrEmpty(NewTargetGrade) || string.IsNullOrEmpty(NewTargetDemographic))
+            {
+                _logger.LogWarning("Target save failed: Missing required fields.");
+                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
+            }
+
+            if (IsSchoolAdmin && !UserSchoolIds.Contains(SchoolId.Value))
+            {
+                _logger.LogWarning("Target save FORBIDDEN: User tried to save target for unassigned school {SchoolId}", SchoolId.Value);
+                return Forbid();
+            }
+
+            if (!int.TryParse(NewTargetGrade, out var gradeInt))
+            {
+                _logger.LogWarning("Target save failed: Invalid grade '{Grade}'", NewTargetGrade);
+                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
+            }
+
+            try
+            {
+                var sql = @"
+                    MERGE INTO [dbo].[SchoolTargets] AS T
+                    USING (VALUES (@SchoolId, @SchoolYear, @Grade, @DemographicGroup)) AS S (school_id, school_year, grade, demographic_group)
+                    ON T.school_id = S.school_id AND T.school_year = S.school_year AND T.grade = S.grade AND T.demographic_group = S.demographic_group
+                    WHEN MATCHED THEN
+                        UPDATE SET 
+                            target_pct = @TargetPct,
+                            updated_at = GETUTCDATE()
+                    WHEN NOT MATCHED THEN
+                        INSERT (school_id, school_year, grade, demographic_group, target_pct, created_at, updated_at)
+                        VALUES (@SchoolId, @SchoolYear, @Grade, @DemographicGroup, @TargetPct, GETUTCDATE(), GETUTCDATE());";
+
+                using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
+                        cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear.Value);
+                        cmd.Parameters.AddWithValue("@Grade", gradeInt);
+                        cmd.Parameters.AddWithValue("@DemographicGroup", NewTargetDemographic);
+                        cmd.Parameters.AddWithValue("@TargetPct", NewTargetPercent.Value);
+                        
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                
+                _logger.LogInformation("School Target saved successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving school target.");
+            }
+            
+            return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
+        }
+        
+        // OnGetExcelAsync
         public async Task<IActionResult> OnGetExcelAsync()
         {
             InitializeUserDataScope();
             if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser) return Forbid();
             if (UserDistrictId.HasValue) DistrictId = UserDistrictId.Value;
 
-            if (!SchoolId.HasValue || !DistrictId.HasValue)
+            if (!SchoolId.HasValue || !DistrictId.HasValue || !SchoolYear.HasValue)
                 return RedirectToPage();
 
             await LoadDistrictInfoAsync();
-            await LoadFiltersAsync(); // This populates SchoolName
+            await LoadFiltersAsync(); // This populates AvailableSchools
             await LoadMetaDataAsync();
-            BuildDisplayGroups(); // This populates UnitGroups
+            BuildDisplayGroups();
 
-            // Manually set SchoolName if it wasn't set by LoadFilters (e.g., if coming directly to Excel handler)
             if (string.IsNullOrEmpty(SchoolName))
             {
                 if (SchoolId.Value == 0)
@@ -120,21 +223,32 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
                 else
                 {
-                    // A minimal load to get the school name
-                    var schoolsList = new List<SelectListItem>();
-                    using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
+                    // ---
+                    // CORRECTED: Be more explicit about searching the SelectList's items
+                    // ---
+                    if (AvailableSchools.Items != null)
                     {
-                        await conn.OpenAsync();
-                        var sql = "SELECT Id, Name FROM [dbo].[Schools] WHERE Id = @SchoolId AND DistrictId = @DistrictId";
-                        using (var cmd = new SqlCommand(sql, conn))
+                        var items = AvailableSchools.Items.Cast<SelectListItem>();
+                        SchoolName = items.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
+                    }
+                    else
+                    {
+                        // Fallback in case filters weren't loaded (e.g., direct Excel link)
+                        var schoolsList = new List<SelectListItem>();
+                        using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
                         {
-                            cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
-                            cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
-                            using (var reader = await cmd.ExecuteReaderAsync())
+                            await conn.OpenAsync();
+                            var sql = "SELECT Id, Name FROM [dbo].[Schools] WHERE Id = @SchoolId AND DistrictId = @DistrictId";
+                            using (var cmd = new SqlCommand(sql, conn))
                             {
-                                if (await reader.ReadAsync())
+                                cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
+                                cmd.Parameters.AddWithValue("@DistrictId", DistrictId.Value);
+                                using (var reader = await cmd.ExecuteReaderAsync())
                                 {
-                                    SchoolName = reader["Name"].ToString() ?? "Selected School";
+                                    if (await reader.ReadAsync())
+                                    {
+                                        SchoolName = reader["Name"].ToString() ?? "Selected School";
+                                    }
                                 }
                             }
                         }
@@ -146,87 +260,56 @@ namespace ORSV2.Pages.CurriculumAlignment
             using (var workbook = new XLWorkbook())
             {
                 var ws = workbook.Worksheets.Add("Meta Data");
-
-                // Set column widths
-                ws.Column(1).Width = 20; // Grade column
-                for (int i = 2; i <= 7; i++) ws.Column(i).Width = 22; // Data columns
-
-                // --- Define Styles ---
-                // Header colors (from CSS .col-header-*)
+                ws.Column(1).Width = 20; 
+                for (int i = 2; i <= 7; i++) ws.Column(i).Width = 22; 
                 var headerBgColors = new Dictionary<string, XLColor>
                 {
-                    { "Grade", XLColor.FromArgb(44, 62, 80) }, // #2c3e50 (default dark)
-                    { "All", XLColor.FromArgb(179, 217, 255) }, // #b3d9ff
-                    { "EL", XLColor.FromArgb(255, 179, 217) }, // #ffb3d9
-                    { "SWD", XLColor.FromArgb(255, 255, 179) }, // #ffffb3
-                    { "AA", XLColor.FromArgb(179, 255, 179) }, // #b3ffb3
-                    { "SED", XLColor.FromArgb(255, 179, 102) }, // #ffb366
-                    { "HISP", XLColor.FromArgb(255, 230, 179) } // #ffe6b3
+                    { "Grade", XLColor.FromArgb(44, 62, 80) }, { "All", XLColor.FromArgb(179, 217, 255) }, { "EL", XLColor.FromArgb(255, 179, 217) }, { "SWD", XLColor.FromArgb(255, 255, 179) }, { "AA", XLColor.FromArgb(179, 255, 179) }, { "SED", XLColor.FromArgb(255, 179, 102) }, { "HISP", XLColor.FromArgb(255, 230, 179) }
                 };
-
                 var headerFontColors = new Dictionary<string, XLColor>
                 {
-                    { "Grade", XLColor.White },
-                    { "All", XLColor.FromArgb(0, 61, 153) },   // #003d99
-                    { "EL", XLColor.FromArgb(153, 0, 51) },  // #990033
-                    { "SWD", XLColor.FromArgb(153, 102, 0) }, // #996600
-                    { "AA", XLColor.FromArgb(0, 77, 0) },    // #004d00
-                    { "SED", XLColor.FromArgb(102, 68, 0) },  // #664400
-                    { "HISP", XLColor.FromArgb(102, 77, 0) }  // #664d00
+                    { "Grade", XLColor.White }, { "All", XLColor.FromArgb(0, 61, 153) }, { "EL", XLColor.FromArgb(153, 0, 51) }, { "SWD", XLColor.FromArgb(153, 102, 0) }, { "AA", XLColor.FromArgb(0, 77, 0) }, { "SED", XLColor.FromArgb(102, 68, 0) }, { "HISP", XLColor.FromArgb(102, 77, 0) }
                 };
-
-                // Data cell base colors (light versions of headers, from CSS .data-*)
-                // Using 0.2 opacity from CSS, rendered as solid color by blending with white
                 var dataBgColors = new Dictionary<string, XLColor>
                 {
-                    { "All", XLColor.FromArgb(230, 241, 250) }, // rgba(179, 217, 255, 0.2)
-                    { "EL", XLColor.FromArgb(250, 230, 241) }, // rgba(255, 179, 217, 0.2)
-                    { "SWD", XLColor.FromArgb(250, 250, 230) }, // rgba(255, 255, 179, 0.2)
-                    { "AA", XLColor.FromArgb(230, 250, 230) }, // rgba(179, 255, 179, 0.2)
-                    { "SED", XLColor.FromArgb(250, 230, 215) }, // rgba(255, 179, 102, 0.2)
-                    { "HISP", XLColor.FromArgb(250, 244, 230) }  // rgba(255, 230, 179, 0.2)
+                    { "All", XLColor.FromArgb(230, 241, 250) }, { "EL", XLColor.FromArgb(250, 230, 241) }, { "SWD", XLColor.FromArgb(250, 250, 230) }, { "AA", XLColor.FromArgb(230, 250, 230) }, { "SED", XLColor.FromArgb(250, 230, 215) }, { "HISP", XLColor.FromArgb(250, 244, 230) }
                 };
 
                 int row = 1;
-                int firstHeaderRow = 0; // For freezing panes
+                int firstHeaderRow = 0; 
 
-                // Header
                 var headerCell = ws.Cell(row, 1);
-                headerCell.Value = $"{DistrictName} - {SchoolName}";
+                headerCell.Value = $"{DistrictName} - {SchoolName} (SY {SchoolYear - 1}-{SchoolYear})";
                 headerCell.Style.Font.Bold = true;
                 headerCell.Style.Font.FontSize = 14;
                 ws.Range(row, 1, row, 7).Merge();
                 row += 2;
 
-                // Process each UnitGroup
                 foreach (var unitGroup in UnitGroups)
                 {
                     var unitCell = ws.Cell(row, 1);
                     unitCell.Value = $"Cycle: {unitGroup.UnitName}";
                     unitCell.Style.Font.Bold = true;
-                    unitCell.Style.Fill.BackgroundColor = XLColor.FromArgb(52, 73, 94); // #34495e
+                    unitCell.Style.Fill.BackgroundColor = XLColor.FromArgb(52, 73, 94);
                     unitCell.Style.Font.FontColor = XLColor.White;
                     ws.Range(row, 1, row, 7).Merge();
                     row++;
 
                     foreach (var subjectGroup in unitGroup.SubjectGroups)
                     {
-                        // Subject header
                         var subjectCell = ws.Cell(row, 1);
                         subjectCell.Value = $"Subject: {subjectGroup.SubjectName}";
                         subjectCell.Style.Font.Bold = true;
-                        subjectCell.Style.Fill.BackgroundColor = XLColor.FromArgb(238, 242, 255); // #eef2ff
+                        subjectCell.Style.Fill.BackgroundColor = XLColor.FromArgb(238, 242, 255);
                         subjectCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80);
                         ws.Range(row, 1, row, 7).Merge();
                         row++;
 
-                        // --- Column headers (Two Rows) ---
-                        if (firstHeaderRow == 0) firstHeaderRow = row; // Track first header for freezing
+                        if (firstHeaderRow == 0) firstHeaderRow = row; 
                 
                         int headerRow1 = row;
                         int headerRow2 = row + 1;
 
-                        // Row 1: Grade + Demo Headers
                         var gradeHeaderCell = ws.Cell(headerRow1, 1);
                         gradeHeaderCell.Value = "Grade";
                         gradeHeaderCell.Style.Fill.BackgroundColor = headerBgColors["Grade"];
@@ -236,11 +319,8 @@ namespace ORSV2.Pages.CurriculumAlignment
                         gradeHeaderCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                         gradeHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                         gradeHeaderCell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
-
-                        // Merge Grade cell
                         ws.Range(headerRow1, 1, headerRow2, 1).Merge();
 
-                        // Demo Headers
                         Action<int, string, string> setHeader = (col, key, text) =>
                         {
                             var cell = ws.Cell(headerRow1, col);
@@ -251,14 +331,11 @@ namespace ORSV2.Pages.CurriculumAlignment
                             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                             cell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                             cell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
-
-
-                            // Sub-header
                             var subCell = ws.Cell(headerRow2, col);
                             subCell.Value = "% Proficient (Proficient/Tested)";
-                            subCell.Style.Fill.BackgroundColor = dataBgColors[key]; // Use light data color for sub-header
+                            subCell.Style.Fill.BackgroundColor = dataBgColors[key];
                             subCell.Style.Font.Bold = true;
-                            subCell.Style.Font.FontColor = headerFontColors[key]; // Use dark demo font color
+                            subCell.Style.Font.FontColor = headerFontColors[key];
                             subCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                             subCell.Style.Alignment.WrapText = true;
                             subCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
@@ -272,79 +349,63 @@ namespace ORSV2.Pages.CurriculumAlignment
                         setHeader(6, "SED", "SED");
                         setHeader(7, "HISP", "Hispanic");
                 
-                        ws.Row(headerRow2).Height = 30; // Give space for wrapped text
-                        row += 2; // We used two rows
-                        // --- End Column Headers ---
+                        ws.Row(headerRow2).Height = 30;
+                        row += 2; 
 
-                        // Data rows
                         foreach (var bodyRow in subjectGroup.BodyRows)
                         {
                             var gradeCell = ws.Cell(row, 1);
                             gradeCell.Value = bodyRow.RowLabel;
                             gradeCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                            gradeCell.Style.Font.Bold = true; // Match .col-core font-weight: 500
-
+                            gradeCell.Style.Font.Bold = true; 
                             RenderExcelDataCell(ws, row, 2, bodyRow.All, dataBgColors["All"]);
                             RenderExcelDataCell(ws, row, 3, bodyRow.EL, dataBgColors["EL"]);
                             RenderExcelDataCell(ws, row, 4, bodyRow.SWD, dataBgColors["SWD"]);
                             RenderExcelDataCell(ws, row, 5, bodyRow.AA, dataBgColors["AA"]);
                             RenderExcelDataCell(ws, row, 6, bodyRow.SED, dataBgColors["SED"]);
                             RenderExcelDataCell(ws, row, 7, bodyRow.HISP, dataBgColors["HISP"]);
-
-                            // Style subtotal rows
                             if (bodyRow.Type == RowType.K2Total || bodyRow.Type == RowType.G3PlusTotal)
                             {
                                 var subtotalStyle = ws.Range(row, 1, row, 7).Style;
-                                subtotalStyle.Fill.BackgroundColor = XLColor.FromArgb(248, 249, 250); // #f8f9fa
+                                subtotalStyle.Fill.BackgroundColor = XLColor.FromArgb(248, 249, 250);
                                 subtotalStyle.Font.Bold = true;
                                 subtotalStyle.Border.SetTopBorder(XLBorderStyleValues.Thin);
                                 subtotalStyle.Border.SetBottomBorder(XLBorderStyleValues.Thin);
-                                subtotalStyle.Border.SetTopBorderColor(XLColor.FromArgb(173, 181, 189)); // #adb5bd
-                                subtotalStyle.Border.SetBottomBorderColor(XLColor.FromArgb(173, 181, 189)); // #adb5bd
-
-                                // Style .col-core for subtotal
-                                gradeCell.Style.Font.FontColor = XLColor.FromArgb(52, 73, 94); // #34495e
-                                gradeCell.Style.Alignment.Indent = 1; // Match padding-left
+                                subtotalStyle.Border.SetTopBorderColor(XLColor.FromArgb(173, 181, 189));
+                                subtotalStyle.Border.SetBottomBorderColor(XLColor.FromArgb(173, 181, 189)); 
+                                gradeCell.Style.Font.FontColor = XLColor.FromArgb(52, 73, 94);
+                                gradeCell.Style.Alignment.Indent = 1;
                             }
                             row++;
                         }
-
-                        // Subject total row
                         if (!subjectGroup.SubjectTotalRow.IsEmpty)
                         {
                             var totalCell = ws.Cell(row, 1);
                             totalCell.Value = subjectGroup.SubjectTotalRow.RowLabel;
                             totalCell.Style.Font.Bold = true;
-                            totalCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80); // #2c3e50
+                            totalCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80); 
                             totalCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-
                             RenderExcelDataCell(ws, row, 2, subjectGroup.SubjectTotalRow.All, dataBgColors["All"]);
                             RenderExcelDataCell(ws, row, 3, subjectGroup.SubjectTotalRow.EL, dataBgColors["EL"]);
                             RenderExcelDataCell(ws, row, 4, subjectGroup.SubjectTotalRow.SWD, dataBgColors["SWD"]);
                             RenderExcelDataCell(ws, row, 5, subjectGroup.SubjectTotalRow.AA, dataBgColors["AA"]);
                             RenderExcelDataCell(ws, row, 6, subjectGroup.SubjectTotalRow.SED, dataBgColors["SED"]);
                             RenderExcelDataCell(ws, row, 7, subjectGroup.SubjectTotalRow.HISP, dataBgColors["HISP"]);
-
-                            // Style grand total row
                             var totalRowStyle = ws.Range(row, 1, row, 7).Style;
-                            totalRowStyle.Fill.BackgroundColor = XLColor.FromArgb(233, 236, 239); // #e9ecef
+                            totalRowStyle.Fill.BackgroundColor = XLColor.FromArgb(233, 236, 239);
                             totalRowStyle.Font.Bold = true;
                             totalRowStyle.Border.SetTopBorder(XLBorderStyleValues.Thick);
-                            totalRowStyle.Border.SetTopBorderColor(XLColor.FromArgb(52, 73, 94)); // #34495e
+                            totalRowStyle.Border.SetTopBorderColor(XLColor.FromArgb(52, 73, 94));
                             row++;
                         }
-                        row++; // Add space between subject tables
+                        row++;
                     }
                 }
-
-                // Freeze panes after the first table's header
                 if (firstHeaderRow > 0)
                 {
-                    ws.SheetView.FreezeRows(firstHeaderRow + 1); // Freezes rows 1 through headerRow2
+                    ws.SheetView.FreezeRows(firstHeaderRow + 1); 
                 }
-
-                var filename = $"Meta_Data_{SchoolName.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
-
+                var filename = $"Meta_Data_{SchoolName.Replace(" ", "_")}_SY{SchoolYear}_{DateTime.Now:yyyyMMdd}.xlsx";
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -355,7 +416,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        // RenderExcelDataCell - UPDATED FOR CLOSEDXML
+        // RenderExcelDataCell
         private void RenderExcelDataCell(IXLWorksheet ws, int row, int col, AggData data, XLColor baseDataColor)
         {
             var cell = ws.Cell(row, col);
@@ -366,23 +427,12 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 cell.Value = $"{data.PctProficient}%\n({data.TotalProficient}/{data.TotalTested})";
                 cell.Style.Alignment.WrapText = true;
-
-                // Apply proficiency color (from CSS .proficiency-*)
-                var profColor = data.PctProficient >= 75 ? XLColor.FromArgb(212, 237, 218) // .proficiency-high bg
-                            : data.PctProficient >= 50 ? XLColor.FromArgb(255, 243, 205) // .proficiency-mid bg
-                            : XLColor.FromArgb(248, 215, 218); // .proficiency-low bg
-                
-                var profFontColor = data.PctProficient >= 75 ? XLColor.FromArgb(21, 87, 36)   // .proficiency-high color
-                                : data.PctProficient >= 50 ? XLColor.FromArgb(133, 100, 4)  // .proficiency-mid color
-                                : XLColor.FromArgb(114, 28, 36); // .proficiency-low color
-
-                cell.Style.Fill.BackgroundColor = profColor;
-                cell.Style.Font.FontColor = profFontColor;
+                cell.Style.Fill.BackgroundColor = baseDataColor;
             }
             else
             {
                 cell.Value = "—";
-                cell.Style.Fill.BackgroundColor = baseDataColor; // Apply the light demo color
+                cell.Style.Fill.BackgroundColor = baseDataColor; 
             }
         }
 
@@ -409,8 +459,8 @@ namespace ORSV2.Pages.CurriculumAlignment
         private async Task LoadFiltersAsync()
         {
             var schools = new List<SelectListItem> { new SelectListItem { Text = "-- Select School --", Value = "" } };
+            var years = new List<SelectListItem> { new SelectListItem { Text = "-- Select Year --", Value = "" } }; 
 
-            // Add "All Schools" option for District/Orenda admins
             if (IsDistrictAdmin || IsOrendaUser)
             {
                 schools.Add(new SelectListItem { Text = "All Schools", Value = "0" });
@@ -419,7 +469,6 @@ namespace ORSV2.Pages.CurriculumAlignment
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
             {
                 await conn.OpenAsync();
-
                 var sql = @"
                     SELECT DISTINCT s.Id, s.Name 
                     FROM [dbo].[Schools] s
@@ -430,8 +479,6 @@ namespace ORSV2.Pages.CurriculumAlignment
                           FROM [dbo].[MetaAggregation] ma 
                           WHERE ma.school_id = s.Id
                       )";
-
-                // SchoolAdmins only see their assigned schools
                 if (IsSchoolAdmin && UserSchoolIds.Any())
                 {
                     var schoolParams = new List<string>();
@@ -454,7 +501,6 @@ namespace ORSV2.Pages.CurriculumAlignment
                             cmd.Parameters.AddWithValue($"@SchoolId{i}", UserSchoolIds[i]);
                         }
                     }
-
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -466,10 +512,79 @@ namespace ORSV2.Pages.CurriculumAlignment
                             });
                         }
                     }
-                    AvailableSchools = new SelectList(schools, "Value", "Text", SchoolId?.ToString());
+                }
+                AvailableSchools = new SelectList(schools, "Value", "Text", SchoolId?.ToString());
+                var yearSql = @"
+                    SELECT DISTINCT ma.school_year
+                    FROM [dbo].[MetaAggregation] ma
+                    WHERE ma.district_id = @districtId
+                      AND ma.school_year IS NOT NULL
+                    ORDER BY ma.school_year DESC";
+
+                using (var cmdYears = new SqlCommand(yearSql, conn))
+                {
+                    cmdYears.Parameters.AddWithValue("@districtId", DistrictId);
+                    using (var reader = await cmdYears.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var yearObj = reader["school_year"];
+                            if (yearObj != null && yearObj != DBNull.Value)
+                            {
+                                var yearInt = (int)yearObj; 
+                                var yearString = yearInt.ToString();
+                                years.Add(new SelectListItem
+                                {
+                                    Text = $"{yearInt - 1}-{yearString}",
+                                    Value = yearString
+                                });
+                            }
+                        }
+                    }
+                }
+                AvailableSchoolYears = new SelectList(years, "Value", "Text", SchoolYear?.ToString());
+            }
+        }
+
+        // LoadSchoolTargetsAsync
+        private async Task LoadSchoolTargetsAsync()
+        {
+            if (!SchoolId.HasValue || !SchoolYear.HasValue || SchoolId.Value == 0)
+            {
+                CurrentTargets = new List<SchoolTarget>();
+                return;
+            }
+
+            CurrentTargets = new List<SchoolTarget>();
+            var sql = @"
+                SELECT grade, demographic_group, target_pct
+                FROM [dbo].[SchoolTargets]
+                WHERE school_id = @SchoolId AND school_year = @SchoolYear";
+
+            using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
+            {
+                await conn.OpenAsync();
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
+                    cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear.Value);
+                    
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            CurrentTargets.Add(new SchoolTarget
+                            {
+                                Grade = (int)reader["grade"],
+                                DemographicGroup = reader["demographic_group"].ToString() ?? string.Empty,
+                                TargetPct = (decimal)reader["target_pct"]
+                            });
+                        }
+                    }
                 }
             }
         }
+
 
         // LoadMetaDataAsync
         private async Task LoadMetaDataAsync()
@@ -477,7 +592,6 @@ namespace ORSV2.Pages.CurriculumAlignment
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
             {
                 await conn.OpenAsync();
-
                 using (var cmd = new SqlCommand(
                     @"SELECT
                         ma.unit AS Unit,
@@ -494,6 +608,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                         SUM(ma.total_proficient) AS total_proficient
                     FROM [dbo].[MetaAggregation] ma
                     WHERE ma.district_id = @DistrictId
+                      AND ma.school_year = @SchoolYear 
                       AND (@SchoolId = 0 OR ma.school_id = @SchoolId)
                       AND ma.grade >= 0
                     GROUP BY
@@ -520,7 +635,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 {
                     cmd.Parameters.AddWithValue("@DistrictId", DistrictId!.Value);
                     cmd.Parameters.AddWithValue("@SchoolId", SchoolId!.Value);
-
+                    cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear!.Value); 
                     RawDataRows = new List<MetaDataRow>();
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -543,6 +658,38 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
+        // LoadTargetUIData
+        private void LoadTargetUIData()
+        {
+            if (!RawDataRows.Any())
+                return;
+
+            var grades = RawDataRows
+                .Select(r => r.Grade)
+                .Distinct()
+                .OrderBy(g => g)
+                .Select(g => new SelectListItem {
+                    Text = (g == 0 ? "K" : $"Grade {g}"),
+                    Value = g.ToString()
+                })
+                .ToList();
+            
+            AvailableTargetGrades = new SelectList(grades, "Value", "Text");
+
+            var demos = RawDataRows
+                .Select(r => r.DemographicGroup)
+                .Distinct()
+                .OrderBy(d => d)
+                .Select(d => new SelectListItem {
+                    Text = d,
+                    Value = d
+                })
+                .ToList();
+            
+            AvailableTargetDemographics = new SelectList(demos, "Value", "Text");
+        }
+
+
         // BuildDisplayGroups
         private void BuildDisplayGroups()
         {
@@ -561,7 +708,6 @@ namespace ORSV2.Pages.CurriculumAlignment
                             var bodyRows = new List<MetaDisplayRow>();
                             var allSubjectData = subjectGroup.ToList();
 
-                            // --- K-2 Group ---
                             var k2_data = allSubjectData.Where(s => s.GradeGroup == "K-2").ToList();
                             var k2_GradeRows = k2_data
                                 .GroupBy(g => g.Grade)
@@ -569,7 +715,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                                 .Select(gradeData =>
                                 {
                                     var label = gradeData.Key == 0 ? "K" : $"Grade {gradeData.Key}";
-                                    var row = PivotDemographics(gradeData, label);
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key);
                                     row.Type = RowType.Grade;
                                     return row;
                                 })
@@ -577,14 +723,13 @@ namespace ORSV2.Pages.CurriculumAlignment
 
                             bodyRows.AddRange(k2_GradeRows);
 
-                            var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total");
+                            var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total", null);
                             k2_TotalRow.Type = RowType.K2Total;
                             if (!k2_TotalRow.IsEmpty)
                             {
                                 bodyRows.Add(k2_TotalRow);
                             }
 
-                            // --- 3+ Group ---
                             var g3Plus_data = allSubjectData.Where(s => s.GradeGroup == "3+").ToList();
                             var g3Plus_GradeRows = g3Plus_data
                                 .GroupBy(g => g.Grade)
@@ -592,7 +737,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                                 .Select(gradeData =>
                                 {
                                     var label = $"Grade {gradeData.Key}";
-                                    var row = PivotDemographics(gradeData, label);
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key);
                                     row.Type = RowType.Grade;
                                     return row;
                                 })
@@ -600,16 +745,15 @@ namespace ORSV2.Pages.CurriculumAlignment
 
                             bodyRows.AddRange(g3Plus_GradeRows);
 
-                            var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total");
+                            var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total", null);
                             g3Plus_TotalRow.Type = RowType.G3PlusTotal;
                             if (!g3Plus_TotalRow.IsEmpty)
                             {
                                 bodyRows.Add(g3Plus_TotalRow);
                             }
 
-                            // Set the final lists
                             subjectDisplayGroup.BodyRows = bodyRows;
-                            subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total");
+                            subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total", null);
                             subjectDisplayGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
 
                             return subjectDisplayGroup;
@@ -618,7 +762,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
         // PivotDemographics
-        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel)
+        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade)
         {
             var row = new MetaDisplayRow { RowLabel = rowLabel };
             var groups = rows
@@ -635,6 +779,17 @@ namespace ORSV2.Pages.CurriculumAlignment
             row.AA = groups.GetValueOrDefault("AA", new AggData());
             row.SED = groups.GetValueOrDefault("SED", new AggData());
             row.HISP = groups.GetValueOrDefault("HISP", new AggData());
+
+            if (grade.HasValue)
+            {
+                row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "All")?.TargetPct;
+                row.ELTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "EL")?.TargetPct;
+                row.SWDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "SWD")?.TargetPct;
+                row.AATarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "AA")?.TargetPct;
+                row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "SED")?.TargetPct;
+                row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "HISP")?.TargetPct;
+            }
+            
             return row;
         }
 
@@ -645,6 +800,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             {
                 new BreadcrumbItem { Title = "Curriculum Alignment", Url = "/CurriculumAlignment/Index" },
                 new BreadcrumbItem { Title = DistrictName, Url = null },
+                // --- CORRECTED TYPO HERE ---
                 new BreadcrumbItem { Title = "Meta Data", Url = null }
             };
         }
@@ -653,7 +809,7 @@ namespace ORSV2.Pages.CurriculumAlignment
     // ###############################################################
     // VIEW MODELS
     // ###############################################################
-
+    
     public enum RowType { Grade, K2Total, G3PlusTotal, SubjectTotal }
 
     public class MetaDataRow
@@ -679,6 +835,13 @@ namespace ORSV2.Pages.CurriculumAlignment
         public AggData HISP { get; set; } = new AggData();
         public RowType Type { get; set; } = RowType.Grade;
 
+        public decimal? AllTarget { get; set; }
+        public decimal? ELTarget { get; set; }
+        public decimal? SWDTarget { get; set; }
+        public decimal? AATarget { get; set; }
+        public decimal? SEDTarget { get; set; }
+        public decimal? HISPTarget { get; set; }
+
         public bool IsEmpty =>
             All.TotalTested == 0 &&
             EL.TotalTested == 0 &&
@@ -692,7 +855,6 @@ namespace ORSV2.Pages.CurriculumAlignment
     {
         public int TotalTested { get; set; }
         public int TotalProficient { get; set; }
-
         public decimal PctProficient => TotalTested > 0
             ? Math.Round(100m * TotalProficient / TotalTested, 2)
             : 0m;

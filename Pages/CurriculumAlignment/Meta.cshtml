@@ -3,25 +3,34 @@
 @{
     ViewData["Title"] = "Meta Assessment Data - DRS";
     
-    // --- UPDATED HELPER ---
-    // This now renders a single <td> with combined data
-    Action<ORSV2.Pages.CurriculumAlignment.AggData, string> RenderDemoCells = (demoData, cssClass) =>
+    // ---
+    // MODIFIED: RenderDemoCells HELPER
+    // ---
+    Action<ORSV2.Pages.CurriculumAlignment.AggData, string, decimal?> RenderDemoCells = 
+        (demoData, cssClass, target) =>
     {
         var dataClass = $"data-{cssClass}";
         if (demoData != null && demoData.TotalTested > 0)
         {
-            var profClass = demoData.PctProficient >= 75 ? "proficiency-high"
-                : demoData.PctProficient >= 50 ? "proficiency-mid"
-                : "proficiency-low";
-            
             <td class="@dataClass">
-                <span class="proficiency-badge @profClass">@demoData.PctProficient%</span>
+                <span class="proficiency-badge proficiency-neutral">@demoData.PctProficient%</span>
                 <span class="combined-count">(@demoData.TotalProficient / @demoData.TotalTested)</span>
+                
+                @if (target.HasValue)
+                {
+                    <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
+                }
             </td>
         }
         else
         {
-            <td class="@dataClass">—</td>
+            <td class="@dataClass">
+                —
+                @if (target.HasValue)
+                {
+                    <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
+                }
+            </td>
         }
     };
 }
@@ -111,13 +120,24 @@
     }
     .proficiency-high { background-color: #d4edda; color: #155724; }
     .proficiency-mid { background-color: #fff3cd; color: #856404; }
-    .proficiency-low { background-color: #f8d7da; color: #721c24; }
+    .proficiency-low { background-color: #f8d7da;
+    color: #721c24; }
+    .proficiency-neutral { background-color: #e9ecef; color: #495057; }
     
     .combined-count {
         font-size: 0.8rem;
         color: #6c757d;
         margin-left: 0.5rem;
         white-space: nowrap;
+    }
+
+    /* --- ADDED: Style for the new target display --- */
+    .target-pct {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #005a9c; /* A distinct but not-alarming blue */
+        margin-top: 4px;
     }
     
     .no-data-alert {
@@ -416,13 +436,26 @@
             background-color: #f8d7da !important; 
             color: #721c24 !important; 
         }
-
+        .proficiency-neutral { 
+            background-color: #e9ecef !important; 
+            color: #495057 !important; 
+        }
+        
         .combined-count {
             display: block;
             font-size: 7pt;
             color: #495057;
             margin-top: 0.08rem;
             white-space: nowrap;
+        }
+
+        /* --- ADDED: Print style for target --- */
+        .target-pct {
+            display: block !important;
+            font-size: 7pt !important;
+            font-weight: 600 !important;
+            color: #005a9c !important;
+            margin-top: 3px !important;
         }
 
         /* Headers */
@@ -501,12 +534,19 @@
         <form method="get" class="row g-3">
             <input type="hidden" asp-for="DistrictId" />
             
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label asp-for="SchoolId" class="form-label">School</label>
                 <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
                 </select>
             </div>
-            <div class="col-md-6 d-flex align-items-end">
+            
+            <div class="col-md-4">
+                <label asp-for="SchoolYear" class="form-label">School Year</label>
+                <select asp-for="SchoolYear" asp-items="Model.AvailableSchoolYears" class="form-select">
+                </select>
+            </div>
+
+            <div class="col-md-4 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-search me-2"></i>Load Data
                 </button>
@@ -521,7 +561,6 @@
             <p class="mb-0">@Model.DistrictName</p>
         </div>
 
-        <!-- Print Header - Shows on printed reports only -->
         <div class="print-report-header">
             <div class="print-header-district">@Model.DistrictName</div>
             <div class="print-header-school">@Model.SchoolName</div>
@@ -529,16 +568,48 @@
 
         <div class="mb-3 d-print-none">
             <button type="button" class="btn btn-action btn-print" onclick="window.print()">
-                <i class="fas fa-print"></i>Print Report (Landscape)
+                <i class="fas fa-print"></i>Print Report
             </button>
             <a asp-page-handler="Excel"
                asp-route-DistrictId="@Model.DistrictId"
                asp-route-SchoolId="@Model.SchoolId"
+               asp-route-SchoolYear="@Model.SchoolYear" 
                class="btn btn-action btn-edit" style="background-color: #d4edda; color: #155724; border-color: #155724;">
                <i class="fas fa-file-excel"></i>Download Excel
             </a>
         </div>
 
+        <div class="meta-filter-section d-print-none">
+            <h4 class="mb-3">Set School Target</h4>
+            <form method="post" asp-page-handler="SetTarget" class="row g-3">
+                <input type="hidden" asp-for="DistrictId" />
+                <input type="hidden" asp-for="SchoolId" />
+                <input type="hidden" asp-for="SchoolYear" />
+                @Html.AntiForgeryToken()
+
+                <div class="col-md-3">
+                    <label asp-for="NewTargetGrade" class="form-label">Grade</label>
+                    <select asp-for="NewTargetGrade" asp-items="Model.AvailableTargetGrades" class="form-select" required>
+                        <option value="">-- Select Grade --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewTargetDemographic" class="form-label">Demographic</label>
+                    <select asp-for="NewTargetDemographic" asp-items="Model.AvailableTargetDemographics" class="form-select" required>
+                        <option value="">-- Select Group --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewTargetPercent" class="form-label">Target %</label>
+                    <input type="number" step="0.1" min="0" max="100" class="form-control" asp-for="NewTargetPercent" placeholder="e.g., 75.5" required />
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Set Target
+                    </button>
+                </div>
+            </form>
+        </div>
         @foreach (var unitGroup in Model.UnitGroups)
         {
             <h3 class="unit-header">Cycle: @unitGroup.UnitName</h3>
@@ -580,12 +651,12 @@
                                 
                                 <tr class="@rowClass">
                                     <td class="col-core">@row.RowLabel</td>
-                                    @{ RenderDemoCells(row.All, "all"); }
-                                    @{ RenderDemoCells(row.EL, "el"); }
-                                    @{ RenderDemoCells(row.SWD, "swd"); }
-                                    @{ RenderDemoCells(row.AA, "aa"); }
-                                    @{ RenderDemoCells(row.SED, "sed"); }
-                                    @{ RenderDemoCells(row.HISP, "hisp"); }
+                                    @{ RenderDemoCells(row.All, "all", row.AllTarget); }
+                                    @{ RenderDemoCells(row.EL, "el", row.ELTarget); }
+                                    @{ RenderDemoCells(row.SWD, "swd", row.SWDTarget); }
+                                    @{ RenderDemoCells(row.AA, "aa", row.AATarget); }
+                                    @{ RenderDemoCells(row.SED, "sed", row.SEDTarget); }
+                                    @{ RenderDemoCells(row.HISP, "hisp", row.HISPTarget); }
                                 </tr>
                             }
                         </tbody>
@@ -595,12 +666,12 @@
                             <tfoot>
                                 <tr class="grand-total-row">
                                     <td class="col-core">@subjectGroup.SubjectTotalRow.RowLabel</td>
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.All, "all"); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.EL, "el"); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SWD, "swd"); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.AA, "aa"); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SED, "sed"); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.HISP, "hisp"); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.All, "all", subjectGroup.SubjectTotalRow.AllTarget); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.EL, "el", subjectGroup.SubjectTotalRow.ELTarget); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SWD, "swd", subjectGroup.SubjectTotalRow.SWDTarget); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.AA, "aa", subjectGroup.SubjectTotalRow.AATarget); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SED, "sed", subjectGroup.SubjectTotalRow.SEDTarget); }
+                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.HISP, "hisp", subjectGroup.SubjectTotalRow.HISPTarget); }
                                 </tr>
                             </tfoot>
                         }
@@ -609,11 +680,25 @@
             }
         }
     }
-    else if (Model.SchoolId.HasValue)
+    else if (Model.DistrictId.HasValue && !Model.SchoolId.HasValue)
+    {
+         <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Please select a school to load data.
+        </div>
+    }
+    else if (Model.SchoolId.HasValue && !Model.SchoolYear.HasValue)
     {
         <div class="no-data-alert">
             <i class="fas fa-info-circle me-2"></i>
-            No meta data available for the selected school or district.
+            Please select a school year to load data.
+        </div>
+    }
+    else if (Model.SchoolId.HasValue && Model.SchoolYear.HasValue)
+    {
+        <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            No meta data available for the selected school and year.
         </div>
     }
     else
