@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Microsoft.Extensions.Logging; // Added for logging, if available
+using Microsoft.Extensions.Logging;
 
 namespace ORSV2.Areas.Identity.Pages.Account
 {
@@ -35,8 +35,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
         private readonly string _notificationEmail;
-        private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly ILogger<ExternalLoginModel> _logger; // Added for logging
+        private readonly RoleManager<ApplicationRole> _roleManager; // <-- Corrected type
+        private readonly ILogger<ExternalLoginModel> _logger; 
 
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
@@ -45,8 +45,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
             IEmailSender emailSender,
             ApplicationDbContext context,
             string notificationEmail,
-            RoleManager<IdentityRole> roleManager,
-            ILogger<ExternalLoginModel> logger)  // Add this parameter
+            RoleManager<ApplicationRole> roleManager, // <-- Corrected type
+            ILogger<ExternalLoginModel> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -55,8 +55,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailSender = emailSender;
             _context = context;
             _notificationEmail = notificationEmail;
-            _roleManager = roleManager;
-            _logger = logger;
+            _roleManager = roleManager; // <-- Added assignment
+            _logger = logger; // <-- Added assignment
         }
 
         [BindProperty]
@@ -186,7 +186,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostConfirmationAsync(string returnUrl = null)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
-
+            
             // Retrieve the info we stored in TempData
             var loginProvider = TempData["LoginProvider"] as string;
             var providerKey = TempData["ProviderKey"] as string;
@@ -230,9 +230,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     // Primary school - in-memory lookup
                     if (!string.IsNullOrWhiteSpace(staff.PrimarySchool))
                     {
-                        var primarySchool = schoolsForDistrict.FirstOrDefault(s =>
+                        var primarySchool = schoolsForDistrict.FirstOrDefault(s => 
                             s.LocalSchoolId.ToString() == staff.PrimarySchool);
-
+                        
                         if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
                         {
                             user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
@@ -249,7 +249,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             {
                                 foreach (var entry in accessList)
                                 {
-                                    var school = schoolsForDistrict.FirstOrDefault(s =>
+                                    var school = schoolsForDistrict.FirstOrDefault(s => 
                                         s.LocalSchoolId == entry.SchoolCode.ToString());
 
                                     if (school != null && !user.UserSchools.Any(us => us.SchoolId == school.Id))
@@ -261,14 +261,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "Failed to parse SchoolAccess for {Email} during external login", staff.EmailAddress);
+                             _logger.LogWarning(ex, "Failed to parse SchoolAccess for {Email} during external login", staff.EmailAddress);
                         }
                     }
                 }
                 else
                 {
                     user.FirstName = Input.FirstName?.Trim();
-                    user.LastName = Input.LastName?.Trim();
+                    user.LastName  = Input.LastName?.Trim();
                     user.LockoutEnabled = true;
                     user.LockoutEnd = DateTimeOffset.MaxValue;
                 }
@@ -362,7 +362,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
+                                     _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
                                 }
                             }
                         }
@@ -409,7 +409,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             }
             return (IUserEmailStore<ApplicationUser>)_userStore;
         }
-
+        
         // Helper class for the raw SQL query result
         private class AssignmentQueryResult
         {

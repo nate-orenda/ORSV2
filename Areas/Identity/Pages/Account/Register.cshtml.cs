@@ -37,7 +37,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
         private readonly string _notificationEmail;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<ApplicationRole> _roleManager; // <-- Corrected type
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
@@ -47,7 +47,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             IEmailSender emailSender,
             ApplicationDbContext context,
             string notificationEmail,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<ApplicationRole> roleManager) // <-- Corrected type
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -57,7 +57,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailSender = emailSender;
             _context = context;
             _notificationEmail = notificationEmail;
-            _roleManager = roleManager;
+            _roleManager = roleManager; // <-- Added assignment
         }
 
 
