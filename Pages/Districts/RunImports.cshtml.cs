@@ -31,12 +31,25 @@ namespace ORSV2.Pages.Districts
         [BindProperty(SupportsGet = true)]
         public int DistrictId { get; set; }
         public ORSV2.Models.District? District { get; set; }
+        public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(int districtId)
         {
             DistrictId = districtId;
             District = await _context.Districts.FirstOrDefaultAsync(d => d.Id == districtId);
             if (District is null) return NotFound();
+
+            // --- ADD BREADCRUMB LOGIC ---
+            var districtName = District.Name ?? string.Empty;
+            Breadcrumbs = new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Districts", Url = Url.Page("/Districts/Index") },
+                // Link back to the main page for this district (which seems to be the Schools Index)
+                new BreadcrumbItem { Title = districtName, Url = Url.Page("/Schools/Index", new { districtId = District.Id }) }, 
+                new BreadcrumbItem { Title = "Run Imports" } // Current page, no link
+            };
+            // --- END BREADCRUMB LOGIC ---
+            
             return Page();
         }
 
@@ -104,3 +117,4 @@ namespace ORSV2.Pages.Districts
         }
     }
 }
+

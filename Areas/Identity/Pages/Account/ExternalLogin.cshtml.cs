@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.Extensions.Logging; // Added for logging, if available
 
 namespace ORSV2.Areas.Identity.Pages.Account
 {
@@ -34,13 +35,18 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
         private readonly string _notificationEmail;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ILogger<ExternalLoginModel> _logger; // Added for logging
+
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             IEmailSender emailSender,
             ApplicationDbContext context,
-            string notificationEmail)  // Add this parameter
+            string notificationEmail,
+            RoleManager<IdentityRole> roleManager,
+            ILogger<ExternalLoginModel> logger)  // Add this parameter
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -48,7 +54,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailStore = GetEmailStore();
             _emailSender = emailSender;
             _context = context;
-            _notificationEmail = notificationEmail;  // Add this assignment
+            _notificationEmail = notificationEmail;
+            _roleManager = roleManager;
+            _logger = logger;
         }
 
         [BindProperty]
@@ -169,7 +177,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 }
 
                 Input.FirstName = given;
-                Input.LastName  = family;
+                Input.LastName = family;
             }
 
             return Page();
@@ -178,7 +186,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostConfirmationAsync(string returnUrl = null)
         {
             returnUrl = returnUrl ?? Url.Content("~/");
-            
+
             // Retrieve the info we stored in TempData
             var loginProvider = TempData["LoginProvider"] as string;
             var providerKey = TempData["ProviderKey"] as string;
@@ -222,9 +230,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     // Primary school - in-memory lookup
                     if (!string.IsNullOrWhiteSpace(staff.PrimarySchool))
                     {
-                        var primarySchool = schoolsForDistrict.FirstOrDefault(s => 
+                        var primarySchool = schoolsForDistrict.FirstOrDefault(s =>
                             s.LocalSchoolId.ToString() == staff.PrimarySchool);
-                        
+
                         if (primarySchool != null && !user.UserSchools.Any(us => us.SchoolId == primarySchool.Id))
                         {
                             user.UserSchools.Add(new UserSchool { SchoolId = primarySchool.Id, User = user });
@@ -241,7 +249,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             {
                                 foreach (var entry in accessList)
                                 {
-                                    var school = schoolsForDistrict.FirstOrDefault(s => 
+                                    var school = schoolsForDistrict.FirstOrDefault(s =>
                                         s.LocalSchoolId == entry.SchoolCode.ToString());
 
                                     if (school != null && !user.UserSchools.Any(us => us.SchoolId == school.Id))
@@ -251,13 +259,16 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                 }
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to parse SchoolAccess for {Email} during external login", staff.EmailAddress);
+                        }
                     }
                 }
                 else
                 {
                     user.FirstName = Input.FirstName?.Trim();
-                    user.LastName  = Input.LastName?.Trim();
+                    user.LastName = Input.LastName?.Trim();
                     user.LockoutEnabled = true;
                     user.LockoutEnd = DateTimeOffset.MaxValue;
                 }
@@ -268,6 +279,39 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     var loginResult = await _userManager.AddLoginAsync(user, info);
                     if (loginResult.Succeeded)
                     {
+                        _logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+
+                        // --- START: Auto Role Assignment ---
+                        string assignedRole = "No role set";
+                        if (user.StaffId.HasValue && staff != null)
+                        {
+                            try
+                            {
+                                string determinedRole = await DetermineUserRoleAsync(staff);
+                                if (!string.IsNullOrWhiteSpace(determinedRole))
+                                {
+                                    // Ensure role exists before assigning
+                                    if (await _roleManager.RoleExistsAsync(determinedRole))
+                                    {
+                                        await _userManager.AddToRoleAsync(user, determinedRole);
+                                        assignedRole = determinedRole;
+                                        _logger.LogInformation("Automatically assigned role '{Role}' to user {Email}", determinedRole, user.Email);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("Role '{Role}' not found in database. Cannot assign to user {Email}", determinedRole, user.Email);
+                                        assignedRole = $"Role '{determinedRole}' not found";
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error during automatic role assignment for user {Email}", user.Email);
+                                assignedRole = "Error during role assignment";
+                            }
+                        }
+                        // --- END: Auto Role Assignment ---
+
                         var userId = await _userManager.GetUserIdAsync(user);
                         var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
@@ -296,6 +340,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                         <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
                                         <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
                                         <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                                        <p><strong>Assigned Role:</strong> {HtmlEncoder.Default.Encode(assignedRole)}</p>
                                         <p><strong>Status:</strong> {locked}</p>
                                         <p><strong>Provider:</strong> {HtmlEncoder.Default.Encode(info.LoginProvider)}</p>
                                         <p><a href=""{adminUrl}"">Open user admin</a></p>";
@@ -315,10 +360,9 @@ namespace ORSV2.Areas.Identity.Pages.Account
                                         "New ORSV2 registration (Google)",
                                         adminBody);
                                 }
-                                catch (Exception)
+                                catch (Exception ex)
                                 {
-                                    // Log but don't fail the registration
-                                    // Add logging here if you have ILogger injected
+                                    _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
                                 }
                             }
                         }
@@ -365,5 +409,139 @@ namespace ORSV2.Areas.Identity.Pages.Account
             }
             return (IUserEmailStore<ApplicationUser>)_userStore;
         }
+
+        // Helper class for the raw SQL query result
+        private class AssignmentQueryResult
+        {
+            public string JCDescription { get; set; }
+            public string NC1Description { get; set; }
+        }
+
+        private async Task<string> DetermineUserRoleAsync(Staff staff)
+        {
+            if (staff == null || staff.DistrictId == 0) return null;
+
+            var potentialRoles = new HashSet<string>();
+
+            // --- Logic 1: Check StaffAssignments ---
+            // Use raw SQL since StaffAssignments and Codes are not in the DbContext
+            var assignments = await _context.Database.SqlQuery<AssignmentQueryResult>($@"
+                SELECT
+                    jc.Description AS JCDescription,
+                    nc1.Description AS NC1Description
+                FROM
+                    StaffAssignments sa
+                LEFT JOIN
+                    Codes jc ON sa.DistrictID = jc.DistrictId
+                           AND jc.SourceTable = 'STJ'
+                           AND jc.SourceField = 'JC'
+                           AND sa.JobClassificationCode = jc.Code
+                LEFT JOIN
+                    Codes nc1 ON sa.DistrictID = nc1.DistrictId
+                            AND nc1.SourceTable = 'STJ'
+                            AND nc1.SourceField = 'NC1'
+                            AND sa.NonClassroomBasedJobAssignmentCode1 = nc1.Code
+                WHERE
+                    sa.StaffID = {staff.StaffId} AND sa.DistrictID = {staff.DistrictId}
+            ").ToListAsync();
+
+
+            // Define role descriptions
+            var teacherJCCodes = new[] { "Teacher", "Itinerant Teacher" };
+            var adminPupilJCCodes = new[] { "Administrator", "Pupil Services" };
+            var districtAdminNC1Codes = new[] {
+                "Admin other subject area", "Admin staff development", "Administrator - Program Coordinator",
+                "Deputy or associate superintendent (general)", "Superintendent", "Teacher on Special Assignment"
+            };
+            var schoolAdminNC1Codes = new[] { "Principal", "Vice principal or assoc/asst administrator" };
+            var counselorNC1Codes = new[] { "Counselor", "Counselors and Rehabilitation Counselors" };
+
+            if (assignments.Any())
+            {
+                foreach (var assignment in assignments)
+                {
+                    if (assignment.JCDescription != null)
+                    {
+                        if (teacherJCCodes.Contains(assignment.JCDescription))
+                        {
+                            potentialRoles.Add("Teacher");
+                        }
+                        else if (adminPupilJCCodes.Contains(assignment.JCDescription))
+                        {
+                            // Check NC1
+                            if (assignment.NC1Description != null)
+                            {
+                                if (districtAdminNC1Codes.Contains(assignment.NC1Description))
+                                    potentialRoles.Add("DistrictAdmin");
+                                else if (schoolAdminNC1Codes.Contains(assignment.NC1Description))
+                                    potentialRoles.Add("SchoolAdmin");
+                                else if (counselorNC1Codes.Contains(assignment.NC1Description))
+                                    potentialRoles.Add("Counselor");
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Logic 2: Fallback to Staff.JobTitle ---
+            if (!potentialRoles.Any() && !string.IsNullOrWhiteSpace(staff.JobTitle))
+            {
+                var jobTitle = staff.JobTitle.ToLower().Trim();
+
+                // Check for DistrictAdmin (highest priority)
+                // These are high-confidence keywords.
+                if (jobTitle.Contains("superintendent") || // Catches "Superintendent", "Deputy Superintendent", "Associate Superintendent"
+                    jobTitle.Contains("asst superintendent") || // Catches "Asst Supt"
+                    jobTitle.Contains("assistant superintendent") ||
+                    jobTitle.Contains("chief business officer") ||
+                    jobTitle.Contains("chief academic officer") ||
+                    jobTitle.Contains("chief technology officer") ||
+                    jobTitle.Contains("chief of staff") ||
+                    jobTitle.Contains("executive director") ||
+                    jobTitle.Contains("director of") || // e.g., "Director of MOT"
+                    jobTitle.Contains("director,") || // e.g., "Director, Nutrition Services"
+                    jobTitle.Contains("director iii") || // e.g., "Director III, Lcap"
+                    jobTitle.Contains("director iv") ||
+                    jobTitle.Contains("director v") ||
+                    jobTitle.Equals("director") ||
+                    jobTitle.Contains("teacher on special assignment")) // Match NC1 logic
+                {
+                    potentialRoles.Add("DistrictAdmin");
+                }
+                // Check for SchoolAdmin
+                else if (jobTitle.Contains("principal") || // Catches "Principal", "Vice Principal", "Asst Principal" etc.
+                         jobTitle.Contains("asst principal") ||
+                         jobTitle.Contains("assistant principal") ||
+                         jobTitle.Contains("vice principal"))
+                {
+                    potentialRoles.Add("SchoolAdmin");
+                }
+                // Check for Counselor
+                else if (jobTitle.Contains("counselor"))
+                {
+                    potentialRoles.Add("Counselor");
+                }
+                // Check for Teacher (lowest priority)
+                // Exclude "teacher on special assignment" which is handled above.
+                else if ((jobTitle.Contains("teacher") && !jobTitle.Contains("special assignment")) ||
+                         jobTitle.Contains("instructor"))
+                {
+                    potentialRoles.Add("Teacher");
+                }
+            }
+
+            // --- Logic 3: Determine highest priority role ---
+            if (potentialRoles.Contains("DistrictAdmin"))
+                return "DistrictAdmin";
+            if (potentialRoles.Contains("SchoolAdmin"))
+                return "SchoolAdmin";
+            if (potentialRoles.Contains("Counselor"))
+                return "Counselor";
+            if (potentialRoles.Contains("Teacher"))
+                return "Teacher";
+
+            return null; // No role determined
+        }
     }
 }
+

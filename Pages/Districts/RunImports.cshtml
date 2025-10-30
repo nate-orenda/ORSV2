@@ -3,15 +3,17 @@
 @{
     ViewData["Title"] = "Run Imports";
     var jobs = new[]{
-        "ImportSchools", "ImportCodes", "ImportStaff",
+        "ImportSchools", "ImportCodes", "ImportStaff", "ImportStaffAssignments",
         "ImportCourses", "ImportStudents", "ImportDiscipline",
         "ImportGrades", "ImportMasterSchedule", "ImportReportCards",
         "ImportAttendance", "ImportStudentClasses"
     };
 }
 
+<partial name="_Breadcrumbs" model="Model.Breadcrumbs" />
+
 <div class="orenda-container">
-    <div class="orenda-header shadow-orenda">
+    <div class="orenda-header">
         <h2 class="mb-1">Run Imports – @Model.District?.Name</h2>
         <p class="mb-0">District ID: <strong>@Model.DistrictId</strong></p>
     </div>
@@ -46,13 +48,13 @@
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="job" value="@job" />
                                             <input type="hidden" name="districtId" value="@Model.DistrictId" />
-                                            <button type="submit" class="btn-orenda btn-sm shadow-orenda-hover">
+                                            <button type="submit" class="btn-action btn-edit">
                                                 Run
                                             </button>
                                         </form>
 
                                         <button type="button"
-                                                class="btn-orenda-outline btn-sm"
+                                                class="btn-action btn-print"
                                                 data-copy="#out-@job">
                                             Copy Output
                                         </button>
@@ -85,7 +87,7 @@
                 <form method="post" asp-page-handler="RunSp" class="ajax-form-sp">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="districtId" value="@Model.DistrictId" />
-                    <button type="submit" class="btn-orenda shadow-orenda-hover">Run Stored Procedure</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Run Stored Procedure</button>
                 </form>
                 <pre id="out-sp" class="mt-3 mb-0" style="white-space:pre-wrap; font-size:.85rem;"></pre>
             </div>
@@ -212,3 +214,5 @@
 })();
 </script>
 }
+
+
