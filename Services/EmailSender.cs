@@ -180,7 +180,7 @@ namespace ORSV2.Services
     <div class='email-wrapper'>
         <div class='email-container'>
             <div class='header'>
-                <h1>ORSV2 Account Confirmation</h1>
+                <h1>Orenda Reporting System Account Confirmation</h1>
             </div>
             <div class='content'>
                 <h2>Almost there!</h2>

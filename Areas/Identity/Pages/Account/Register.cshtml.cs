@@ -220,8 +220,20 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
+                    // --- START: Capture HttpContext-dependent data BEFORE background task ---
+                    string scheme = Request.Scheme;
+                    string host = Request.Host.ToUriComponent();
+                    string encodedCode = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    string callbackUrl = Url.Page(
+                        "/Account/ConfirmEmail",
+                        pageHandler: null,
+                        values: new { area = "Identity", userId = userId, code = encodedCode, returnUrl = returnUrl },
+                        protocol: scheme);
+                    // --- END: Capture HttpContext-dependent data ---
+
                     // --- START: Send Emails in Background ---
-                    _ = SendRegistrationEmailsAsync(user, code, assignedRole, returnUrl);
+                    // Pass the captured data, not the HttpContext-dependent properties
+                    _ = SendRegistrationEmailsAsync(user, assignedRole, callbackUrl, scheme, host);
                     // --- END: Send Emails in Background ---
 
 
@@ -249,19 +261,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
         /// This method is intended to be run in the background ("fire-and-forget") to avoid
         /// blocking the registration process.
         /// </summary>
-        private async Task SendRegistrationEmailsAsync(ApplicationUser user, string code, string assignedRole, string returnUrl)
+        private async Task SendRegistrationEmailsAsync(ApplicationUser user, string assignedRole, string callbackUrl, string requestScheme, string requestHost)
         {
             try
             {
                 var userId = user.Id;
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                var callbackUrl = Url.Page(
-                    "/Account/ConfirmEmail",
-                    pageHandler: null,
-                    values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                    protocol: Request.Scheme);
 
-                await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
+                // Send confirmation email
+                await _emailSender.SendEmailAsync(user.Email, "Confirm your email",
                     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
                 // --- Admin notification (multiple mailboxes) ---
@@ -273,8 +280,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                         ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
                         : "Unlocked";
 
-                    // Admin page link (prefer Page() when available; fall back to Content)
-                    var adminUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users/Edit?id={userId}";
+                    // Use the passed-in scheme and host
+                    var adminUrl = $"{requestScheme}://{requestHost}/Admin/Users/Edit?id={userId}";
 
                     var adminBody = $@"
                             <h3>New ORSV2 Registration</h3>
