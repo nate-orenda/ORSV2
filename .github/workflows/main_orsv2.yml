@@ -84,7 +84,7 @@ jobs:
         run: |
           $maxAttempts = 30
           $attempt = 0
-          $healthCheckUrl = "https://orsv2-staging.azurewebsites.net/health"
+          $healthCheckUrl = "https://orsv2-ors-stage-g2cecegnfec5hnff.westus2-01.azurewebsites.net/"
           
           Write-Host "Starting health check for staging deployment..."
           
@@ -96,13 +96,13 @@ jobs:
                 exit 0
               }
             } catch {
-              Write-Host "Attempt $($attempt + 1)/$maxAttempts: Waiting for staging to be ready..."
+              Write-Host "Attempt $([int]$attempt + 1)/${maxAttempts}: Waiting for staging to be ready..."
             }
             Start-Sleep -Seconds 2
             $attempt++
           }
           
-          Write-Host "✗ Staging deployment health check failed after $maxAttempts attempts"
+          Write-Host "✗ Staging deployment health check failed after ${maxAttempts} attempts"
           exit 1
 
   deploy-production:
@@ -133,7 +133,7 @@ jobs:
         run: |
           $maxAttempts = 30
           $attempt = 0
-          $healthCheckUrl = "https://orsv2.azurewebsites.net/health"
+          $healthCheckUrl = "https://ors.orendaed.org/"
           
           Write-Host "Starting health check for production deployment..."
           
@@ -145,13 +145,13 @@ jobs:
                 exit 0
               }
             } catch {
-              Write-Host "Attempt $($attempt + 1)/$maxAttempts: Waiting for production to be ready..."
+              Write-Host "Attempt $([int]$attempt + 1)/${maxAttempts}: Waiting for production to be ready..."
             }
             Start-Sleep -Seconds 2
             $attempt++
           }
           
-          Write-Host "✗ Production deployment health check failed after $maxAttempts attempts"
+          Write-Host "✗ Production deployment health check failed after ${maxAttempts} attempts"
           Write-Host "Consider rolling back by swapping slots again"
           exit 1
 
