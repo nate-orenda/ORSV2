@@ -37,7 +37,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
         private readonly IEmailSender _emailSender;
         private readonly ApplicationDbContext _context;
         private readonly string _notificationEmail;
-        private readonly RoleManager<ApplicationRole> _roleManager; // <-- Corrected type
+        private readonly RoleManager<ApplicationRole> _roleManager;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
@@ -47,7 +47,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             IEmailSender emailSender,
             ApplicationDbContext context,
             string notificationEmail,
-            RoleManager<ApplicationRole> roleManager) // <-- Corrected type
+            RoleManager<ApplicationRole> roleManager) 
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -57,7 +57,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailSender = emailSender;
             _context = context;
             _notificationEmail = notificationEmail;
-            _roleManager = roleManager; // <-- Added assignment
+            _roleManager = roleManager; 
         }
 
 
@@ -217,61 +217,11 @@ namespace ORSV2.Areas.Identity.Pages.Account
 
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                        protocol: Request.Scheme);
-
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-
-                    // --- Admin notification (multiple mailboxes) ---
-                    if (!string.IsNullOrWhiteSpace(_notificationEmail))
-                    {
-                        // Keep PII concise and useful for provisioning
-                        var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
-                        var locked = user.LockoutEnd.HasValue
-                            ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
-                            : "Unlocked";
-
-                        // Admin page link (prefer Page() when available; fall back to Content)
-                        var adminUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users/Edit?id={userId}";
-
-                        var adminBody = $@"
-                            <h3>New ORSV2 Registration</h3>
-                            <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
-                            <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
-                            <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
-                            <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
-                            <p><strong>Assigned Role:</strong> {HtmlEncoder.Default.Encode(assignedRole)}</p>
-                            <p><strong>Status:</strong> {locked}</p>
-                            <p><a href=""{adminUrl}"">Open user admin</a></p>";
-
-                        var notificationEmails = _notificationEmail
-                            .Split(',')
-                            .Select(email => email.Trim())
-                            .Where(email => !string.IsNullOrWhiteSpace(email))
-                            .ToList();
-
-                        foreach (var email in notificationEmails)
-                        {
-                            try
-                            {
-                                await _emailSender.SendEmailAsync(
-                                    email,
-                                    "New ORSV2 registration",
-                                    adminBody);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
-                            }
-                        }
-                    }
-                    // --- end admin notification ---
-
+                    
+                    // --- START: Send Emails in Background ---
+                    // Run this task in the background ("fire-and-forget")
+                    _ = SendRegistrationEmailsAsync(user, code, assignedRole, returnUrl);
+                    // --- END: Send Emails in Background ---
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
@@ -291,6 +241,78 @@ namespace ORSV2.Areas.Identity.Pages.Account
 
             return Page();
         }
+
+        /// <summary>
+        /// Generates email content and sends user confirmation and admin notification emails.
+        /// This method is intended to be run in the background ("fire-and-forget") to avoid
+        /// blocking the registration process.
+        /// </summary>
+        private async Task SendRegistrationEmailsAsync(ApplicationUser user, string code, string assignedRole, string returnUrl)
+        {
+            try
+            {
+                var userId = user.Id;
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var callbackUrl = Url.Page(
+                    "/Account/ConfirmEmail",
+                    pageHandler: null,
+                    values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
+                    protocol: Request.Scheme);
+
+                // Send user confirmation email
+                await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
+                    $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+
+                // --- Admin notification (multiple mailboxes) ---
+                if (!string.IsNullOrWhiteSpace(_notificationEmail))
+                {
+                    var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
+                    var locked = user.LockoutEnd.HasValue
+                        ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
+                        : "Unlocked";
+
+                    var adminUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users/Edit?id={userId}";
+
+                    var adminBody = $@"
+                        <h3>New ORSV2 Registration</h3>
+                        <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                        <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                        <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                        <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                        <p><strong>Assigned Role:</strong> {HtmlEncoder.Default.Encode(assignedRole)}</p>
+                        <p><strong>Status:</strong> {locked}</p>
+                        <p><a href=""{adminUrl}"">Open user admin</a></p>";
+
+                    var notificationEmails = _notificationEmail
+                        .Split(',')
+                        .Select(email => email.Trim())
+                        .Where(email => !string.IsNullOrWhiteSpace(email))
+                        .ToList();
+
+                    foreach (var email in notificationEmails)
+                    {
+                        try
+                        {
+                            await _emailSender.SendEmailAsync(
+                                email,
+                                "New ORSV2 registration",
+                                adminBody);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed sending new user notification to {Admin}", email);
+                        }
+                    }
+                }
+                // --- end admin notification ---
+            }
+            catch (Exception ex)
+            {
+                // Log the entire email-sending failure
+                _logger.LogError(ex, "Background email sending failed for user {Email}", user.Email);
+            }
+        }
+
 
         private ApplicationUser CreateUser()
         {
