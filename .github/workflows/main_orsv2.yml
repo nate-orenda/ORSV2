@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -22,9 +22,24 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
+          cache: true
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity normal
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+          retention-days: 30
 
       - name: dotnet publish
         run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
@@ -34,20 +49,22 @@ jobs:
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
+          retention-days: 30
 
-  deploy:
+  deploy-staging:
     runs-on: windows-latest
     needs: build
+    if: success()
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -55,11 +72,104 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C1B3DE86A43C49ECB0AD147184703181 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_40ABB6CC70214441B78D23DDBEE9A535 }}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: Deploy to staging slot
+        id: deploy-to-staging
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'ORSV2'
-          slot-name: 'Production'
+          slot-name: 'ors-stage'
           package: .
+
+      - name: Health check staging deployment
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          $healthCheckUrl = "https://orsv2-staging.azurewebsites.net/health"
           
+          Write-Host "Starting health check for staging deployment..."
+          
+          while ($attempt -lt $maxAttempts) {
+            try {
+              $response = Invoke-WebRequest -Uri $healthCheckUrl -ErrorAction Stop -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                Write-Host "✓ Staging deployment is healthy"
+                exit 0
+              }
+            } catch {
+              Write-Host "Attempt $($attempt + 1)/$maxAttempts: Waiting for staging to be ready..."
+            }
+            Start-Sleep -Seconds 2
+            $attempt++
+          }
+          
+          Write-Host "✗ Staging deployment health check failed after $maxAttempts attempts"
+          exit 1
+
+  deploy-production:
+    runs-on: windows-latest
+    needs: deploy-staging
+    if: success()
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_9FC946385E084B8B8490ADEC9E1083A7 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C1B3DE86A43C49ECB0AD147184703181 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_40ABB6CC70214441B78D23DDBEE9A535 }}
+
+      - name: Swap staging to production
+        id: swap-slots
+        run: |
+          az webapp deployment slot swap `
+            --resource-group "OrendaEd" `
+            --name "ORSV2" `
+            --slot "ors-stage"
+
+      - name: Health check production deployment
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          $healthCheckUrl = "https://orsv2.azurewebsites.net/health"
+          
+          Write-Host "Starting health check for production deployment..."
+          
+          while ($attempt -lt $maxAttempts) {
+            try {
+              $response = Invoke-WebRequest -Uri $healthCheckUrl -ErrorAction Stop -TimeoutSec 5
+              if ($response.StatusCode -eq 200) {
+                Write-Host "✓ Production deployment is healthy"
+                exit 0
+              }
+            } catch {
+              Write-Host "Attempt $($attempt + 1)/$maxAttempts: Waiting for production to be ready..."
+            }
+            Start-Sleep -Seconds 2
+            $attempt++
+          }
+          
+          Write-Host "✗ Production deployment health check failed after $maxAttempts attempts"
+          Write-Host "Consider rolling back by swapping slots again"
+          exit 1
+
+  notify-failure:
+    runs-on: windows-latest
+    if: failure()
+    needs: [build, deploy-staging, deploy-production]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create GitHub Issue for failed deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `❌ Production Deployment Failed - Run #${context.runId}`,
+              body: `The deployment pipeline failed for commit ${context.sha.substring(0, 7)}\n\n[View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })
