@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using ORSV2.Data;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Data.SqlClient; // <-- ADDED for SqlParameter
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.Extensions.Logging; 
@@ -448,7 +449,10 @@ namespace ORSV2.Areas.Identity.Pages.Account
             var potentialRoles = new HashSet<string>();
 
             // --- Logic 1: Check StaffAssignments ---
-            // Use raw SQL since StaffAssignments and Codes are not in the DbContext
+            // Use raw SQL with parameters (BEST PRACTICE)
+            var staffIdParam = new SqlParameter("@staffId", staff.StaffId);
+            var districtIdParam = new SqlParameter("@districtId", staff.DistrictId);
+
             var assignments = await _context.Database.SqlQuery<AssignmentQueryResult>($@"
                 SELECT
                     jc.Description AS JCDescription,
@@ -466,7 +470,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             AND nc1.SourceField = 'NC1'
                             AND sa.NonClassroomBasedJobAssignmentCode1 = nc1.Code
                 WHERE
-                    sa.StaffID = {staff.StaffId} AND sa.DistrictID = {staff.DistrictId}
+                    sa.StaffID = {staffIdParam} AND sa.DistrictID = {districtIdParam}
             ").ToListAsync();
 
 
@@ -568,3 +572,5 @@ namespace ORSV2.Areas.Identity.Pages.Account
         }
     }
 }
+
+

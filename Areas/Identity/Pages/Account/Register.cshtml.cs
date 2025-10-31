@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Data.SqlClient; // <-- ADDED for SqlParameter
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ORSV2.Data;
@@ -47,7 +48,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             IEmailSender emailSender,
             ApplicationDbContext context,
             string notificationEmail,
-            RoleManager<ApplicationRole> roleManager) 
+            RoleManager<ApplicationRole> roleManager) // <-- constructor updated
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -57,7 +58,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
             _emailSender = emailSender;
             _context = context;
             _notificationEmail = notificationEmail;
-            _roleManager = roleManager; 
+            _roleManager = roleManager; // <-- Added
         }
 
 
@@ -215,13 +216,14 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     }
                     // --- END: Auto Role Assignment ---
 
+
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    
+
                     // --- START: Send Emails in Background ---
-                    // Run this task in the background ("fire-and-forget")
                     _ = SendRegistrationEmailsAsync(user, code, assignedRole, returnUrl);
                     // --- END: Send Emails in Background ---
+
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
@@ -259,29 +261,30 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                     protocol: Request.Scheme);
 
-                // Send user confirmation email
                 await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
                     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
                 // --- Admin notification (multiple mailboxes) ---
                 if (!string.IsNullOrWhiteSpace(_notificationEmail))
                 {
+                    // Keep PII concise and useful for provisioning
                     var matchedStaff = user.StaffId.HasValue ? "matched" : "not matched";
                     var locked = user.LockoutEnd.HasValue
                         ? $"Locked (until {user.LockoutEnd:yyyy-MM-dd})"
                         : "Unlocked";
 
+                    // Admin page link (prefer Page() when available; fall back to Content)
                     var adminUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users/Edit?id={userId}";
 
                     var adminBody = $@"
-                        <h3>New ORSV2 Registration</h3>
-                        <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
-                        <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
-                        <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
-                        <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
-                        <p><strong>Assigned Role:</strong> {HtmlEncoder.Default.Encode(assignedRole)}</p>
-                        <p><strong>Status:</strong> {locked}</p>
-                        <p><a href=""{adminUrl}"">Open user admin</a></p>";
+                            <h3>New ORSV2 Registration</h3>
+                            <p><strong>Email:</strong> {HtmlEncoder.Default.Encode(user.Email)}</p>
+                            <p><strong>Name:</strong> {HtmlEncoder.Default.Encode(user.FirstName)} {HtmlEncoder.Default.Encode(user.LastName)}</p>
+                            <p><strong>DistrictId:</strong> {user.DistrictId?.ToString() ?? "—"}</p>
+                            <p><strong>StaffId:</strong> {user.StaffId?.ToString() ?? "—"} ({matchedStaff})</p>
+                            <p><strong>Assigned Role:</strong> {HtmlEncoder.Default.Encode(assignedRole)}</p>
+                            <p><strong>Status:</strong> {locked}</p>
+                            <p><a href=""{adminUrl}"">Open user admin</a></p>";
 
                     var notificationEmails = _notificationEmail
                         .Split(',')
@@ -349,7 +352,10 @@ namespace ORSV2.Areas.Identity.Pages.Account
             var potentialRoles = new HashSet<string>();
 
             // --- Logic 1: Check StaffAssignments ---
-            // Use raw SQL since StaffAssignments and Codes are not in the DbContext
+            // Use raw SQL with parameters (BEST PRACTICE)
+            var staffIdParam = new SqlParameter("@staffId", staff.StaffId);
+            var districtIdParam = new SqlParameter("@districtId", staff.DistrictId);
+
             var assignments = await _context.Database.SqlQuery<AssignmentQueryResult>($@"
                 SELECT
                     jc.Description AS JCDescription,
@@ -367,7 +373,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                             AND nc1.SourceField = 'NC1'
                             AND sa.NonClassroomBasedJobAssignmentCode1 = nc1.Code
                 WHERE
-                    sa.StaffID = {staff.StaffId} AND sa.DistrictID = {staff.DistrictId}
+                    sa.StaffID = {staffIdParam} AND sa.DistrictID = {districtIdParam}
             ").ToListAsync();
 
 

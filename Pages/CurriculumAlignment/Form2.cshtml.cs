@@ -177,7 +177,8 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
 
             if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
-                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId!), IsSchoolAdmin ? UserSchoolIds : null);
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId), 
+                    (IsSchoolAdmin || IsTeacher || User.IsInRole("Counselor")) ? UserSchoolIds : null);
 
             if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
                 AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId!), IsTeacher ? UserStaffId : null);
