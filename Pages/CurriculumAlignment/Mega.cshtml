@@ -1,0 +1,709 @@
+@page
+@model ORSV2.Pages.CurriculumAlignment.MegaModel
+@{
+    ViewData["Title"] = "Mega Assessment Data - DRS";
+    
+    // ---
+    // NEW HELPER: RenderMegaDataCells
+    // This helper renders a full set of <td> cells for one demographic, iterating over all active units.
+    // ---
+    Action<Dictionary<string, ORSV2.Pages.CurriculumAlignment.AggData>, string, decimal?, List<string>> RenderMegaDataCells = 
+        (data, cssClass, target, activeUnits) =>
+    {
+        var dataClass = $"data-{cssClass}";
+        
+        // Loop over the defined units for this subject
+        foreach (var unit in activeUnits)
+        {
+            // Try to get data for this specific unit
+            data.TryGetValue(unit, out var aggData);
+
+            if (aggData != null && aggData.TotalTested > 0)
+            {
+                <td class="@dataClass">
+                    <span class="proficiency-badge proficiency-neutral">@aggData.PctProficient%</span>
+                    <span class="combined-count">(@aggData.TotalProficient / @aggData.TotalTested)</span>
+                    
+                    @if (target.HasValue)
+                    {
+                        <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
+                    }
+                </td>
+            }
+            else
+            {
+                <td class="@dataClass">
+                    —
+                    @if (target.HasValue)
+                    {
+                        <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
+                    }
+                </td>
+            }
+        }
+    };
+}
+
+<style>
+    /* STYLES COPIED FROM META.CSHTML */
+    /* SCREEN STYLES (Normal View) */
+    .meta-filter-section {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .meta-filter-section .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .meta-table {
+        font-size: 0.9rem;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        width: 100%;
+        margin-top: 1rem;
+        /* Make table-layout fixed for predictable column widths if needed, but auto is better for this many cols */
+        table-layout: auto; 
+    }
+    
+    .meta-table thead {
+        background-color: #2c3e50;
+        color: white;
+        /* Make the header sticky for vertical scroll */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    /* NEW STYLE for horizontal scrolling
+      We apply this to the wrapper div
+    */
+    .mega-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        margin-bottom: 2rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    
+    .meta-table th {
+        padding: 0.75rem 0.5rem; /* Reduced padding slightly */
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.8rem; /* Reduced font size slightly */
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid #34495e;
+        white-space: nowrap; /* Keep headers on one line */
+    }
+    
+    .meta-table th:last-child { border-right: 1px solid #34495e; } /* Ensure last border */
+    
+    .meta-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+        border-left: 1px solid #e9ecef;
+        text-align: center;
+        white-space: nowrap;
+        min-width: 160px; /* Give each data cell a min-width */
+    }
+
+    .meta-table td:first-child {
+        border-left: none;
+    }
+    
+    .meta-table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease;
+    }
+    
+    .col-core {
+        text-align: left;
+        font-weight: 600;
+        /* Make the Grade column sticky for horizontal scroll */
+        position: sticky;
+        left: 0;
+        background-color: white; /* Needs a solid background */
+        border-right: 2px solid #adb5bd; /* Add a separator */
+        min-width: 150px;
+        z-index: 1;
+    }
+
+    /* Ensure sticky header cells are also sticky and have background */
+    .meta-table thead th.col-core {
+        z-index: 11; /* Above data rows */
+        background-color: #2c3e50; /* Match header */
+    }
+    
+    /* Ensure sticky total cells have the right background */
+    .meta-table tr.sub-total-row td.col-core {
+        background-color: #f8f9fa;
+    }
+    .meta-table tfoot tr.grand-total-row td.col-core {
+        background-color: #e9ecef;
+    }
+
+
+    /* Column Colors */
+    .col-header-all { background-color: #b3d9ff; color: #003d99; }
+    .col-header-el { background-color: #ffb3d9; color: #990033; }
+    .col-header-swd { background-color: #ffffb3; color: #996600; }
+    .col-header-sed { background-color: #ffb366; color: #664400; }
+    .col-header-aa { background-color: #b3ffb3; color: #004d00; }
+    .col-header-hisp { background-color: #ffe6b3; color: #664d00; }
+    
+    .data-all { background-color: rgba(179, 217, 255, 0.2); }
+    .data-el { background-color: rgba(255, 179, 217, 0.2); }
+    .data-swd { background-color: rgba(255, 255, 179, 0.2); }
+    .data-sed { background-color: rgba(255, 179, 102, 0.2); }
+    .data-aa { background-color: rgba(179, 255, 179, 0.2); }
+    .data-hisp { background-color: rgba(255, 230, 179, 0.2); }
+    
+    /* Sub-header rows (Unit names, % Proficient) */
+    .meta-table thead tr:nth-child(2) th {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.5rem;
+    }
+     .meta-table thead tr:nth-child(3) th {
+        font-size: 0.7rem;
+        font-weight: 500;
+        padding: 0.4rem;
+        white-space: normal; /* Allow % proficient to wrap */
+        line-height: 1.3;
+    }
+
+
+    .proficiency-badge {
+        display: inline-block;
+        padding: 0.35rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        min-width: 55px;
+    }
+    .proficiency-high { background-color: #d4edda; color: #155724; }
+    .proficiency-mid { background-color: #fff3cd; color: #856404; }
+    .proficiency-low { background-color: #f8d7da;
+    color: #721c24; }
+    .proficiency-neutral { background-color: #e9ecef; color: #495057; }
+    
+    .combined-count {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-left: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .target-pct {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #005a9c; /* A distinct but not-alarming blue */
+        margin-top: 4px;
+    }
+    
+    .no-data-alert {
+        background-color: #e7f3ff;
+        border-left: 4px solid #0066cc;
+        color: #003d99;
+        padding: 1rem;
+        border-radius: 4px;
+    }
+    
+    /* Unit header is removed, but we keep subject header */
+    .subject-header {
+        background-color: #eef2ff;
+        color: var(--orenda-primary);
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-bottom: 2px solid var(--orenda-primary-hover);
+        margin-top: 2rem; /* Add margin to separate subject groups */
+        border-radius: 6px 6px 0 0;
+    }
+    
+    /* Print Header */
+    .print-report-header {
+        display: none;
+        text-align: center;
+        margin-bottom: 0.5in;
+        padding-bottom: 0.3in;
+        border-bottom: 2px solid #2c3e50;
+    }
+    .print-header-district {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.2rem;
+    }
+    .print-header-school {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #34495e;
+    }
+    
+    /* Total Rows */
+    .meta-table tr.sub-total-row {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-top: 2px solid #adb5bd; 
+        border-bottom: 2px solid #adb5bd;
+    }
+    .meta-table tr.sub-total-row .col-core {
+         color: #34495e;
+         padding-left: 1.5rem;
+    }
+    .meta-table tfoot tr.grand-total-row {
+        background-color: #e9ecef;
+        font-weight: 700;
+        border-top: 2px solid #34495e;
+        /* Make footer sticky for vertical scroll */
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+    }
+    .meta-table tfoot tr.grand-total-row .col-core {
+        color: #2c3e50;
+        /* Ensure footer sticky cell has correct background */
+        background-color: #e9ecef; 
+        z-index: 11;
+    }
+
+    /* ========================================
+       PRINT STYLES - LANDSCAPE
+       ======================================== */
+    @@media print {
+        @@page {
+            size: landscape;
+            margin: 0.2in 0.2in;
+        }
+
+        /* Hide everything except tables */
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            font-size: 8pt;
+        }
+        .container-fluid { width: 100%; margin: 0; padding: 0; }
+
+        h2,
+        .meta-filter-section,
+        .d-print-none,
+        .orenda-header,
+        .shadow-orenda,
+        .btn,
+        .no-data-alert,
+        div.mb-3,
+        header,
+        footer,
+        nav,
+        .navbar,
+        .navbar-header {
+            display: none !important;
+            visibility: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 0 !important;
+            position: absolute !important;
+        }
+
+        /* Remove scrolling wrapper for print */
+        .mega-table-wrapper {
+            overflow: visible;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+
+        /* Table styling */
+        .meta-table {
+            box-shadow: none;
+            border: 1px solid #2c3e50;
+            margin-bottom: 0.2in;
+            page-break-inside: avoid;
+            width: 100%;
+            table-layout: auto; /* Allow table to shrink for print */
+        }
+        .meta-table thead {
+            display: table-header-group;
+            background-color: #2c3e50 !important;
+        }
+        .meta-table thead,
+        .meta-table tbody,
+        .meta-table tfoot {
+            position: static !important; /* Remove sticky for print */
+        }
+        .meta-table td,
+        .meta-table th {
+            position: static !important; /* Remove sticky for print */
+            background-color: transparent !important; /* Reset sticky backgrounds */
+        }
+        
+        .meta-table th {
+            background-color: #2c3e50 !important;
+            color: white !important;
+            border: 1px solid #1a252f;
+            padding: 0.25rem 0.2rem;
+            font-size: 7pt; /* Even smaller for more columns */
+            font-weight: 700;
+            text-align: center;
+            page-break-inside: avoid;
+            white-space: normal; /* Allow wrapping */
+        }
+
+        /* Preserve demographic header colors */
+        .meta-table th.col-header-all { background-color: #b3d9ff !important; color: #003d99 !important; }
+        .meta-table th.col-header-el { background-color: #ffb3d9 !important; color: #990033 !important; }
+        .meta-table th.col-header-swd { background-color: #ffffb3 !important; color: #996600 !important; }
+        .meta-table th.col-header-sed { background-color: #ffb366 !important; color: #664400 !important; }
+        .meta-table th.col-header-aa { background-color: #b3ffb3 !important; color: #004d00 !important; }
+        .meta-table th.col-header-hisp { background-color: #ffe6b3 !important; color: #664d00 !important; }
+
+        /* Sub-headers */
+        .meta-table thead tr:nth-child(2) th,
+        .meta-table thead tr:nth-child(3) th {
+            font-size: 7pt;
+            padding: 0.15rem;
+        }
+        .meta-table th[class*="data-"] {
+             white-space: nowrap; /* Keep unit names from wrapping if possible */
+        }
+        .meta-table thead tr:nth-child(3) th[class*="data-"] {
+             white-space: normal; /* Allow % proficient to wrap */
+        }
+
+
+        .meta-table tbody tr {
+            page-break-inside: avoid;
+            border-bottom: 1px solid #ddd;
+        }
+        .meta-table td {
+            padding: 0.2rem 0.15rem;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            font-size: 7pt; /* Smaller font for print */
+        }
+
+        .col-core {
+            text-align: left;
+            font-weight: 600;
+            padding-left: 0.5rem;
+            background-color: #fff !important; /* Ensure white bg */
+            border-right: 1px solid #2c3e50 !important;
+        }
+
+        .meta-table tr.sub-total-row {
+            background-color: #f8f9fa !important;
+            font-weight: 700;
+            border-top: 2px solid #2c3e50;
+            border-bottom: 2px solid #2c3e50;
+        }
+        .meta-table tr.sub-total-row td {
+            background-color: #f8f9fa !important;
+        }
+
+        .meta-table tfoot tr.grand-total-row {
+            background-color: #e9ecef !important;
+            font-weight: 700;
+            border-top: 2px solid #2c3e50;
+        }
+        .meta-table tfoot tr.grand-total-row td {
+            background-color: #e9ecef !important;
+            border-bottom: 2px solid #2c3e50;
+        }
+
+        /* Demographic colors - preserve in print */
+        .data-all { background-color: rgba(179, 217, 255, 0.3) !important; }
+        .data-el { background-color: rgba(255, 179, 217, 0.3) !important; }
+        .data-swd { background-color: rgba(255, 255, 179, 0.3) !important; }
+        .data-sed { background-color: rgba(255, 179, 102, 0.3) !important; }
+        .data-aa { background-color: rgba(179, 255, 179, 0.3) !important; }
+        .data-hisp { background-color: rgba(255, 230, 179, 0.3) !important; }
+
+        /* Badges */
+        .proficiency-badge {
+            display: inline-block;
+            padding: 0.1rem 0.2rem;
+            border-radius: 2px;
+            font-weight: 600;
+            font-size: 6pt;
+            min-width: 30px;
+            border: 0.5px solid #333;
+        }
+        .proficiency-high { background-color: #d4edda !important; color: #155724 !important; }
+        .proficiency-mid { background-color: #fff3cd !important; color: #856404 !important; }
+        .proficiency-low { background-color: #f8d7da !important; color: #721c24 !important; }
+        .proficiency-neutral { background-color: #e9ecef !important; color: #495057 !important; }
+        
+        .combined-count {
+            display: block;
+            font-size: 6pt;
+            color: #495057;
+            margin-top: 0.05rem;
+            white-space: nowrap;
+        }
+        .target-pct {
+            display: block !important;
+            font-size: 6pt !important;
+            font-weight: 600 !important;
+            color: #005a9c !important;
+            margin-top: 2px !important;
+        }
+
+        /* Headers */
+        .subject-header {
+            background-color: #eef2ff !important;
+            color: #2c3e50 !important;
+            padding: 0.1rem 0.3rem;
+            margin: 0.1in 0 0.05in 0 !important;
+            font-size: 9pt;
+            font-weight: 600;
+            page-break-after: avoid;
+            border-bottom: 0.5px solid #2c3e50;
+        }
+
+        /* Show print header on print */
+        .print-report-header {
+            display: block !important;
+            text-align: center;
+            margin-bottom: 0.15in;
+            padding-bottom: 0.1in;
+            border-bottom: 1px solid #2c3e50;
+        }
+        .print-header-district { font-size: 11pt; }
+        .print-header-school { font-size: 9pt; }
+
+        /* Color preservation */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        @@page { orphans: 3; widows: 3; }
+    }
+</style>
+
+<div class="container-fluid my-4">
+    <h2 class="mb-4">
+        <i class="fas fa-table text-primary me-2"></i>
+        Mega Assessment Data
+    </h2>
+    
+    <!-- Filter section is identical to Meta -->
+    <div class="meta-filter-section d-print-none">
+        <form method="get" class="row g-3">
+            <input type="hidden" asp-for="DistrictId" />
+            
+            <div class="col-md-4">
+                <label asp-for="SchoolId" class="form-label">School</label>
+                <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label asp-for="SchoolYear" class="form-label">School Year</label>
+                <select asp-for="SchoolYear" asp-items="Model.AvailableSchoolYears" class="form-select">
+                </select>
+            </div>
+
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Load Data
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.SubjectGroups.Any())
+    {
+        <div class="orenda-header shadow-orenda d-print-none">
+            <h3 class="mb-0">@Model.SchoolName</h3>
+            <p class="mb-0">@Model.DistrictName</p>
+        </div>
+
+        <div class="print-report-header">
+            <div class="print-header-district">@Model.DistrictName</div>
+            <div class="print-header-school">@Model.SchoolName</div>
+        </div>
+
+        <div class="mb-3 d-print-none">
+            <button type="button" class="btn btn-action btn-print" onclick="window.print()">
+                <i class="fas fa-print"></i>Print Report
+            </button>
+            <a asp-page-handler="Excel"
+               asp-route-DistrictId="@Model.DistrictId"
+               asp-route-SchoolId="@Model.SchoolId"
+               asp-route-SchoolYear="@Model.SchoolYear" 
+               class="btn btn-action btn-edit" style="background-color: #d4edda; color: #155724; border-color: #155724;">
+               <i class="fas fa-file-excel"></i>Download Excel
+            </a>
+        </div>
+
+        <!-- Target setting section is identical to Meta -->
+        <div class="meta-filter-section d-print-none">
+            <h4 class="mb-3">Set School Target</h4>
+            <form method="post" asp-page-handler="SetTarget" class="row g-3">
+                <input type="hidden" asp-for="DistrictId" />
+                <input type="hidden" asp-for="SchoolId" />
+                <input type="hidden" asp-for="SchoolYear" />
+                @Html.AntiForgeryToken()
+
+                <div class="col-md-3">
+                    <label asp-for="NewTargetGrade" class="form-label">Grade</label>
+                    <select asp-for="NewTargetGrade" asp-items="Model.AvailableTargetGrades" class="form-select" required>
+                        <option value="">-- Select Grade --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewTargetDemographic" class="form-label">Demographic</label>
+                    <select asp-for="NewTargetDemographic" asp-items="Model.AvailableTargetDemographics" class="form-select" required>
+                        <option value="">-- Select Group --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewTargetPercent" class="form-label">Target %</label>
+                    <input type="number" step="0.1" min="0" max="100" class="form-control" asp-for="NewTargetPercent" placeholder="e.g., 75.5" required />
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Set Target
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 
+          NEW TABLE STRUCTURE
+          - Loop by SubjectGroup
+          - Remove UnitGroup loop and header
+          - Add mega-table-wrapper for horizontal scroll
+          - Rebuild thead for 3-row dynamic headers
+          - Use new RenderMegaDataCells helper
+        -->
+        @foreach (var subjectGroup in Model.SubjectGroups)
+        {
+            // Get the active units for this subject
+            var activeUnits = subjectGroup.ActiveUnits;
+            
+            // If there are no units, add a placeholder to prevent crashing
+            if (!activeUnits.Any())
+            {
+                activeUnits = new List<string> { "N/A" };
+            }
+            var unitColCount = activeUnits.Count;
+            
+            <div class="subject-header">Subject: @subjectGroup.SubjectName</div>
+            
+            <div class="mega-table-wrapper">
+                <table class="meta-table">
+                    <thead>
+                        <!-- Row 1: Demographic Groups -->
+                        <tr>
+                            <th rowspan="3" class="col-core">Grade</th>
+                            <th colspan="@unitColCount" class="col-header-all">All Students</th>
+                            <th colspan="@unitColCount" class="col-header-el">EL</th>
+                            <th colspan="@unitColCount" class="col-header-swd">SWD</th>
+                            <th colspan="@unitColCount" class="col-header-aa">AA</th>
+                            <th colspan="@unitColCount" class="col-header-sed">SED</th>
+                            <th colspan="@unitColCount" class="col-header-hisp">Hispanic</th>
+                        </tr>
+                        <!-- Row 2: Unit Names -->
+                        <tr>
+                            @foreach(var unit in activeUnits) { <th class="data-all">@unit</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-el">@unit</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-swd">@unit</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-aa">@unit</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-sed">@unit</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-hisp">@unit</th> }
+                        </tr>
+                        <!-- Row 3: % Proficient -->
+                        <tr>
+                            @foreach(var unit in activeUnits) { <th class="data-all">% Proficient (Proficient/Tested)</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-el">% Proficient (Proficient/Tested)</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-swd">% Proficient (Proficient/Tested)</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-aa">% Proficient (Proficient/Tested)</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-sed">% Proficient (Proficient/Tested)</th> }
+                            @foreach(var unit in activeUnits) { <th class="data-hisp">% Proficient (Proficient/Tested)</th> }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var row in subjectGroup.BodyRows)
+                        {
+                            var rowClass = row.Type switch {
+                                ORSV2.Pages.CurriculumAlignment.RowType.K2Total => "sub-total-row",
+                                ORSV2.Pages.CurriculumAlignment.RowType.G3PlusTotal => "sub-total-row",
+                                _ => ""
+                            };
+                            
+                            <tr class="@rowClass">
+                                <td class="col-core">@row.RowLabel</td>
+                                <!-- Use the new helper to render all unit cells for each demo -->
+                                @{ RenderMegaDataCells(row.AllData, "all", row.AllTarget, activeUnits); }
+                                @{ RenderMegaDataCells(row.ELData, "el", row.ELTarget, activeUnits); }
+                                @{ RenderMegaDataCells(row.SWDData, "swd", row.SWDTarget, activeUnits); }
+                                @{ RenderMegaDataCells(row.AAData, "aa", row.AATarget, activeUnits); }
+                                @{ RenderMegaDataCells(row.SEDData, "sed", row.SEDTarget, activeUnits); }
+                                @{ RenderMegaDataCells(row.HISPData, "hisp", row.HISPTarget, activeUnits); }
+                            </tr>
+                        }
+                    </tbody>
+
+                    @if (!subjectGroup.SubjectTotalRow.IsEmpty)
+                    {
+                        <tfoot>
+                            <tr class="grand-total-row">
+                                @{ var totalRow = subjectGroup.SubjectTotalRow; }
+                                <td class="col-core">@totalRow.RowLabel</td>
+                                @{ RenderMegaDataCells(totalRow.AllData, "all", totalRow.AllTarget, activeUnits); }
+                                @{ RenderMegaDataCells(totalRow.ELData, "el", totalRow.ELTarget, activeUnits); }
+                                @{ RenderMegaDataCells(totalRow.SWDData, "swd", totalRow.SWDTarget, activeUnits); }
+                                @{ RenderMegaDataCells(totalRow.AAData, "aa", totalRow.AATarget, activeUnits); }
+                                @{ RenderMegaDataCells(totalRow.SEDData, "sed", totalRow.SEDTarget, activeUnits); }
+                                @{ RenderMegaDataCells(totalRow.HISPData, "hisp", totalRow.HISPTarget, activeUnits); }
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        }
+    }
+    else if (Model.DistrictId.HasValue && !Model.SchoolId.HasValue)
+    {
+         <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Please select a school to load data.
+        </div>
+    }
+    else if (Model.SchoolId.HasValue && !Model.SchoolYear.HasValue)
+    {
+        <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Please select a school year to load data.
+        </div>
+    }
+    else if (Model.SchoolId.HasValue && Model.SchoolYear.HasValue)
+    {
+        <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            No mega data available for the selected school and year.
+        </div>
+    }
+    else
+    {
+         <div class="no-data-alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Please select a school to load data.
+        </div>
+    }
+</div>
+
