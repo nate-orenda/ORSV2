@@ -1,5 +1,5 @@
 @page
-@model ORSV2.Pages.CurriculumAlignment.MegaModel
+@model ORSV2.Pages.DataReflection.MegaModel
 @{
     ViewData["Title"] = "Mega Assessment Data - DRS";
     
@@ -7,7 +7,7 @@
     // NEW HELPER: RenderMegaDataCells
     // This helper renders a full set of <td> cells for one demographic, iterating over all active units.
     // ---
-    Action<Dictionary<string, ORSV2.Pages.CurriculumAlignment.AggData>, string, decimal?, List<string>> RenderMegaDataCells = 
+    Action<Dictionary<string, ORSV2.Pages.DataReflection.AggData>, string, decimal?, List<string>> RenderMegaDataCells = 
         (data, cssClass, target, activeUnits) =>
     {
         var dataClass = $"data-{cssClass}";
@@ -43,6 +43,8 @@
         }
     };
 }
+
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
 <style>
     /* STYLES COPIED FROM META.CSHTML */
@@ -640,8 +642,8 @@
                         @foreach (var row in subjectGroup.BodyRows)
                         {
                             var rowClass = row.Type switch {
-                                ORSV2.Pages.CurriculumAlignment.RowType.K2Total => "sub-total-row",
-                                ORSV2.Pages.CurriculumAlignment.RowType.G3PlusTotal => "sub-total-row",
+                                ORSV2.Pages.DataReflection.RowType.K2Total => "sub-total-row",
+                                ORSV2.Pages.DataReflection.RowType.G3PlusTotal => "sub-total-row",
                                 _ => ""
                             };
                             

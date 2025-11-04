@@ -1,7 +1,7 @@
 @page
-@model ORSV2.Pages.CurriculumAlignment.IndexModel
+@model ORSV2.Pages.DataReflection.IndexModel
 @{
-    ViewData["Title"] = "Curriculum Alignment";
+    ViewData["Title"] = "Data Reflection";
 }
 
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
@@ -10,7 +10,7 @@
 {
     <div class="orenda-card">
         <div class="orenda-card-body text-muted">
-            No Curriculum Alignment districts available for your scope.
+            No Data Reflection districts available for your scope.
         </div>
     </div>
 }
@@ -23,9 +23,9 @@ else
             <div class="col">
                 <!-- Minimal GA-style card: header only, entire card is the link -->
                 <a class="text-decoration-none text-dark"
-                   asp-page="/CurriculumAlignment/Forms"
+                   asp-page="/DataReflection/Forms"
                    asp-route-districtId="@b.DistrictId"
-                   aria-label="Open @b.DistrictName Curriculum Alignment">
+                   aria-label="Open @b.DistrictName Data Reflection">
                     <div class="card h-100 shadow-sm border-0 rounded-3 bg-white hover-shadow">
                         <div class="card-body border-start border-5 border-primary">
                             <h5 class="card-title">@b.DistrictName</h5>

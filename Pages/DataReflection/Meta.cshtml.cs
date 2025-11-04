@@ -12,121 +12,24 @@ using ClosedXML.Excel;
 using System.IO; // Required for MemoryStream
 using System; // Required for DBNull
 
-// Note: We are in a new namespace for the Mega page
-namespace ORSV2.Pages.CurriculumAlignment
+namespace ORSV2.Pages.DataReflection
 {
-    // SchoolTarget class remains the same
-    /*
-     [REMOVED]
     public class SchoolTarget
     {
         public int Grade { get; set; }
         public string DemographicGroup { get; set; } = string.Empty;
         public decimal TargetPct { get; set; }
     }
-    */
     
-    // MetaDataRow remains the same - it's the correct data structure from the DB
-    /*
-     [REMOVED]
-    public class MetaDataRow
-    {
-        public string Unit { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public int Grade { get; set; }
-        public string GradeGroup { get; set; } = string.Empty;
-        public string DemographicGroup { get; set; } = string.Empty;
-        public int TotalEnrolled { get; set; }
-        public int TotalTested { get; set; }
-        public int TotalProficient { get; set; }
-    }
-    */
-
-    // AggData remains the same
-    /*
-     [REMOVED]
-    public class AggData
-    {
-        public int TotalTested { get; set; }
-        public int TotalProficient { get; set; }
-        public decimal PctProficient => TotalTested > 0
-            ? Math.Round(100m * TotalProficient / TotalTested, 2)
-            : 0m;
-    }
-    */
-
-    // RowType enum remains the same
-    /*
-     [REMOVED]
-    public enum RowType { Grade, K2Total, G3PlusTotal, SubjectTotal }
-    */
-
-    // ###############################################################
-    // NEW VIEW MODELS FOR MEGA PAGE
-    // ###############################################################
-
-    public class MegaGradeRow
-    {
-        public string RowLabel { get; set; } = string.Empty;
-        public RowType Type { get; set; } = RowType.Grade;
-
-        // Data is now a dictionary where the Key is the Unit Name (e.g., "Unit 1")
-        public Dictionary<string, AggData> AllData { get; set; } = new Dictionary<string, AggData>();
-        public Dictionary<string, AggData> ELData { get; set; } = new Dictionary<string, AggData>();
-        public Dictionary<string, AggData> SWDData { get; set; } = new Dictionary<string, AggData>();
-        public Dictionary<string, AggData> AAData { get; set; } = new Dictionary<string, AggData>();
-        public Dictionary<string, AggData> SEDData { get; set; } = new Dictionary<string, AggData>();
-        public Dictionary<string, AggData> HISPData { get; set; } = new Dictionary<string, AggData>();
-
-        // Targets are still at the grade level, not unit level
-        public decimal? AllTarget { get; set; }
-        public decimal? ELTarget { get; set; }
-        public decimal? SWDTarget { get; set; }
-        public decimal? AATarget { get; set; }
-        public decimal? SEDTarget { get; set; }
-        public decimal? HISPTarget { get; set; }
-
-        public bool IsEmpty
-        {
-            get
-            {
-                // Check if all data dictionaries are empty or only contain empty AggData
-                Func<Dictionary<string, AggData>, bool> isDataEmpty = (data) =>
-                    !data.Any() || data.Values.All(v => v.TotalTested == 0);
-
-                return isDataEmpty(AllData) &&
-                       isDataEmpty(ELData) &&
-                       isDataEmpty(SWDData) &&
-                       isDataEmpty(AAData) &&
-                       isDataEmpty(SEDData) &&
-                       isDataEmpty(HISPData);
-            }
-        }
-    }
-
-    public class MegaSubjectGroup
-    {
-        public string SubjectName { get; set; } = string.Empty;
-        // This list will contain the dynamic units found for this subject (e.g., "Unit 1", "Unit 2")
-        public List<string> ActiveUnits { get; set; } = new List<string>();
-        public List<MegaGradeRow> BodyRows { get; set; } = new List<MegaGradeRow>();
-        public MegaGradeRow SubjectTotalRow { get; set; } = new MegaGradeRow();
-    }
-
-
-    // ###############################################################
-    // MEGA MODEL
-    // ###############################################################
-
-    public class MegaModel : SecureReportPageModel
+    public class MetaModel : SecureReportPageModel
     {
         private readonly IConfiguration _config;
-        private readonly ILogger<MegaModel> _logger; // Changed from MetaModel
+        private readonly ILogger<MetaModel> _logger;
 
         [BindProperty(SupportsGet = true)]
         public int? SchoolId { get; set; }
 
-        [BindProperty(SupportsGet = true)]
+        [BindProperty(SupportsGet =true)]
         public int? DistrictId { get; set; }
 
         [BindProperty(SupportsGet = true)]
@@ -139,25 +42,24 @@ namespace ORSV2.Pages.CurriculumAlignment
         [BindProperty]
         public decimal? NewTargetPercent { get; set; }
 
+        // ---
+        // CORRECTED: Explicitly initialize with a list to fix constructor error
+        // ---
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableSchoolYears { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetGrades { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetDemographics { get; set; } = new SelectList(new List<SelectListItem>());
 
-        // This is the new top-level display property
-        public List<MegaSubjectGroup> SubjectGroups { get; set; } = new List<MegaSubjectGroup>();
-        
+        public List<UnitDisplayGroup> UnitGroups { get; set; } = new List<UnitDisplayGroup>();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new List<BreadcrumbItem>();
         public string DistrictName { get; set; } = string.Empty;
         public string SchoolName { get; set; } = string.Empty;
 
-        // Private properties for data handling
         private List<MetaDataRow> RawDataRows { get; set; } = new List<MetaDataRow>();
         private List<SchoolTarget> CurrentTargets { get; set; } = new List<SchoolTarget>();
 
-
         // Constructor
-        public MegaModel(IConfiguration config, ILogger<MegaModel> logger) // Changed from MetaModel
+        public MetaModel(IConfiguration config, ILogger<MetaModel> logger)
         {
             _config = config;
             _logger = logger;
@@ -196,13 +98,13 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
 
             await LoadDistrictInfoAsync();
-            await LoadFiltersAsync();
+            await LoadFiltersAsync(); 
 
             if (SchoolId.HasValue && SchoolYear.HasValue)
             {
-                await LoadSchoolTargetsAsync();
+                await LoadSchoolTargetsAsync(); 
                 await LoadMetaDataAsync();
-                BuildDisplayGroups(); // This will call our new Mega-specific builder
+                BuildDisplayGroups(); 
 
                 if (SchoolId.Value == 0)
                 {
@@ -210,11 +112,14 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
                 else
                 {
+                    // ---
+                    // CORRECTED: Be more explicit about searching the SelectList's items
+                    // ---
                     var items = AvailableSchools.Items?.Cast<SelectListItem>() ?? new List<SelectListItem>();
                     SchoolName = items.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
                 }
 
-                if (SubjectGroups.Any()) // Changed from UnitGroups
+                if (UnitGroups.Any())
                 {
                     LoadTargetUIData();
                 }
@@ -224,15 +129,15 @@ namespace ORSV2.Pages.CurriculumAlignment
             return Page();
         }
 
-        // OnPostSetTargetAsync - This logic remains identical to MetaModel
+        // OnPostSetTargetAsync
         public async Task<IActionResult> OnPostSetTargetAsync()
         {
             InitializeUserDataScope();
-
+            
             if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser) return Forbid();
             if (UserDistrictId.HasValue) DistrictId = UserDistrictId.Value;
 
-            if (!SchoolId.HasValue || SchoolId.Value == 0)
+            if (!SchoolId.HasValue || SchoolId.Value == 0) 
             {
                 _logger.LogWarning("Target save failed: 'All Schools' (0) is not a valid school ID for targets.");
                 return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
@@ -279,22 +184,22 @@ namespace ORSV2.Pages.CurriculumAlignment
                         cmd.Parameters.AddWithValue("@Grade", gradeInt);
                         cmd.Parameters.AddWithValue("@DemographicGroup", NewTargetDemographic);
                         cmd.Parameters.AddWithValue("@TargetPct", NewTargetPercent.Value);
-
+                        
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
-
+                
                 _logger.LogInformation("School Target saved successfully.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving school target.");
             }
-
+            
             return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
         }
-
-        // OnGetExcelAsync - This needs to be completely rewritten for the new format
+        
+        // OnGetExcelAsync
         public async Task<IActionResult> OnGetExcelAsync()
         {
             InitializeUserDataScope();
@@ -305,12 +210,10 @@ namespace ORSV2.Pages.CurriculumAlignment
                 return RedirectToPage();
 
             await LoadDistrictInfoAsync();
-            await LoadFiltersAsync(); // Populates AvailableSchools
-            await LoadSchoolTargetsAsync();
+            await LoadFiltersAsync(); // This populates AvailableSchools
             await LoadMetaDataAsync();
-            BuildDisplayGroups(); // Build the new MegaSubjectGroups
+            BuildDisplayGroups();
 
-            // SchoolName lookup (same as Meta)
             if (string.IsNullOrEmpty(SchoolName))
             {
                 if (SchoolId.Value == 0)
@@ -319,6 +222,9 @@ namespace ORSV2.Pages.CurriculumAlignment
                 }
                 else
                 {
+                    // ---
+                    // CORRECTED: Be more explicit about searching the SelectList's items
+                    // ---
                     if (AvailableSchools.Items != null)
                     {
                         var items = AvailableSchools.Items.Cast<SelectListItem>();
@@ -326,7 +232,8 @@ namespace ORSV2.Pages.CurriculumAlignment
                     }
                     else
                     {
-                        // Fallback
+                        // Fallback in case filters weren't loaded (e.g., direct Excel link)
+                        var schoolsList = new List<SelectListItem>();
                         using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
                         {
                             await conn.OpenAsync();
@@ -351,9 +258,9 @@ namespace ORSV2.Pages.CurriculumAlignment
 
             using (var workbook = new XLWorkbook())
             {
-                var ws = workbook.Worksheets.Add("Mega Data");
-                ws.Column(1).Width = 20; // Grade column
-
+                var ws = workbook.Worksheets.Add("Meta Data");
+                ws.Column(1).Width = 20; 
+                for (int i = 2; i <= 7; i++) ws.Column(i).Width = 22; 
                 var headerBgColors = new Dictionary<string, XLColor>
                 {
                     { "Grade", XLColor.FromArgb(44, 62, 80) }, { "All", XLColor.FromArgb(179, 217, 255) }, { "EL", XLColor.FromArgb(255, 179, 217) }, { "SWD", XLColor.FromArgb(255, 255, 179) }, { "AA", XLColor.FromArgb(179, 255, 179) }, { "SED", XLColor.FromArgb(255, 179, 102) }, { "HISP", XLColor.FromArgb(255, 230, 179) }
@@ -366,174 +273,138 @@ namespace ORSV2.Pages.CurriculumAlignment
                 {
                     { "All", XLColor.FromArgb(230, 241, 250) }, { "EL", XLColor.FromArgb(250, 230, 241) }, { "SWD", XLColor.FromArgb(250, 250, 230) }, { "AA", XLColor.FromArgb(230, 250, 230) }, { "SED", XLColor.FromArgb(250, 230, 215) }, { "HISP", XLColor.FromArgb(250, 244, 230) }
                 };
-                var demoKeys = new[] { "All", "EL", "SWD", "AA", "SED", "HISP" };
-                var demoNames = new[] { "All Students", "EL", "SWD", "AA", "SED", "Hispanic" };
-
 
                 int row = 1;
-                int firstHeaderRow = 0;
+                int firstHeaderRow = 0; 
 
                 var headerCell = ws.Cell(row, 1);
                 headerCell.Value = $"{DistrictName} - {SchoolName} (SY {SchoolYear - 1}-{SchoolYear})";
                 headerCell.Style.Font.Bold = true;
                 headerCell.Style.Font.FontSize = 14;
-                // Merge will be set later
+                ws.Range(row, 1, row, 7).Merge();
                 row += 2;
 
-                foreach (var subjectGroup in SubjectGroups)
+                foreach (var unitGroup in UnitGroups)
                 {
-                    var activeUnits = subjectGroup.ActiveUnits;
-                    if (!activeUnits.Any()) activeUnits.Add("N/A"); // Handle case with no units
-                    int unitColCount = activeUnits.Count;
-                    int totalCols = 1 + (demoKeys.Length * unitColCount);
-                    
-                    if (row == 3) // First time, merge the main header
-                    {
-                         ws.Range(1, 1, 1, totalCols).Merge();
-                    }
-
-                    var subjectCell = ws.Cell(row, 1);
-                    subjectCell.Value = $"Subject: {subjectGroup.SubjectName}";
-                    subjectCell.Style.Font.Bold = true;
-                    subjectCell.Style.Fill.BackgroundColor = XLColor.FromArgb(238, 242, 255);
-                    subjectCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80);
-                    ws.Range(row, 1, row, totalCols).Merge();
+                    var unitCell = ws.Cell(row, 1);
+                    unitCell.Value = $"Cycle: {unitGroup.UnitName}";
+                    unitCell.Style.Font.Bold = true;
+                    unitCell.Style.Fill.BackgroundColor = XLColor.FromArgb(52, 73, 94);
+                    unitCell.Style.Font.FontColor = XLColor.White;
+                    ws.Range(row, 1, row, 7).Merge();
                     row++;
 
-                    if (firstHeaderRow == 0) firstHeaderRow = row;
-
-                    int headerRow1 = row;
-                    int headerRow2 = row + 1;
-                    int headerRow3 = row + 2;
-
-                    // Grade Header (Row 1)
-                    var gradeHeaderCell = ws.Cell(headerRow1, 1);
-                    gradeHeaderCell.Value = "Grade";
-                    gradeHeaderCell.Style.Fill.BackgroundColor = headerBgColors["Grade"];
-                    gradeHeaderCell.Style.Font.FontColor = headerFontColors["Grade"];
-                    gradeHeaderCell.Style.Font.Bold = true;
-                    gradeHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    gradeHeaderCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    ws.Range(headerRow1, 1, headerRow3, 1).Merge();
-                    SetAllBorders(gradeHeaderCell, XLColor.FromArgb(52, 73, 94));
-
-                    int currentCol = 2;
-                    // Demographic Headers (Row 1)
-                    for(int i = 0; i < demoKeys.Length; i++)
+                    foreach (var subjectGroup in unitGroup.SubjectGroups)
                     {
-                        var key = demoKeys[i];
-                        var cell = ws.Cell(headerRow1, currentCol);
-                        cell.Value = demoNames[i];
-                        cell.Style.Fill.BackgroundColor = headerBgColors[key];
-                        cell.Style.Font.FontColor = headerFontColors[key];
-                        cell.Style.Font.Bold = true;
-                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        ws.Range(headerRow1, currentCol, headerRow1, currentCol + unitColCount - 1).Merge();
-                        SetAllBorders(cell, XLColor.FromArgb(52, 73, 94));
-                        
-                        // Unit Headers (Row 2)
-                        for (int j = 0; j < unitColCount; j++)
-                        {
-                            var unitCell = ws.Cell(headerRow2, currentCol + j);
-                            unitCell.Value = activeUnits[j];
-                            unitCell.Style.Fill.BackgroundColor = dataBgColors[key];
-                            unitCell.Style.Font.FontColor = headerFontColors[key];
-                            unitCell.Style.Font.Bold = true;
-                            unitCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            SetAllBorders(unitCell, XLColor.FromArgb(52, 73, 94));
-                            ws.Column(currentCol + j).Width = 22;
+                        var subjectCell = ws.Cell(row, 1);
+                        subjectCell.Value = $"Subject: {subjectGroup.SubjectName}";
+                        subjectCell.Style.Font.Bold = true;
+                        subjectCell.Style.Fill.BackgroundColor = XLColor.FromArgb(238, 242, 255);
+                        subjectCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80);
+                        ws.Range(row, 1, row, 7).Merge();
+                        row++;
 
-                            // % Proficient Headers (Row 3)
-                            var subCell = ws.Cell(headerRow3, currentCol + j);
+                        if (firstHeaderRow == 0) firstHeaderRow = row; 
+                
+                        int headerRow1 = row;
+                        int headerRow2 = row + 1;
+
+                        var gradeHeaderCell = ws.Cell(headerRow1, 1);
+                        gradeHeaderCell.Value = "Grade";
+                        gradeHeaderCell.Style.Fill.BackgroundColor = headerBgColors["Grade"];
+                        gradeHeaderCell.Style.Font.FontColor = headerFontColors["Grade"];
+                        gradeHeaderCell.Style.Font.Bold = true;
+                        gradeHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        gradeHeaderCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                        gradeHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                        gradeHeaderCell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
+                        ws.Range(headerRow1, 1, headerRow2, 1).Merge();
+
+                        Action<int, string, string> setHeader = (col, key, text) =>
+                        {
+                            var cell = ws.Cell(headerRow1, col);
+                            cell.Value = text;
+                            cell.Style.Fill.BackgroundColor = headerBgColors[key];
+                            cell.Style.Font.FontColor = headerFontColors[key];
+                            cell.Style.Font.Bold = true;
+                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            cell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                            cell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
+                            var subCell = ws.Cell(headerRow2, col);
                             subCell.Value = "% Proficient (Proficient/Tested)";
                             subCell.Style.Fill.BackgroundColor = dataBgColors[key];
+                            subCell.Style.Font.Bold = true;
                             subCell.Style.Font.FontColor = headerFontColors[key];
                             subCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                             subCell.Style.Alignment.WrapText = true;
-                            SetAllBorders(subCell, XLColor.FromArgb(52, 73, 94));
-                        }
-                        
-                        currentCol += unitColCount;
-                    }
+                            subCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                            subCell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
+                        };
 
-                    ws.Row(headerRow3).Height = 30;
-                    row += 3;
-
-                    // Data Rows
-                    foreach (var bodyRow in subjectGroup.BodyRows)
-                    {
-                        var gradeCell = ws.Cell(row, 1);
-                        gradeCell.Value = bodyRow.RowLabel;
-                        gradeCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                        gradeCell.Style.Font.Bold = true;
-                        SetAllBorders(gradeCell, XLColor.Gainsboro);
-
-                        currentCol = 2;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.AllData, "All", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.ELData, "EL", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.SWDData, "SWD", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.AAData, "AA", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.SEDData, "SED", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, bodyRow.HISPData, "HISP", activeUnits, dataBgColors, headerFontColors);
-                        
-                        if (bodyRow.Type == RowType.K2Total || bodyRow.Type == RowType.G3PlusTotal)
-                        {
-                            var subtotalStyle = ws.Range(row, 1, row, totalCols).Style;
-                            subtotalStyle.Fill.BackgroundColor = XLColor.FromArgb(248, 249, 250);
-                            subtotalStyle.Font.Bold = true;
-                            subtotalStyle.Border.SetTopBorder(XLBorderStyleValues.Thin);
-                            subtotalStyle.Border.SetBottomBorder(XLBorderStyleValues.Thin);
-                            gradeCell.Style.Font.FontColor = XLColor.FromArgb(52, 73, 94);
-                            gradeCell.Style.Alignment.Indent = 1;
-                        }
-                        row++;
-                    }
-
-                    // Total Row
-                    if (!subjectGroup.SubjectTotalRow.IsEmpty)
-                    {
-                        var totalRow = subjectGroup.SubjectTotalRow;
-                        var totalCell = ws.Cell(row, 1);
-                        totalCell.Value = totalRow.RowLabel;
-                        totalCell.Style.Font.Bold = true;
-                        totalCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80);
-                        totalCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                        SetAllBorders(totalCell, XLColor.Gainsboro);
-
-                        currentCol = 2;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.AllData, "All", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.ELData, "EL", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.SWDData, "SWD", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.AAData, "AA", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.SEDData, "SED", activeUnits, dataBgColors, headerFontColors);
-                        currentCol += unitColCount;
-                        RenderExcelDataRow(ws, row, currentCol, totalRow.HISPData, "HISP", activeUnits, dataBgColors, headerFontColors);
-
-                        var totalRowStyle = ws.Range(row, 1, row, totalCols).Style;
-                        totalRowStyle.Fill.BackgroundColor = XLColor.FromArgb(233, 236, 239);
-                        totalRowStyle.Font.Bold = true;
-                        totalRowStyle.Border.SetTopBorder(XLBorderStyleValues.Thick);
-                        totalRowStyle.Border.SetTopBorderColor(XLColor.FromArgb(52, 73, 94));
-                        row++;
-                    }
-                    row++; // Space between subjects
-                }
+                        setHeader(2, "All", "All Students");
+                        setHeader(3, "EL", "EL");
+                        setHeader(4, "SWD", "SWD");
+                        setHeader(5, "AA", "AA");
+                        setHeader(6, "SED", "SED");
+                        setHeader(7, "HISP", "Hispanic");
                 
+                        ws.Row(headerRow2).Height = 30;
+                        row += 2; 
+
+                        foreach (var bodyRow in subjectGroup.BodyRows)
+                        {
+                            var gradeCell = ws.Cell(row, 1);
+                            gradeCell.Value = bodyRow.RowLabel;
+                            gradeCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            gradeCell.Style.Font.Bold = true; 
+                            RenderExcelDataCell(ws, row, 2, bodyRow.All, dataBgColors["All"]);
+                            RenderExcelDataCell(ws, row, 3, bodyRow.EL, dataBgColors["EL"]);
+                            RenderExcelDataCell(ws, row, 4, bodyRow.SWD, dataBgColors["SWD"]);
+                            RenderExcelDataCell(ws, row, 5, bodyRow.AA, dataBgColors["AA"]);
+                            RenderExcelDataCell(ws, row, 6, bodyRow.SED, dataBgColors["SED"]);
+                            RenderExcelDataCell(ws, row, 7, bodyRow.HISP, dataBgColors["HISP"]);
+                            if (bodyRow.Type == RowType.K2Total || bodyRow.Type == RowType.G3PlusTotal)
+                            {
+                                var subtotalStyle = ws.Range(row, 1, row, 7).Style;
+                                subtotalStyle.Fill.BackgroundColor = XLColor.FromArgb(248, 249, 250);
+                                subtotalStyle.Font.Bold = true;
+                                subtotalStyle.Border.SetTopBorder(XLBorderStyleValues.Thin);
+                                subtotalStyle.Border.SetBottomBorder(XLBorderStyleValues.Thin);
+                                subtotalStyle.Border.SetTopBorderColor(XLColor.FromArgb(173, 181, 189));
+                                subtotalStyle.Border.SetBottomBorderColor(XLColor.FromArgb(173, 181, 189)); 
+                                gradeCell.Style.Font.FontColor = XLColor.FromArgb(52, 73, 94);
+                                gradeCell.Style.Alignment.Indent = 1;
+                            }
+                            row++;
+                        }
+                        if (!subjectGroup.SubjectTotalRow.IsEmpty)
+                        {
+                            var totalCell = ws.Cell(row, 1);
+                            totalCell.Value = subjectGroup.SubjectTotalRow.RowLabel;
+                            totalCell.Style.Font.Bold = true;
+                            totalCell.Style.Font.FontColor = XLColor.FromArgb(44, 62, 80); 
+                            totalCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            RenderExcelDataCell(ws, row, 2, subjectGroup.SubjectTotalRow.All, dataBgColors["All"]);
+                            RenderExcelDataCell(ws, row, 3, subjectGroup.SubjectTotalRow.EL, dataBgColors["EL"]);
+                            RenderExcelDataCell(ws, row, 4, subjectGroup.SubjectTotalRow.SWD, dataBgColors["SWD"]);
+                            RenderExcelDataCell(ws, row, 5, subjectGroup.SubjectTotalRow.AA, dataBgColors["AA"]);
+                            RenderExcelDataCell(ws, row, 6, subjectGroup.SubjectTotalRow.SED, dataBgColors["SED"]);
+                            RenderExcelDataCell(ws, row, 7, subjectGroup.SubjectTotalRow.HISP, dataBgColors["HISP"]);
+                            var totalRowStyle = ws.Range(row, 1, row, 7).Style;
+                            totalRowStyle.Fill.BackgroundColor = XLColor.FromArgb(233, 236, 239);
+                            totalRowStyle.Font.Bold = true;
+                            totalRowStyle.Border.SetTopBorder(XLBorderStyleValues.Thick);
+                            totalRowStyle.Border.SetTopBorderColor(XLColor.FromArgb(52, 73, 94));
+                            row++;
+                        }
+                        row++;
+                    }
+                }
                 if (firstHeaderRow > 0)
                 {
-                    ws.SheetView.FreezeRows(firstHeaderRow + 2); // Freeze all 3 header rows
+                    ws.SheetView.FreezeRows(firstHeaderRow + 1); 
                 }
-
-                var filename = $"Mega_Data_{SchoolName.Replace(" ", "_")}_SY{SchoolYear}_{DateTime.Now:yyyyMMdd}.xlsx";
+                var filename = $"Meta_Data_{SchoolName.Replace(" ", "_")}_SY{SchoolYear}_{DateTime.Now:yyyyMMdd}.xlsx";
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -544,39 +415,14 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        private void SetAllBorders(IXLCell cell, XLColor color)
-        {
-            cell.Style.Border.SetTopBorder(XLBorderStyleValues.Thin);
-            cell.Style.Border.SetBottomBorder(XLBorderStyleValues.Thin);
-            cell.Style.Border.SetLeftBorder(XLBorderStyleValues.Thin);
-            cell.Style.Border.SetRightBorder(XLBorderStyleValues.Thin);
-            cell.Style.Border.SetTopBorderColor(color);
-            cell.Style.Border.SetBottomBorderColor(color);
-            cell.Style.Border.SetLeftBorderColor(color);
-            cell.Style.Border.SetRightBorderColor(color);
-        }
-
-
-        // Helper for Excel Data Row
-        private void RenderExcelDataRow(IXLWorksheet ws, int row, int startCol, Dictionary<string, AggData> data, string key, List<string> activeUnits, Dictionary<string, XLColor> bgColors, Dictionary<string, XLColor> fontColors)
-        {
-            foreach (var unit in activeUnits)
-            {
-                data.TryGetValue(unit, out var aggData);
-                RenderExcelDataCell(ws, row, startCol, aggData, bgColors[key]);
-                startCol++;
-            }
-        }
-
-        // RenderExcelDataCell - Reused from MetaModel
-        private void RenderExcelDataCell(IXLWorksheet ws, int row, int col, AggData? data, XLColor baseDataColor)
+        // RenderExcelDataCell
+        private void RenderExcelDataCell(IXLWorksheet ws, int row, int col, AggData data, XLColor baseDataColor)
         {
             var cell = ws.Cell(row, col);
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-            SetAllBorders(cell, XLColor.Gainsboro); // Add borders to data cells too
 
-            if (data != null && data.TotalTested > 0)
+            if (data.TotalTested > 0)
             {
                 cell.Value = $"{data.PctProficient}%\n({data.TotalProficient}/{data.TotalTested})";
                 cell.Style.Alignment.WrapText = true;
@@ -585,12 +431,11 @@ namespace ORSV2.Pages.CurriculumAlignment
             else
             {
                 cell.Value = "—";
-                cell.Style.Fill.BackgroundColor = baseDataColor;
+                cell.Style.Fill.BackgroundColor = baseDataColor; 
             }
         }
 
-
-        // LoadDistrictInfoAsync - Reused from MetaModel
+        // LoadDistrictInfoAsync
         private async Task LoadDistrictInfoAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -609,11 +454,11 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        // LoadFiltersAsync - Reused from MetaModel
+        // LoadFiltersAsync
         private async Task LoadFiltersAsync()
         {
             var schools = new List<SelectListItem> { new SelectListItem { Text = "-- Select School --", Value = "" } };
-            var years = new List<SelectListItem> { new SelectListItem { Text = "-- Select Year --", Value = "" } };
+            var years = new List<SelectListItem> { new SelectListItem { Text = "-- Select Year --", Value = "" } }; 
 
             if (IsDistrictAdmin || IsOrendaUser)
             {
@@ -685,7 +530,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                             var yearObj = reader["school_year"];
                             if (yearObj != null && yearObj != DBNull.Value)
                             {
-                                var yearInt = (int)yearObj;
+                                var yearInt = (int)yearObj; 
                                 var yearString = yearInt.ToString();
                                 years.Add(new SelectListItem
                                 {
@@ -700,7 +545,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        // LoadSchoolTargetsAsync - Reused from MetaModel
+        // LoadSchoolTargetsAsync
         private async Task LoadSchoolTargetsAsync()
         {
             if (!SchoolId.HasValue || !SchoolYear.HasValue || SchoolId.Value == 0)
@@ -722,7 +567,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 {
                     cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
                     cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear.Value);
-
+                    
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
@@ -740,7 +585,7 @@ namespace ORSV2.Pages.CurriculumAlignment
         }
 
 
-        // LoadMetaDataAsync - Reused from MetaModel (it gets all the data we need)
+        // LoadMetaDataAsync
         private async Task LoadMetaDataAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -782,14 +627,14 @@ namespace ORSV2.Pages.CurriculumAlignment
                             ELSE 'Other'
                         END != 'Other'
                     ORDER BY
-                        Subject,
                         Unit,
+                        Subject,
                         Grade,
                         DemographicGroup", conn))
                 {
                     cmd.Parameters.AddWithValue("@DistrictId", DistrictId!.Value);
                     cmd.Parameters.AddWithValue("@SchoolId", SchoolId!.Value);
-                    cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear!.Value);
+                    cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear!.Value); 
                     RawDataRows = new List<MetaDataRow>();
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -812,7 +657,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             }
         }
 
-        // LoadTargetUIData - Reused from MetaModel
+        // LoadTargetUIData
         private void LoadTargetUIData()
         {
             if (!RawDataRows.Any())
@@ -822,139 +667,118 @@ namespace ORSV2.Pages.CurriculumAlignment
                 .Select(r => r.Grade)
                 .Distinct()
                 .OrderBy(g => g)
-                .Select(g => new SelectListItem
-                {
+                .Select(g => new SelectListItem {
                     Text = (g == 0 ? "K" : $"Grade {g}"),
                     Value = g.ToString()
                 })
                 .ToList();
-
+            
             AvailableTargetGrades = new SelectList(grades, "Value", "Text");
 
             var demos = RawDataRows
                 .Select(r => r.DemographicGroup)
                 .Distinct()
                 .OrderBy(d => d)
-                .Select(d => new SelectListItem
-                {
+                .Select(d => new SelectListItem {
                     Text = d,
                     Value = d
                 })
                 .ToList();
-
+            
             AvailableTargetDemographics = new SelectList(demos, "Value", "Text");
         }
 
 
-        // BuildDisplayGroups - This is the NEW logic for the Mega view
+        // BuildDisplayGroups
         private void BuildDisplayGroups()
         {
-            SubjectGroups = RawDataRows
-                .GroupBy(r => r.Subject)
+            UnitGroups = RawDataRows
+                .GroupBy(r => r.Unit)
                 .OrderBy(g => g.Key)
-                .Select(subjectGroup =>
+                .Select(unitGroup => new UnitDisplayGroup
                 {
-                    var megaSubjectGroup = new MegaSubjectGroup { SubjectName = subjectGroup.Key };
-                    
-                    // Find all unique, non-empty units for this subject to build columns
-                    var activeUnits = subjectGroup
-                        .Select(r => r.Unit)
-                        .Where(u => !string.IsNullOrEmpty(u))
-                        .Distinct()
-                        .OrderBy(u => u) // You might want custom sorting here later
-                        .ToList();
-                    
-                    megaSubjectGroup.ActiveUnits = activeUnits;
-
-                    var bodyRows = new List<MegaGradeRow>();
-                    var allSubjectData = subjectGroup.ToList();
-
-                    // K-2 Grades
-                    var k2_data = allSubjectData.Where(s => s.GradeGroup == "K-2").ToList();
-                    var k2_GradeRows = k2_data
-                        .GroupBy(g => g.Grade)
-                        .OrderBy(g => g.Key)
-                        .Select(gradeData =>
+                    UnitName = unitGroup.Key,
+                    SubjectGroups = unitGroup
+                        .GroupBy(u => u.Subject)
+                        .OrderBy(s => s.Key)
+                        .Select(subjectGroup =>
                         {
-                            var label = gradeData.Key == 0 ? "K" : $"Grade {gradeData.Key}";
-                            var row = PivotUnitsAndDemographics(gradeData, label, gradeData.Key, activeUnits);
-                            row.Type = RowType.Grade;
-                            return row;
-                        })
-                        .ToList();
-                    bodyRows.AddRange(k2_GradeRows);
+                            var subjectDisplayGroup = new SubjectDisplayGroup { SubjectName = subjectGroup.Key };
+                            var bodyRows = new List<MetaDisplayRow>();
+                            var allSubjectData = subjectGroup.ToList();
 
-                    // K-2 Total
-                    var k2_TotalRow = PivotUnitsAndDemographics(k2_data, "K-2 Total", null, activeUnits);
-                    k2_TotalRow.Type = RowType.K2Total;
-                    if (!k2_TotalRow.IsEmpty)
-                    {
-                        bodyRows.Add(k2_TotalRow);
-                    }
+                            var k2_data = allSubjectData.Where(s => s.GradeGroup == "K-2").ToList();
+                            var k2_GradeRows = k2_data
+                                .GroupBy(g => g.Grade)
+                                .OrderBy(g => g.Key)
+                                .Select(gradeData =>
+                                {
+                                    var label = gradeData.Key == 0 ? "K" : $"Grade {gradeData.Key}";
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key);
+                                    row.Type = RowType.Grade;
+                                    return row;
+                                })
+                                .ToList();
 
-                    // 3+ Grades
-                    var g3Plus_data = allSubjectData.Where(s => s.GradeGroup == "3+").ToList();
-                    var g3Plus_GradeRows = g3Plus_data
-                        .GroupBy(g => g.Grade)
-                        .OrderBy(g => g.Key)
-                        .Select(gradeData =>
-                        {
-                            var label = $"Grade {gradeData.Key}";
-                            var row = PivotUnitsAndDemographics(gradeData, label, gradeData.Key, activeUnits);
-                            row.Type = RowType.Grade;
-                            return row;
-                        })
-                        .ToList();
-                    bodyRows.AddRange(g3Plus_GradeRows);
+                            bodyRows.AddRange(k2_GradeRows);
 
-                    // 3+ Total
-                    var g3Plus_TotalRow = PivotUnitsAndDemographics(g3Plus_data, "3+ Total", null, activeUnits);
-                    g3Plus_TotalRow.Type = RowType.G3PlusTotal;
-                    if (!g3Plus_TotalRow.IsEmpty)
-                    {
-                        bodyRows.Add(g3Plus_TotalRow);
-                    }
+                            var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total", null);
+                            k2_TotalRow.Type = RowType.K2Total;
+                            if (!k2_TotalRow.IsEmpty)
+                            {
+                                bodyRows.Add(k2_TotalRow);
+                            }
 
-                    megaSubjectGroup.BodyRows = bodyRows;
-                    
-                    // Subject Total
-                    megaSubjectGroup.SubjectTotalRow = PivotUnitsAndDemographics(allSubjectData, "Subject Total", null, activeUnits);
-                    megaSubjectGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
+                            var g3Plus_data = allSubjectData.Where(s => s.GradeGroup == "3+").ToList();
+                            var g3Plus_GradeRows = g3Plus_data
+                                .GroupBy(g => g.Grade)
+                                .OrderBy(g => g.Key)
+                                .Select(gradeData =>
+                                {
+                                    var label = $"Grade {gradeData.Key}";
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key);
+                                    row.Type = RowType.Grade;
+                                    return row;
+                                })
+                                .ToList();
 
-                    return megaSubjectGroup;
+                            bodyRows.AddRange(g3Plus_GradeRows);
 
+                            var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total", null);
+                            g3Plus_TotalRow.Type = RowType.G3PlusTotal;
+                            if (!g3Plus_TotalRow.IsEmpty)
+                            {
+                                bodyRows.Add(g3Plus_TotalRow);
+                            }
+
+                            subjectDisplayGroup.BodyRows = bodyRows;
+                            subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total", null);
+                            subjectDisplayGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
+
+                            return subjectDisplayGroup;
+                        }).ToList()
                 }).ToList();
         }
 
-        // PivotUnitsAndDemographics - This is the NEW pivoting logic
-        private MegaGradeRow PivotUnitsAndDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade, List<string> activeUnits)
+        // PivotDemographics
+        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade)
         {
-            var row = new MegaGradeRow { RowLabel = rowLabel };
+            var row = new MetaDisplayRow { RowLabel = rowLabel };
+            var groups = rows
+                .GroupBy(r => r.DemographicGroup)
+                .ToDictionary(g => g.Key, g => new AggData
+                {
+                    TotalTested = g.Sum(x => x.TotalTested),
+                    TotalProficient = g.Sum(x => x.TotalProficient)
+                });
 
-            // Helper function to pivot the data for a specific demographic group
-            Func<string, Dictionary<string, AggData>> getUnitData = (demoGroupKey) =>
-            {
-                return rows
-                    .Where(r => r.DemographicGroup == demoGroupKey)
-                    .GroupBy(r => r.Unit)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new AggData
-                        {
-                            TotalTested = g.Sum(x => x.TotalTested),
-                            TotalProficient = g.Sum(x => x.TotalProficient)
-                        }
-                    );
-            };
+            row.All = groups.GetValueOrDefault("All", new AggData());
+            row.EL = groups.GetValueOrDefault("EL", new AggData());
+            row.SWD = groups.GetValueOrDefault("SWD", new AggData());
+            row.AA = groups.GetValueOrDefault("AA", new AggData());
+            row.SED = groups.GetValueOrDefault("SED", new AggData());
+            row.HISP = groups.GetValueOrDefault("HISP", new AggData());
 
-            row.AllData = getUnitData("All");
-            row.ELData = getUnitData("EL");
-            row.SWDData = getUnitData("SWD");
-            row.AAData = getUnitData("AA");
-            row.SEDData = getUnitData("SED");
-            row.HISPData = getUnitData("HISP");
-
-            // Assign targets if this is a specific grade row
             if (grade.HasValue)
             {
                 row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "All")?.TargetPct;
@@ -964,20 +788,88 @@ namespace ORSV2.Pages.CurriculumAlignment
                 row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "SED")?.TargetPct;
                 row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "HISP")?.TargetPct;
             }
-
+            
             return row;
         }
 
-        // BuildBreadcrumbs - Changed "Meta Data" to "Mega Data"
+        // BuildBreadcrumbs
         private void BuildBreadcrumbs()
         {
             Breadcrumbs = new List<BreadcrumbItem>
             {
-                new BreadcrumbItem { Title = "Curriculum Alignment", Url = "/CurriculumAlignment/Index" },
-                new BreadcrumbItem { Title = DistrictName, Url = null },
-                new BreadcrumbItem { Title = "Mega Data", Url = null } // Changed
+                new BreadcrumbItem { Title = "Data Reflection", Url = "/DataReflection/Index" },
+                new BreadcrumbItem { Title = DistrictName,
+                Url = DistrictId.HasValue ? Url.Page("/DataReflection/Forms", new { districtId = DistrictId }) : null },
+                // --- CORRECTED TYPO HERE ---
+                new BreadcrumbItem { Title = "Meta Data", Url = null }
             };
         }
     }
-}
 
+    // ###############################################################
+    // VIEW MODELS
+    // ###############################################################
+    
+    public enum RowType { Grade, K2Total, G3PlusTotal, SubjectTotal }
+
+    public class MetaDataRow
+    {
+        public string Unit { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public int Grade { get; set; }
+        public string GradeGroup { get; set; } = string.Empty;
+        public string DemographicGroup { get; set; } = string.Empty;
+        public int TotalEnrolled { get; set; }
+        public int TotalTested { get; set; }
+        public int TotalProficient { get; set; }
+    }
+
+    public class MetaDisplayRow
+    {
+        public string RowLabel { get; set; } = string.Empty;
+        public AggData All { get; set; } = new AggData();
+        public AggData EL { get; set; } = new AggData();
+        public AggData SWD { get; set; } = new AggData();
+        public AggData AA { get; set; } = new AggData();
+        public AggData SED { get; set; } = new AggData();
+        public AggData HISP { get; set; } = new AggData();
+        public RowType Type { get; set; } = RowType.Grade;
+
+        public decimal? AllTarget { get; set; }
+        public decimal? ELTarget { get; set; }
+        public decimal? SWDTarget { get; set; }
+        public decimal? AATarget { get; set; }
+        public decimal? SEDTarget { get; set; }
+        public decimal? HISPTarget { get; set; }
+
+        public bool IsEmpty =>
+            All.TotalTested == 0 &&
+            EL.TotalTested == 0 &&
+            SWD.TotalTested == 0 &&
+            AA.TotalTested == 0 &&
+            SED.TotalTested == 0 &&
+            HISP.TotalTested == 0;
+    }
+
+    public class AggData
+    {
+        public int TotalTested { get; set; }
+        public int TotalProficient { get; set; }
+        public decimal PctProficient => TotalTested > 0
+            ? Math.Round(100m * TotalProficient / TotalTested, 2)
+            : 0m;
+    }
+
+    public class SubjectDisplayGroup
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public List<MetaDisplayRow> BodyRows { get; set; } = new List<MetaDisplayRow>();
+        public MetaDisplayRow SubjectTotalRow { get; set; } = new MetaDisplayRow();
+    }
+
+    public class UnitDisplayGroup
+    {
+        public string UnitName { get; set; } = string.Empty;
+        public List<SubjectDisplayGroup> SubjectGroups { get; set; } = new List<SubjectDisplayGroup>();
+    }
+}

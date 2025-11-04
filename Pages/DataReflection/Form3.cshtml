@@ -1,5 +1,5 @@
 @page
-@model ORSV2.Pages.CurriculumAlignment.Form3Model
+@model ORSV2.Pages.DataReflection.Form3Model
 
 @{
     var batchForTitle = Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId);
@@ -370,11 +370,11 @@
                                     var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
                                     <td class="text-center percentage-cell @groupClass">
-                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den)
                                         <span class="text-muted">(@pass)</span>
                                     </td>
                                     <td class="text-center percentage-cell @groupClass">
-                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den)
                                         <span class="text-muted">(@notp)</span>
                                     </td>
                                 }
@@ -385,11 +385,11 @@
                                     var totNot = g.NotPassedByTotal;
                                 }
                                 <td class="text-center percentage-cell standard-group-odd">
-                                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
+                                    @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen)
                                     <span class="text-muted">(@totPass)</span>
                                 </td>
                                 <td class="text-center percentage-cell standard-group-odd">
-                                    @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)
+                                    @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen)
                                     <span class="text-muted">(@totNot)</span>
                                 </td>
                             </tr>
@@ -410,11 +410,11 @@
                                         var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
                                         <th class="text-center percentage-cell @groupClass">
-                                            @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(pass, den)
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den)
                                             <span class="text-muted">(@pass)</span>
                                         </th>
                                         <th class="text-center percentage-cell @groupClass">
-                                            @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(notp, den)
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den)
                                             <span class="text-muted">(@notp)</span>
                                         </th>
                                     }
@@ -425,11 +425,11 @@
                                         var totNot  = Model.GrandTotals.NotPassedByTotal;
                                     }
                                     <th class="text-center percentage-cell standard-group-odd">
-                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totPass, totDen)
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen)
                                         <span class="text-muted">(@totPass)</span>
                                     </th>
                                     <th class="text-center percentage-cell standard-group-odd">
-                                        @ORSV2.Pages.CurriculumAlignment.Form3Model.Pct(totNot, totDen)
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen)
                                         <span class="text-muted">(@totNot)</span>
                                     </th>
                                 </tr>

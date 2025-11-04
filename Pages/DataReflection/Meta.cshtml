@@ -1,12 +1,9 @@
 @page
-@model ORSV2.Pages.CurriculumAlignment.MetaModel
+@model ORSV2.Pages.DataReflection.MetaModel
 @{
     ViewData["Title"] = "Meta Assessment Data - DRS";
     
-    // ---
-    // MODIFIED: RenderDemoCells HELPER
-    // ---
-    Action<ORSV2.Pages.CurriculumAlignment.AggData, string, decimal?> RenderDemoCells = 
+    Action<ORSV2.Pages.DataReflection.AggData, string, decimal?> RenderDemoCells = 
         (demoData, cssClass, target) =>
     {
         var dataClass = $"data-{cssClass}";
@@ -34,6 +31,8 @@
         }
     };
 }
+
+@await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
 
 <style>
     /* SCREEN STYLES (Normal View) */
@@ -644,8 +643,8 @@
                             @foreach (var row in subjectGroup.BodyRows)
                             {
                                 var rowClass = row.Type switch {
-                                    ORSV2.Pages.CurriculumAlignment.RowType.K2Total => "sub-total-row",
-                                    ORSV2.Pages.CurriculumAlignment.RowType.G3PlusTotal => "sub-total-row",
+                                    ORSV2.Pages.DataReflection.RowType.K2Total => "sub-total-row",
+                                    ORSV2.Pages.DataReflection.RowType.G3PlusTotal => "sub-total-row",
                                     _ => ""
                                 };
                                 

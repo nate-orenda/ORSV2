@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 
-namespace ORSV2.Pages.CurriculumAlignment
+namespace ORSV2.Pages.DataReflection
 {
     [Authorize]
     public class IndexModel : SecureReportPageModel
@@ -74,7 +74,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 Breadcrumbs = new List<BreadcrumbItem>
                 {
                     new BreadcrumbItem { Title = "Dashboard", Url = Url.Page("/Index") },
-                    new BreadcrumbItem { Title = "Curriculum Alignment" }
+                    new BreadcrumbItem { Title = "Data Reflection" }
                 };
                 return Page();
             }
@@ -90,7 +90,7 @@ namespace ORSV2.Pages.CurriculumAlignment
                 Breadcrumbs = new List<BreadcrumbItem>
                 {
                     new BreadcrumbItem { Title = "Dashboard", Url = Url.Page("/Index") },
-                    new BreadcrumbItem { Title = "Curriculum Alignment" }
+                    new BreadcrumbItem { Title = "Data Reflection" }
                 };
                 return Page();
             }
@@ -126,7 +126,7 @@ namespace ORSV2.Pages.CurriculumAlignment
             Breadcrumbs = new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Dashboard", Url = Url.Page("/Index") },
-                new BreadcrumbItem { Title = "Curriculum Alignment" }
+                new BreadcrumbItem { Title = "Data Reflection" }
             };
 
             return Page();

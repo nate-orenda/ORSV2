@@ -1,5 +1,5 @@
 @page
-@model ORSV2.Pages.CurriculumAlignment.FormsModel
+@model ORSV2.Pages.DataReflection.FormsModel
 @{
     ViewData["Title"] = "Select a Form";
 }
@@ -8,13 +8,13 @@
 
 <div class="orenda-container">
     <div class="orenda-header shadow-orenda">
-        <h2 class="mb-1">Curriculum Alignment</h2>
+        <h2 class="mb-1">Data Reflection</h2>
         <p class="mb-0">Select a form for @Model.DistrictName</p>
     </div>
 
     <div class="row g-4 mt-4">
         <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/CurriculumAlignment/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+            <a href="@Url.Page("/DataReflection/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
                     <h5 class="text-orenda-primary">Form 1</h5>
                     <p class="text-muted small">Standards analysis view per teacher, class, and student.</p>
@@ -23,7 +23,7 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/CurriculumAlignment/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+            <a href="@Url.Page("/DataReflection/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
                     <h5 class="text-orenda-primary">Form 2</h5>
                     <p class="text-muted small">Quadrant analysis for assessment data based on overall proficiency of standards.</p>
@@ -32,7 +32,7 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/CurriculumAlignment/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+            <a href="@Url.Page("/DataReflection/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
                     <h5 class="text-orenda-primary">Form 3</h5>
                     <p class="text-muted small">School and teacher level summary for a single assessment.</p>
@@ -43,7 +43,7 @@
         @if (Model.ShowAdvancedForms)
         {
             <div class="col-12 col-md-6 col-lg-4">
-                    <a href="@Url.Page("/CurriculumAlignment/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                    <a href="@Url.Page("/DataReflection/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                         <div class="orenda-card-body">
                             <h5 class="text-orenda-primary">Meta</h5>
                             <p class="text-muted small">Meta-analysis across multiple grades, demographic groups, and cycles/units.</p>
@@ -53,13 +53,12 @@
 
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="orenda-card h-100 is-disabled">
+                     <a href="@Url.Page("/DataReflection/Mega", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                     <div class="orenda-card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
                             <h5 class="text-orenda-primary mb-0">Mega</h5>
-                            <span class="badge bg-light text-dark">Coming Soon</span>
-                        </div>
-                        <p class="text-muted small">Comprehensive district-wide analysis with predictive insights.</p>
+                            <p class="text-muted small">Comprehensive district-wide analysis with predictive insights.</p>        
                     </div>
+                    </a>
                 </div>
             </div>
         }

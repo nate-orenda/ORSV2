@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ORSV2.Data;
 using ORSV2.Models;
 
-namespace ORSV2.Pages.CurriculumAlignment
+namespace ORSV2.Pages.DataReflection
 {
     public class FormsModel : SecureReportPageModel
     {
@@ -47,7 +47,7 @@ namespace ORSV2.Pages.CurriculumAlignment
 
             Breadcrumbs = new List<BreadcrumbItem>
             {
-                new BreadcrumbItem { Title = "Curriculum Alignment", Url = Url.Page("/CurriculumAlignment/Index") },
+                new BreadcrumbItem { Title = "Data Reflection", Url = Url.Page("/DataReflection/Index") },
                 new BreadcrumbItem { Title = $"{DistrictName} - Select Forms" } // current page; no URL
             };
 

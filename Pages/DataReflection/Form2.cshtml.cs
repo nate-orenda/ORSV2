@@ -7,7 +7,7 @@ using System.Data;
 using ORSV2.Models;
 using System.Security.Claims;
 
-namespace ORSV2.Pages.CurriculumAlignment
+namespace ORSV2.Pages.DataReflection
 {
     [Authorize(Policy = "CanViewCurriculumForms")]
     public class Form2Model : SecureReportPageModel
@@ -153,10 +153,10 @@ namespace ORSV2.Pages.CurriculumAlignment
 
                     Breadcrumbs = new List<BreadcrumbItem>
                     {
-                        new BreadcrumbItem { Title = "Curriculum Alignment", Url = Url.Page("/CurriculumAlignment/Index") },
+                        new BreadcrumbItem { Title = "Data Reflection", Url = Url.Page("/DataReflection/Index") },
                         new BreadcrumbItem {
                             Title = $"{(DistrictName ?? "District")} - Select Forms",
-                            Url = DistrictId.HasValue ? Url.Page("/CurriculumAlignment/Forms", new { districtId = DistrictId }) : null
+                            Url = DistrictId.HasValue ? Url.Page("/DataReflection/Forms", new { districtId = DistrictId }) : null
                         },
                         new BreadcrumbItem { Title = "Form 2" } // current page, no URL
                     };
