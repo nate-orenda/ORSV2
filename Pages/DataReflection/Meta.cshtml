@@ -2,34 +2,50 @@
 @model ORSV2.Pages.DataReflection.MetaModel
 @{
     ViewData["Title"] = "Meta Assessment Data - DRS";
-    
-    Action<ORSV2.Pages.DataReflection.AggData, string, decimal?> RenderDemoCells = 
-        (demoData, cssClass, target) =>
-    {
-        var dataClass = $"data-{cssClass}";
-        if (demoData != null && demoData.TotalTested > 0)
+
+    // === UPDATED: Helper functions rewritten with robust lambda syntax ===
+    Func<ORSV2.Pages.DataReflection.AggData, string, Microsoft.AspNetCore.Html.IHtmlContent> RenderProfCell = 
+        (demoData, cssClass) => new Microsoft.AspNetCore.Mvc.Razor.HelperResult(async writer => 
         {
-            <td class="@dataClass">
-                <span class="proficiency-badge proficiency-neutral">@demoData.PctProficient%</span>
-                <span class="combined-count">(@demoData.TotalProficient / @demoData.TotalTested)</span>
+            var dataClass = $"data-{cssClass}";
+            if (demoData != null && demoData.TotalTested > 0)
+            {
+                await writer.WriteAsync($"<td class=\"{dataClass} prof-cell\">");
+                await writer.WriteAsync($"<span class=\"proficiency-badge proficiency-neutral\">{demoData.PctProficient}%</span>");
+                await writer.WriteAsync($"<span class=\"combined-count\">({demoData.TotalProficient} / {demoData.TotalTested})</span>");
+                await writer.WriteAsync("</td>");
+            }
+            else
+            {
+                await writer.WriteAsync($"<td class=\"{dataClass} prof-cell\">—</td>");
+            }
+        });
+
+    Func<ORSV2.Pages.DataReflection.AggData, decimal?, string, Microsoft.AspNetCore.Html.IHtmlContent> RenderDiffCell = 
+        (demoData, target, cssClass) => new Microsoft.AspNetCore.Mvc.Razor.HelperResult(async writer => 
+        {
+            var dataClass = $"data-{cssClass}";
+            if (target.HasValue && demoData != null && demoData.TotalTested > 0)
+            {
+                var pctDiff = target.Value - demoData.PctProficient;
+                var nDiff = 0m;
+                if (pctDiff > 0) // Only calculate 'N' gap if target is not met
+                {
+                    nDiff = Math.Ceiling((demoData.TotalTested * pctDiff) / 100m);
+                }
                 
-                @if (target.HasValue)
-                {
-                    <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
-                }
-            </td>
-        }
-        else
-        {
-            <td class="@dataClass">
-                —
-                @if (target.HasValue)
-                {
-                    <span class="target-pct">Target: @target.Value.ToString("0.##")%</span>
-                }
-            </td>
-        }
-    };
+                var diffClass = pctDiff > 0 ? "diff-negative" : (pctDiff == 0 ? "diff-neutral" : "diff-positive");
+                
+                await writer.WriteAsync($"<td class=\"{dataClass} diff-cell {diffClass}\">");
+                await writer.WriteAsync($"{pctDiff.ToString("0.#")}%");
+                await writer.WriteAsync($"<span class=\"combined-count\">({nDiff.ToString("0")})</span>");
+                await writer.WriteAsync("</td>");
+            }
+            else
+            {
+                await writer.WriteAsync($"<td class=\"{dataClass} diff-cell\">—</td>");
+            }
+        });
 }
 
 @await Html.PartialAsync("_Breadcrumbs", Model.Breadcrumbs)
@@ -59,6 +75,7 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         width: 100%;
         margin-top: 1rem;
+        /* === REMOVED: table-layout: fixed; === */
     }
     
     .meta-table thead {
@@ -67,19 +84,20 @@
     }
     
     .meta-table th {
-        padding: 1rem 0.75rem;
+        padding: 1rem 0.5rem; /* Reduced padding */
         text-align: center;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.8rem; /* Reduced font size */
         text-transform: uppercase;
         letter-spacing: 0.5px;
         border-right: 1px solid #34495e;
+        vertical-align: middle; /* ADDED */
     }
     
     .meta-table th:last-child { border-right: none; }
     
     .meta-table td {
-        padding: 0.75rem;
+        padding: 0.75rem 0.5rem; /* Reduced padding */
         border-bottom: 1px solid #e9ecef;
         text-align: center;
         white-space: nowrap;
@@ -90,11 +108,16 @@
         transition: background-color 0.2s ease;
     }
     
+    /* === MODIFIED: Column Widths === */
     .col-core {
         text-align: left;
         font-weight: 500;
+        white-space: normal; /* Allow grade labels to wrap */
+        width: 12%; /* Assign a width */
     }
     
+    /* === MODIFIED: Participation column styled like 'All Students' === */
+    .col-header-participation { background-color: #b3d9ff; color: #003d99; } /* Styled like 'All Students' */
     .col-header-all { background-color: #b3d9ff; color: #003d99; }
     .col-header-el { background-color: #ffb3d9; color: #990033; }
     .col-header-swd { background-color: #ffffb3; color: #996600; }
@@ -102,6 +125,8 @@
     .col-header-aa { background-color: #b3ffb3; color: #004d00; }
     .col-header-hisp { background-color: #ffe6b3; color: #664d00; }
     
+    /* === MODIFIED: Participation column styled like 'All Students' === */
+    .data-participation { background-color: rgba(179, 217, 255, 0.2); } /* Styled like 'All Students' */
     .data-all { background-color: rgba(179, 217, 255, 0.2); }
     .data-el { background-color: rgba(255, 179, 217, 0.2); }
     .data-swd { background-color: rgba(255, 255, 179, 0.2); }
@@ -109,6 +134,15 @@
     .data-aa { background-color: rgba(179, 255, 179, 0.2); }
     .data-hisp { background-color: rgba(255, 230, 179, 0.2); }
     
+    /* === REMOVED: Column sizing for sub-columns === */
+    /*
+    .target-cell { width: 5%; }
+    .prof-cell { width: 8%; }
+    .diff-cell { width: 6%; }
+    .part-cell { width: 8%; } 
+    */
+    
+    /* === ADDED: Responsive font-size for badges === */
     .proficiency-badge {
         display: inline-block;
         padding: 0.35rem 0.6rem;
@@ -128,6 +162,9 @@
         color: #6c757d;
         margin-left: 0.5rem;
         white-space: nowrap;
+        display: block; /* Make it stack */
+        margin-left: 0;  /* Reset margin */
+        margin-top: 3px;  /* Add space */
     }
 
     /* --- ADDED: Style for the new target display --- */
@@ -207,6 +244,115 @@
         color: #2c3e50;
     }
 
+    /* === ADDED: Styles for new Diff column === */
+    .diff-cell {
+        font-weight: 600;
+    }
+    .diff-positive {
+        color: #155724; /* Green */
+        background-color: rgba(212, 237, 218, 0.3);
+    }
+    .diff-negative {
+        color: #721c24; /* Red */
+        background-color: rgba(248, 215, 218, 0.3);
+    }
+    .diff-neutral {
+        color: #383d41; /* Gray */
+    }
+
+    /* === ADDED: Styles for Inline Target Editing === */
+    .target-cell {
+        padding: 0.25rem; /* Reduce padding to fit input */
+    }
+
+    .inline-target-input {
+        width: 100%;
+        max-width: 70px; /* Max width of input */
+        padding: 0.3rem;
+        border: 1px solid transparent; /* Invisible border */
+        border-radius: 4px;
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background-color: transparent;
+        transition: all 0.2s ease;
+        -moz-appearance: textfield; /* Hide arrows for Firefox */
+    }
+    
+    .inline-target-input:hover:not(:disabled) {
+        border: 1px solid #ced4da; /* Show border on hover */
+        background-color: #ffffff;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    
+    .inline-target-input:focus {
+        outline: none;
+        border: 1px solid var(--orenda-primary);
+        background-color: #ffffff;
+        box-shadow: 0 0 5px var(--orenda-primary-glow);
+    }
+
+    .inline-target-input::placeholder {
+        color: #adb5bd;
+        font-weight: 400;
+    }
+    
+    .inline-target-input:disabled {
+        background-color: transparent;
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    /* Hide spin buttons on number inputs */
+    .inline-target-input::-webkit-outer-spin-button,
+    .inline-target-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* === ADDED: Toast Notification for Saving === */
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 1rem 1.5rem;
+        border-radius: 6px;
+        background-color: #28a745; /* Success Green */
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s, bottom 0.3s;
+    }
+    
+    .toast-notification.show {
+        opacity: 1;
+        visibility: visible;
+        bottom: 30px;
+    }
+    
+    .toast-notification.error {
+        background-color: #dc3545;
+    }
+    
+    /* === ADDED: Style for Inline Edit Help Text === */
+    .inline-edit-info {
+        background-color: #e7f3ff; /* Light blue */
+        border-left: 4px solid #005a9c;
+        color: #003d99;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+    }
+    .inline-edit-info i {
+        margin-right: 0.5rem;
+    }
+
+
     /* ========================================
        PRINT STYLES - LANDSCAPE
        ======================================== */
@@ -242,7 +388,9 @@
         footer,
         nav,
         .navbar,
-        .navbar-header {
+        .navbar-header,
+        .toast-notification /* ADDED: Hide toast */
+         {
             display: none !important;
             visibility: hidden !important;
             margin: 0 !important;
@@ -258,6 +406,7 @@
             margin-bottom: 0.2in;
             page-break-inside: avoid;
             width: 100%;
+            table-layout: fixed; /* Print fixed layout */
         }
 
         .meta-table thead {
@@ -266,7 +415,7 @@
         }
 
         /* Default th styling for secondary headers */
-        .meta-table th:not(.col-header-all):not(.col-header-el):not(.col-header-swd):not(.col-header-sed):not(.col-header-aa):not(.col-header-hisp) {
+        .meta-table th:not(.col-header-all):not(.col-header-el):not(.col-header-swd):not(.col-header-sed):not(.col-header-aa):not(.col-header-hisp):not(.col-header-participation) {
             background-color: #2c3e50 !important;
             color: white !important;
             border: 1px solid #1a252f;
@@ -278,6 +427,16 @@
         }
 
         /* Preserve demographic header colors */
+        /* === MODIFIED: Participation column styled like 'All Students' === */
+        .meta-table th.col-header-participation {
+            background-color: #b3d9ff !important; 
+            color: #003d99 !important;
+            border: 1px solid #1a252f;
+            padding: 0.4rem 0.3rem;
+            font-size: 9pt;
+            font-weight: 700;
+            text-align: center;
+        }
         .meta-table th.col-header-all { 
             background-color: #b3d9ff !important; 
             color: #003d99 !important;
@@ -343,6 +502,31 @@
             text-align: center;
             border-right: 1px solid #e9ecef;
             font-size: 8pt;
+            white-space: normal; /* Allow wrapping in print */
+        }
+        
+        /* === ADDED: Hide input, show content for printing === */
+        .inline-target-input {
+            display: none !important; /* Hide input box */
+        }
+        
+        .target-cell::before {
+             content: attr(data-print-value); /* Use data attribute */
+             font-weight: 600;
+             color: #005a9c;
+        }
+        
+        /* === ADDED: Diff cell print styles === */
+        .diff-cell {
+            font-weight: 600;
+        }
+        .diff-positive {
+            color: #155724 !important; /* Green */
+            background-color: rgba(212, 237, 218, 0.5) !important;
+        }
+        .diff-negative {
+            color: #721c24 !important; /* Red */
+            background-color: rgba(248, 215, 218, 0.5) !important;
         }
 
         .meta-table td:last-child {
@@ -353,6 +537,7 @@
             text-align: left;
             font-weight: 600;
             padding-left: 0.5rem;
+            white-space: normal;
         }
 
         .meta-table tr.sub-total-row {
@@ -378,6 +563,11 @@
         }
 
         /* Demographic colors - preserve in print */
+        /* === MODIFIED: Participation column styled like 'All Students' === */
+        .col-header-participation {
+            background-color: #b3d9ff !important; 
+            color: #003d99 !important;
+        }
         .col-header-all { 
             background-color: #b3d9ff !important; 
             color: #003d99 !important;
@@ -402,7 +592,9 @@
             background-color: #ffe6b3 !important; 
             color: #664d00 !important;
         }
-
+        
+        /* === MODIFIED: Participation column styled like 'All Students' === */
+        .data-participation { background-color: rgba(179, 217, 255, 0.3) !important; }
         .data-all { background-color: rgba(179, 217, 255, 0.3) !important; }
         .data-el { background-color: rgba(255, 179, 217, 0.3) !important; }
         .data-swd { background-color: rgba(255, 255, 179, 0.3) !important; }
@@ -535,13 +727,13 @@
             
             <div class="col-md-4">
                 <label asp-for="SchoolId" class="form-label">School</label>
-                <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select">
+                <select asp-for="SchoolId" asp-items="Model.AvailableSchools" class="form-select" id="SchoolId-select">
                 </select>
             </div>
             
             <div class="col-md-4">
                 <label asp-for="SchoolYear" class="form-label">School Year</label>
-                <select asp-for="SchoolYear" asp-items="Model.AvailableSchoolYears" class="form-select">
+                <select asp-for="SchoolYear" asp-items="Model.AvailableSchoolYears" class="form-select" id="SchoolYear-select">
                 </select>
             </div>
 
@@ -555,6 +747,9 @@
 
     @if (Model.UnitGroups.Any())
     {
+        <!-- === ADDED: Anti-Forgery Token for JS Post === -->
+        @Html.AntiForgeryToken()
+        
         <div class="orenda-header shadow-orenda d-print-none">
             <h3 class="mb-0">@Model.SchoolName</h3>
             <p class="mb-0">@Model.DistrictName</p>
@@ -578,104 +773,237 @@
             </a>
         </div>
 
-        <div class="meta-filter-section d-print-none">
-            <h4 class="mb-3">Set School Target</h4>
-            <form method="post" asp-page-handler="SetTarget" class="row g-3">
-                <input type="hidden" asp-for="DistrictId" />
-                <input type="hidden" asp-for="SchoolId" />
-                <input type="hidden" asp-for="SchoolYear" />
-                @Html.AntiForgeryToken()
-
-                <div class="col-md-3">
-                    <label asp-for="NewTargetGrade" class="form-label">Grade</label>
-                    <select asp-for="NewTargetGrade" asp-items="Model.AvailableTargetGrades" class="form-select" required>
-                        <option value="">-- Select Grade --</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label asp-for="NewTargetDemographic" class="form-label">Demographic</label>
-                    <select asp-for="NewTargetDemographic" asp-items="Model.AvailableTargetDemographics" class="form-select" required>
-                        <option value="">-- Select Group --</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label asp-for="NewTargetPercent" class="form-label">Target %</label>
-                    <input type="number" step="0.1" min="0" max="100" class="form-control" asp-for="NewTargetPercent" placeholder="e.g., 75.5" required />
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>Set Target
-                    </button>
-                </div>
-            </form>
+        <!-- === ADDED: Inline Edit Instructions === -->
+        <div class="inline-edit-info d-print-none">
+            <i class="fas fa-info-circle"></i>
+            To enter or update a target, click the <strong>% Target</strong> box for the desired grade-level and group, type in the value, and press Enter or click away to save.
         </div>
+
+        <!-- === REMOVED: "Set School Target" form === -->
+
         @foreach (var unitGroup in Model.UnitGroups)
         {
             <h3 class="unit-header">Cycle: @unitGroup.UnitName</h3>
 
             @foreach (var subjectGroup in unitGroup.SubjectGroups)
             {
-                <div class="subject-header">Subject: @subjectGroup.SubjectName</div>
+                <!-- === ADDED: This 'if' check hides the entire subject group if no students were tested === -->
+                @if (subjectGroup.SubjectTotalRow.All.TotalTested > 0)
+                {
+                    <div class="subject-header">Subject: @subjectGroup.SubjectName</div>
                 
-                <div class="table-responsive">
-                    <table class="meta-table">
-                        <thead class="sticky-top">
-                            <tr>
-                                <th rowspan="2" class="col-core">Grade</th>
-                                <th class="col-header-all">All Students</th>
-                                <th class="col-header-el">EL</th>
-                                <th class="col-header-swd">SWD</th>
-                                <th class="col-header-aa">AA</th>
-                                <th class="col-header-sed">SED</th>
-                                <th class="col-header-hisp">Hispanic</th>
-                            </tr>
-                            <tr>
-                                <th class="data-all">% Proficient (Proficient/Tested)</th>
-                                <th class="data-el">% Proficient (Proficient/Tested)</th>
-                                <th class="data-swd">% Proficient (Proficient/Tested)</th>
-                                <th class="data-aa">% Proficient (Proficient/Tested)</th>
-                                <th class="data-sed">% Proficient (Proficient/Tested)</th>
-                                <th class="data-hisp">% Proficient (Proficient/Tested)</th>
-                            </tr>
-                        </thead>
+                    <div class="table-responsive">
+                        <table class="meta-table">
+                            <thead class="sticky-top">
+                                <tr>
+                                    <th rowspan="2" class="col-core">Grade</th>
+                                    <th colspan="3" class="col-header-all">All Students</th>
+                                    <th colspan="3" class="col-header-el">EL</th>
+                                    <th colspan="3" class="col-header-swd">SWD</th>
+                                    <th colspan="3" class="col-header-aa">AA</th>
+                                    <th colspan="3" class="col-header-sed">SED</th>
+                                    <th colspan="3" class="col-header-hisp">Hispanic</th>
+                                    <th rowspan="2" class="col-header-participation">Participation</th>
+                                </tr>
+                                <tr>
+                                    <!-- All -->
+                                    <th class="data-all target-cell">% Target</th>
+                                    <th class="data-all prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-all diff-cell">%/# Diff</th>
+                                    <!-- EL -->
+                                    <th class="data-el target-cell">% Target</th>
+                                    <th class="data-el prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-el diff-cell">%/# Diff</th>
+                                    <!-- SWD -->
+                                    <th class="data-swd target-cell">% Target</th>
+                                    <th class="data-swd prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-swd diff-cell">%/# Diff</th>
+                                    <!-- AA -->
+                                    <th class="data-aa target-cell">% Target</th>
+                                    <th class="data-aa prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-aa diff-cell">%/# Diff</th>
+                                    <!-- SED -->
+                                    <th class="data-sed target-cell">% Target</th>
+                                    <th class="data-sed prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-sed diff-cell">%/# Diff</th>
+                                    <!-- HISP -->
+                                    <th class="data-hisp target-cell">% Target</th>
+                                    <th class="data-hisp prof-cell">% Proficient (Prof/Tested)</th>
+                                    <th class="data-hisp diff-cell">%/# Diff</th>
+                                </tr>
+                            </thead>
 
-                        <tbody>
-                            @foreach (var row in subjectGroup.BodyRows)
+                            <tbody>
+                                @foreach (var row in subjectGroup.BodyRows)
+                                {
+                                    var rowClass = row.Type switch {
+                                        ORSV2.Pages.DataReflection.RowType.K2Total => "sub-total-row",
+                                        ORSV2.Pages.DataReflection.RowType.G3PlusTotal => "sub-total-row",
+                                        _ => ""
+                                    };
+                                    
+                                    // === ADDED: Logic for inline editing ===
+                                    var isDataRow = row.Type == ORSV2.Pages.DataReflection.RowType.Grade;
+                                    var isDisabled = !isDataRow;
+                                    var gradeInt = isDataRow ? row.Grade : 0; // Use 0 for non-grade rows
+                                    
+                                    <tr class="@rowClass">
+                                        <td class="col-core">@row.RowLabel</td>
+                                        
+                                        <!-- === All Students (Manually Rendered) === -->
+                                        <td class="data-all target-cell" data-print-value="@(row.AllTarget.HasValue ? row.AllTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.AllTarget.HasValue ? row.AllTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="All" />
+                                        </td>
+                                        @RenderProfCell(row.All, "all")
+                                        @RenderDiffCell(row.All, row.AllTarget, "all")
+
+                                        <!-- === EL (Manually Rendered) === -->
+                                        <td class="data-el target-cell" data-print-value="@(row.ELTarget.HasValue ? row.ELTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.ELTarget.HasValue ? row.ELTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="EL" />
+                                        </td>
+                                        @RenderProfCell(row.EL, "el")
+                                        @RenderDiffCell(row.EL, row.ELTarget, "el")
+                                        
+                                        <!-- === SWD (Manually Rendered) === -->
+                                        <td class="data-swd target-cell" data-print-value="@(row.SWDTarget.HasValue ? row.SWDTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.SWDTarget.HasValue ? row.SWDTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="SWD" />
+                                        </td>
+                                        @RenderProfCell(row.SWD, "swd")
+                                        @RenderDiffCell(row.SWD, row.SWDTarget, "swd")
+
+                                        <!-- === AA (Manually Rendered) === -->
+                                        <td class="data-aa target-cell" data-print-value="@(row.AATarget.HasValue ? row.AATarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.AATarget.HasValue ? row.AATarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="AA" />
+                                        </td>
+                                        @RenderProfCell(row.AA, "aa")
+                                        @RenderDiffCell(row.AA, row.AATarget, "aa")
+
+                                        <!-- === SED (Manually Rendered) === -->
+                                        <td class="data-sed target-cell" data-print-value="@(row.SEDTarget.HasValue ? row.SEDTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.SEDTarget.HasValue ? row.SEDTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="SED" />
+                                        </td>
+                                        @RenderProfCell(row.SED, "sed")
+                                        @RenderDiffCell(row.SED, row.SEDTarget, "sed")
+
+                                        <!-- === HISP (Manually Rendered) === -->
+                                        <td class="data-hisp target-cell" data-print-value="@(row.HISPTarget.HasValue ? row.HISPTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(row.HISPTarget.HasValue ? row.HISPTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—"
+                                                   step="0.1" min="0" max="100"
+                                                   @(isDisabled ? "disabled" : "")
+                                                   data-grade="@gradeInt"
+                                                   data-subject="@subjectGroup.SubjectName"
+                                                   data-demo="HISP" />
+                                        </td>
+                                        @RenderProfCell(row.HISP, "hisp")
+                                        @RenderDiffCell(row.HISP, row.HISPTarget, "hisp")
+                                        
+                                        <!-- MOVED Participation Data Cell to end -->
+                                        @if (row.All.TotalEnrolled > 0)
+                                        {
+                                            <td class="data-participation part-cell">
+                                                <span class="proficiency-badge proficiency-neutral">@row.All.PctParticipation%</span>
+                                                <span class="combined-count">(@row.All.TotalTested / @row.All.TotalEnrolled)</span>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td class="data-participation part-cell">—</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+
+                            @if (!subjectGroup.SubjectTotalRow.IsEmpty)
                             {
-                                var rowClass = row.Type switch {
-                                    ORSV2.Pages.DataReflection.RowType.K2Total => "sub-total-row",
-                                    ORSV2.Pages.DataReflection.RowType.G3PlusTotal => "sub-total-row",
-                                    _ => ""
-                                };
-                                
-                                <tr class="@rowClass">
-                                    <td class="col-core">@row.RowLabel</td>
-                                    @{ RenderDemoCells(row.All, "all", row.AllTarget); }
-                                    @{ RenderDemoCells(row.EL, "el", row.ELTarget); }
-                                    @{ RenderDemoCells(row.SWD, "swd", row.SWDTarget); }
-                                    @{ RenderDemoCells(row.AA, "aa", row.AATarget); }
-                                    @{ RenderDemoCells(row.SED, "sed", row.SEDTarget); }
-                                    @{ RenderDemoCells(row.HISP, "hisp", row.HISPTarget); }
-                                </tr>
-                            }
-                        </tbody>
+                                <tfoot>
+                                    <tr class="grand-total-row">
+                                        <td class="col-core">@subjectGroup.SubjectTotalRow.RowLabel</td>
+                                        
+                                        <!-- === All Students (Total Row) === -->
+                                        <td class="data-all target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.All, "all")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.All, subjectGroup.SubjectTotalRow.AllTarget, "all")
 
-                        @if (!subjectGroup.SubjectTotalRow.IsEmpty)
-                        {
-                            <tfoot>
-                                <tr class="grand-total-row">
-                                    <td class="col-core">@subjectGroup.SubjectTotalRow.RowLabel</td>
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.All, "all", subjectGroup.SubjectTotalRow.AllTarget); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.EL, "el", subjectGroup.SubjectTotalRow.ELTarget); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SWD, "swd", subjectGroup.SubjectTotalRow.SWDTarget); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.AA, "aa", subjectGroup.SubjectTotalRow.AATarget); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.SED, "sed", subjectGroup.SubjectTotalRow.SEDTarget); }
-                                    @{ RenderDemoCells(subjectGroup.SubjectTotalRow.HISP, "hisp", subjectGroup.SubjectTotalRow.HISPTarget); }
-                                </tr>
-                            </tfoot>
-                        }
-                    </table>
-                </div>
+                                        <!-- === EL (Total Row) === -->
+                                        <td class="data-el target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.EL, "el")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.EL, subjectGroup.SubjectTotalRow.ELTarget, "el")
+                                        
+                                        <!-- === SWD (Total Row) === -->
+                                        <td class="data-swd target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.SWD, "swd")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.SWD, subjectGroup.SubjectTotalRow.SWDTarget, "swd")
+
+                                        <!-- === AA (Total Row) === -->
+                                        <td class="data-aa target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.AA, "aa")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.AA, subjectGroup.SubjectTotalRow.AATarget, "aa")
+
+                                        <!-- === SED (Total Row) === -->
+                                        <td class="data-sed target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.SED, "sed")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.SED, subjectGroup.SubjectTotalRow.SEDTarget, "sed")
+
+                                        <!-- === HISP (Total Row) === -->
+                                        <td class="data-hisp target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        @RenderProfCell(subjectGroup.SubjectTotalRow.HISP, "hisp")
+                                        @RenderDiffCell(subjectGroup.SubjectTotalRow.HISP, subjectGroup.SubjectTotalRow.HISPTarget, "hisp")
+
+                                        <!-- MOVED Participation Total Cell to end -->
+                                        @if (subjectGroup.SubjectTotalRow.All.TotalEnrolled > 0)
+                                        {
+                                            <td class="data-participation part-cell">
+                                                <span class="proficiency-badge proficiency-neutral">@subjectGroup.SubjectTotalRow.All.PctParticipation%</span>
+                                                <span class="combined-count">(@subjectGroup.SubjectTotalRow.All.TotalTested / @subjectGroup.SubjectTotalRow.All.TotalEnrolled)</span>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td class="data-participation part-cell">—</td>
+                                        }
+                                    </tr>
+                                </tfoot>
+                            }
+                        </table>
+                    </div>
+                } <!-- === ADDED: Closing brace for the 'if' check === -->
             }
         }
     }
@@ -708,3 +1036,169 @@
         </div>
     }
 </div>
+
+<!-- === ADDED: Toast Notification for Saving === -->
+<div id="toast-notification" class="toast-notification"></div>
+
+<!-- === ADDED: JavaScript for Inline Editing === -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Find the anti-forgery token on the page
+        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (!tokenInput) {
+            console.error('Anti-forgery token not found.');
+            return;
+        }
+        const antiForgeryToken = tokenInput.value;
+        
+        // Find the select elements
+        const schoolIdSelect = document.getElementById('SchoolId-select');
+        const schoolYearSelect = document.getElementById('SchoolYear-select');
+
+        // Add change event listeners to all inline inputs
+        const inputs = document.querySelectorAll('.inline-target-input');
+        inputs.forEach(input => {
+            input.addEventListener('change', function (e) {
+                // Get all the data attributes from the input
+                const grade = e.target.dataset.grade;
+                const subject = e.target.dataset.subject;
+                const demo = e.target.dataset.demo;
+                const targetPercent = e.target.value;
+                
+                // Get current SchoolId and SchoolYear from the dropdowns
+                const schoolId = schoolIdSelect ? schoolIdSelect.value : null;
+                const schoolYear = schoolYearSelect ? schoolYearSelect.value : null;
+
+                if (!grade || !subject || !demo) {
+                    console.error('Missing data attributes on input field.');
+                    showToast('Error: Missing data.', 'error');
+                    return;
+                }
+                
+                if (!schoolId || !schoolYear) {
+                    console.error('Missing SchoolId or SchoolYear.');
+                    showToast('Error: Missing School/Year.', 'error');
+                    return;
+                }
+
+                // Create FormData to send in the POST request
+                const formData = new FormData();
+                formData.append('__RequestVerificationToken', antiForgeryToken);
+                formData.append('grade', grade);
+                formData.append('subject', subject);
+                formData.append('demo', demo);
+                formData.append('targetPercent', targetPercent);
+                formData.append('schoolId', schoolId);
+                formData.append('schoolYear', schoolYear);
+
+                // Use fetch to send the data to the new handler
+                fetch('?handler=UpdateTargetInline', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Saved!');
+                        // === ADDED: Refresh the diff cell on success ===
+                        updateDiffCell(e.target);
+                    } else {
+                        showToast(data.message || 'Error saving.', 'error');
+                        // TODO: Optionally revert the input value on failure
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving target:', error);
+                    showToast('Error: Save failed.', 'error');
+                });
+            });
+        });
+
+        // === ADDED: New function to update the Diff cell ===
+        function updateDiffCell(inputElement) {
+            const newTargetVal = inputElement.value;
+            const targetCell = inputElement.closest('.target-cell');
+            if (!targetCell) return;
+
+            const profCell = targetCell.nextElementSibling;
+            if (!profCell) return;
+
+            const diffCell = profCell.nextElementSibling;
+            if (!diffCell) return;
+
+            let pctProficient = 0;
+            let totalTested = 0;
+
+            // 1. Get proficiency data from the prof-cell
+            const profBadge = profCell.querySelector('.proficiency-badge');
+            if (profBadge) {
+                pctProficient = parseFloat(profBadge.textContent.replace('%', '')) || 0;
+            }
+
+            const countSpan = profCell.querySelector('.combined-count');
+            if (countSpan) {
+                const parts = countSpan.textContent.replace(/[()]/g, '').split(' / ');
+                if (parts.length === 2) {
+                    totalTested = parseInt(parts[1], 10) || 0;
+                }
+            }
+
+            // 2. Handle empty/deleted target
+            if (newTargetVal === '' || isNaN(parseFloat(newTargetVal))) {
+                diffCell.innerHTML = '—';
+                diffCell.className = `${diffCell.classList[0]} diff-cell`; // Reset classes
+                targetCell.setAttribute('data-print-value', '—');
+                return;
+            }
+
+            const newTarget = parseFloat(newTargetVal);
+            targetCell.setAttribute('data-print-value', `${newTarget.toString()}%`);
+
+            // 3. Handle rows with no tested students
+            if (totalTested === 0) {
+                diffCell.innerHTML = '—';
+                diffCell.className = `${diffCell.classList[0]} diff-cell`; // Reset classes
+                return;
+            }
+
+            // 4. Calculate and render new diff
+            const pctDiff = newTarget - pctProficient;
+            let nDiff = 0;
+            if (pctDiff > 0) { // Only calculate 'N' gap if target is not met
+                nDiff = Math.ceil((totalTested * pctDiff) / 100);
+            }
+
+            let diffClass = 'diff-neutral';
+            if (pctDiff > 0) diffClass = 'diff-negative';
+            if (pctDiff < 0) diffClass = 'diff-positive';
+
+            // Re-render the cell's HTML
+            diffCell.className = `${diffCell.classList[0]} diff-cell ${diffClass}`;
+            diffCell.innerHTML = `${pctDiff.toFixed(1).replace('.0', '')}%<span class="combined-count">(${nDiff})</span>`;
+        }
+
+        // Helper function to show toast messages
+        let toastTimeout;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast-notification');
+            if (!toast) return;
+
+            toast.textContent = message;
+            toast.className = 'toast-notification'; // Reset classes
+            if (type === 'error') {
+                toast.classList.add('error');
+            }
+            toast.classList.add('show');
+
+            // Clear previous timeout if one exists
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+            }
+
+            // Set new timeout to hide the toast
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    });
+</script>
