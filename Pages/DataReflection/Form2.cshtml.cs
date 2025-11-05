@@ -367,6 +367,9 @@ namespace ORSV2.Pages.DataReflection
             using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
             {
+                // Safely get the TotalPassed value
+                var totalPassedObj = rdr["TotalPassed"];
+
                 Students.Add(new StudentVm(
                     LastName: rdr["LastName"]?.ToString() ?? "",
                     FirstName: rdr["FirstName"]?.ToString() ?? "",
@@ -374,7 +377,10 @@ namespace ORSV2.Pages.DataReflection
                     LanguageFluency: rdr["LanguageFluency"]?.ToString() ?? "",
                     SWD: rdr["SWD"] is bool b ? b :
                                     string.Equals(rdr["SWD"]?.ToString(), "true", StringComparison.OrdinalIgnoreCase),
-                    TotalPassed: Convert.ToInt32(rdr["TotalPassed"])
+                    
+                    // --- THIS IS THE FIX ---
+                    // Was: TotalPassed: Convert.ToInt32(rdr["TotalPassed"])
+                    TotalPassed: totalPassedObj == DBNull.Value ? 0 : Convert.ToInt32(totalPassedObj)
                 ));
             }
         }
