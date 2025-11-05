@@ -30,7 +30,8 @@
                 </div>
             </a>
         </div>
-
+    @if (Model.ShowAdvancedForms)
+        {
         <div class="col-12 col-md-6 col-lg-4">
             <a href="@Url.Page("/DataReflection/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
@@ -40,8 +41,7 @@
             </a>
         </div>
 
-        @if (Model.ShowAdvancedForms)
-        {
+        
             <div class="col-12 col-md-6 col-lg-4">
                     <a href="@Url.Page("/DataReflection/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                         <div class="orenda-card-body">

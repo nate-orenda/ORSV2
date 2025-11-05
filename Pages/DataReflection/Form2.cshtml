@@ -449,6 +449,18 @@ else
                 }
             };
 
+            // --- New variables for Excel export URL ---
+            const excelUrl = '@Url.Page("/DataReflection/Form2", "Excel")';
+            const queryParams = new URLSearchParams({
+                DistrictId: '@Model.DistrictId',
+                UnitCycle: '@Model.UnitCycle',
+                BatchId: '@Model.BatchId',
+                SchoolId: '@(Model.SchoolId?.ToString() ?? "")',
+                TeacherId: '@(Model.TeacherId?.ToString() ?? "")'
+            });
+            const finalExcelUrl = `${excelUrl}&${queryParams.toString()}`;
+            // --- End new variables ---
+
             var table = $('#quadrantTable').DataTable({
                 responsive: true,
                 pageLength: 100,
@@ -477,9 +489,19 @@ else
                 buttons: [
                     { 
                         text: '<i class="fas fa-print"></i> Print', 
-                        className: 'btn-export', 
+                        className: 'btn-export btn btn-primary', // Added Bootstrap class
                         action: () => enhancedPrint(table, dynamicTitle) 
+                    },
+                    // === THIS IS THE NEW BUTTON ===
+                    {
+                        text: '<i class="fas fa-file-excel"></i> Export to Excel',
+                        className: 'btn btn-outline-success ms-2', // Added Bootstrap class & margin
+                        action: function (e, dt, node, config) {
+                            // Navigate to the handler URL
+                            window.location.href = finalExcelUrl;
+                        }
                     }
+                    // === END OF NEW BUTTON ===
                 ],
                 language: { 
                     search: "", 
@@ -488,7 +510,6 @@ else
                     infoFiltered: '(filtered from _MAX_ total students)' 
                 }
             });
-
             $('.dataTables_filter input').before('<i class="fas fa-search" style="padding-right: 5px;"></i>');
         });
 
@@ -516,7 +537,7 @@ else
                 const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'Total Passed'];
                 let currentQuadrant = '';
                 let studentCount = 0;
-                const studentsPerPage = 25; // Adjust based on your page size needs
+                const studentsPerPage = 25; 
 
                 tableRows.forEach((row, index) => {
                     if (row.classList.contains('dtrg-start')) {
@@ -578,13 +599,12 @@ else
                         }
                     }
                 });
-
                 printHtml += '</table>';
 
                 const printStyles = `
                     <style>
                         @@page { 
-                            size: A4; 
+                            size: A4;
                             margin: 0.5in; 
                         }
                         body { 

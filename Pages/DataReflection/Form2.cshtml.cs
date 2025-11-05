@@ -6,6 +6,8 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using ORSV2.Models;
 using System.Security.Claims;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace ORSV2.Pages.DataReflection
 {
@@ -443,6 +445,218 @@ namespace ORSV2.Pages.DataReflection
             var v = Normalize(lf);
             // support: EL, L (local code), ELL, LEP, and the full text
             return v == "el" || v == "L" || v == "ell" || v == "lep" || v.Contains("englishlearner");
+        }
+
+        public async Task<IActionResult> OnGetExcelAsync()
+        {
+            InitializeUserDataScope(); // role + claims scoping
+
+            if (!DistrictId.HasValue || string.IsNullOrWhiteSpace(BatchId) || !Guid.TryParse(BatchId, out var bid))
+                return RedirectToPage();
+
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            await using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+
+            // --- 1. Re-run all data loading logic from OnGet ---
+            // This is necessary to load dropdowns, get the title, and load the student data.
+            
+            // Fetch dropdowns to get text values for the title
+            if (DistrictId.HasValue)
+                AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
+
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
+                AvailableBatches = await GetAssessmentsByUnitCycleAsync(conn, DistrictId.Value, UnitCycle!);
+            if (!string.IsNullOrEmpty(BatchId))
+            {
+                SelectedAssessmentName = AvailableBatches.FirstOrDefault(b => b.Value == BatchId)?.Text;
+            }
+
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId), 
+                    (IsSchoolAdmin || IsTeacher || User.IsInRole("Counselor")) ? UserSchoolIds : null);
+
+            if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+                AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId!), IsTeacher ? UserStaffId : null);
+
+            // Load the actual student data
+            await LoadStudents(conn, bid);
+            GenerateFlattenedData(); // Build the FlattenedStudents list
+
+            // Re-create the title
+            var titleParts = new List<string>();
+            if (!string.IsNullOrEmpty(SelectedAssessmentName))
+                titleParts.Add(SelectedAssessmentName);
+            var selectedSchool = AvailableSchools.FirstOrDefault(s => s.Value == SchoolId?.ToString());
+            titleParts.Add(selectedSchool != null && !string.IsNullOrEmpty(selectedSchool.Text) ? selectedSchool.Text : "All Schools");
+            var selectedTeacher = AvailableTeachers.FirstOrDefault(t => t.Value == TeacherId?.ToString());
+            titleParts.Add(selectedTeacher != null && !string.IsNullOrEmpty(selectedTeacher.Text) ? selectedTeacher.Text : "All Teachers");
+            
+            if (titleParts.Any())
+                FormattedTitle = string.Join(" - ", titleParts);
+
+            // --- 2. Build the Excel File ---
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Form 2");
+            int row = 1;
+
+            // --- Define Colors (from Form2.cshtml CSS) ---
+            // Group Headers (dtrg-start)
+            var challengeStartBg = XLColor.FromArgb(30, 64, 175); // #1e40af
+            var benchmarkStartBg = XLColor.FromArgb(22, 163, 74); // #16a34a
+            var strategicStartBg = XLColor.FromArgb(254, 196, 1);  // #FEC401
+            var intensiveStartBg = XLColor.FromArgb(220, 38, 38); // #dc2626
+            var startFontColor = XLColor.White;
+            var strategicStartFontColor = XLColor.Black;
+            // Group Footers (dtrg-end)
+            var challengeEndBg = XLColor.FromArgb(221, 214, 254); // #ddd6fe
+            var challengeEndBorder = XLColor.FromArgb(30, 64, 175); // #1e40af
+            var benchmarkEndBg = XLColor.FromArgb(209, 250, 229); // #d1fae5
+            var benchmarkEndBorder = XLColor.FromArgb(22, 163, 74); // #16a34a
+            var strategicEndBg = XLColor.FromArgb(254, 243, 199); // #fef3c7
+            var strategicEndBorder = XLColor.FromArgb(254, 196, 1);  // #FEC401
+            var intensiveEndBg = XLColor.FromArgb(254, 226, 226); // #fee2e2
+            var intensiveEndBorder = XLColor.FromArgb(220, 38, 38); // #dc2626
+            // Cell Highlights
+            var hiAaBg = XLColor.FromArgb(239, 246, 255); // var(--quad-challenge-bg)
+            var hiElBg = XLColor.FromArgb(251, 207, 232); // #fbcfe8
+            var hiSwdBg = XLColor.FromArgb(255, 251, 235); // var(--quad-strategic-bg)
+            // Table Header
+            var tableHeaderBg = XLColor.FromArgb(248, 249, 250); // #f8f9fa
+            var tableBorder = XLColor.FromArgb(222, 226, 230); // #dee2e6
+
+            // --- 3. Add Main Title ---
+            var titleCell = ws.Cell(row, 1);
+            titleCell.Value = FormattedTitle;
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontSize = 14;
+            titleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+            ws.Range(row, 1, row, 6).Merge();
+            row += 2;
+
+            // --- 4. Add Table Headers ---
+            int headerRow = row;
+            var headers = new[] { "Last Name", "First Name", "Race/Ethnicity", "Language Fluency", "SWD", "Total Passed" };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(headerRow, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = tableHeaderBg;
+                cell.Style.Border.SetBottomBorder(XLBorderStyleValues.Medium);
+                cell.Style.Border.BottomBorderColor = tableBorder;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            row++;
+
+            // --- 5. Loop through Quadrants and Add Rows ---
+            var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" };
+            var quadrantInfo = new Dictionary<string, string>
+            {
+                { "Challenge", "4-5 standards passed" },
+                { "Benchmark", "3 standards passed" },
+                { "Strategic", "2 standards passed" },
+                { "Intensive", "0-1 standards passed" }
+            };
+
+            var quadrantStudentCounts = Students.GroupBy(s => s.Quadrant)
+                                                .ToDictionary(g => g.Key, g => g.Count());
+
+            foreach (var quadrantName in quadrantOrder)
+            {
+                var studentsInQuad = Students
+                    .Where(s => s.Quadrant.Equals(quadrantName, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
+                    .ToList();
+                
+                var totalRowForQuad = FlattenedStudents.FirstOrDefault(s => s.QuadrantName == quadrantName && s.IsQuadrantTotal);
+
+                if (!studentsInQuad.Any() && totalRowForQuad == null)
+                    continue; // Skip empty quadrants
+
+                // --- 5a. Add Quadrant Header Row (dtrg-start) ---
+                int studentCount = quadrantStudentCounts.GetValueOrDefault(quadrantName, 0);
+                string standards = quadrantInfo[quadrantName];
+                string headerText = $"{quadrantName} ({studentCount} students) - {standards}";
+                
+                var headerCell = ws.Cell(row, 1);
+                headerCell.Value = headerText;
+                ws.Range(row, 1, row, 6).Merge();
+                headerCell.Style.Font.Bold = true;
+                headerCell.Style.Font.FontSize = 11;
+
+                // Apply specific header styling
+                if (quadrantName == "Challenge") { headerCell.Style.Fill.BackgroundColor = challengeStartBg; headerCell.Style.Font.FontColor = startFontColor; }
+                else if (quadrantName == "Benchmark") { headerCell.Style.Fill.BackgroundColor = benchmarkStartBg; headerCell.Style.Font.FontColor = startFontColor; }
+                else if (quadrantName == "Strategic") { headerCell.Style.Fill.BackgroundColor = strategicStartBg; headerCell.Style.Font.FontColor = strategicStartFontColor; }
+                else if (quadrantName == "Intensive") { headerCell.Style.Fill.BackgroundColor = intensiveStartBg; headerCell.Style.Font.FontColor = startFontColor; }
+                row++;
+
+                // --- 5b. Add Student Rows ---
+                foreach (var student in studentsInQuad)
+                {
+                    ws.Cell(row, 1).Value = student.LastName;
+                    ws.Cell(row, 2).Value = student.FirstName;
+                    
+                    var raceCell = ws.Cell(row, 3);
+                    raceCell.Value = student.RaceEthnicity;
+                    if (student.IsAA) raceCell.Style.Fill.BackgroundColor = hiAaBg;
+
+                    var elCell = ws.Cell(row, 4);
+                    elCell.Value = student.LanguageFluency;
+                    if (student.IsEL) elCell.Style.Fill.BackgroundColor = hiElBg;
+
+                    var swdCell = ws.Cell(row, 5);
+                    swdCell.Value = student.SWDDisplay;
+                    if (student.IsSWD) swdCell.Style.Fill.BackgroundColor = hiSwdBg;
+
+                    ws.Cell(row, 6).Value = student.TotalPassed;
+
+                    // Center student data
+                    ws.Range(row, 3, row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    row++;
+                }
+
+                // --- 5c. Add Quadrant Footer Row (dtrg-end) ---
+                if (totalRowForQuad != null)
+                {
+                    var footerCell = ws.Cell(row, 1);
+                    footerCell.Value = $"Totals: {totalRowForQuad.TotalsSummary}";
+                    ws.Range(row, 1, row, 6).Merge();
+                    footerCell.Style.Font.Bold = true;
+                    footerCell.Style.Font.Italic = true;
+                    footerCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+                    // Apply specific footer styling
+                    if (quadrantName == "Challenge") { footerCell.Style.Fill.BackgroundColor = challengeEndBg; footerCell.Style.Border.SetTopBorder(XLBorderStyleValues.Medium); footerCell.Style.Border.TopBorderColor = challengeEndBorder; }
+                    else if (quadrantName == "Benchmark") { footerCell.Style.Fill.BackgroundColor = benchmarkEndBg; footerCell.Style.Border.SetTopBorder(XLBorderStyleValues.Medium); footerCell.Style.Border.TopBorderColor = benchmarkEndBorder; }
+                    else if (quadrantName == "Strategic") { footerCell.Style.Fill.BackgroundColor = strategicEndBg; footerCell.Style.Border.SetTopBorder(XLBorderStyleValues.Medium); footerCell.Style.Border.TopBorderColor = strategicEndBorder; }
+                    else if (quadrantName == "Intensive") { footerCell.Style.Fill.BackgroundColor = intensiveEndBg; footerCell.Style.Border.SetTopBorder(XLBorderStyleValues.Medium); footerCell.Style.Border.TopBorderColor = intensiveEndBorder; }
+                    row++;
+                }
+            }
+
+            // --- 6. Final Formatting & Return ---
+            ws.SheetView.FreezeRows(headerRow);
+            ws.Column(1).Width = 24; // Last Name
+            ws.Column(2).Width = 24; // First Name
+            ws.Column(3).Width = 20; // Race
+            ws.Column(4).Width = 20; // Language
+            ws.Column(5).Width = 10; // SWD
+            ws.Column(6).Width = 14; // Total Passed
+            
+            ws.Rows().AdjustToContents();
+            ws.Row(headerRow).Height = 25;
+
+            // Create a safe filename
+            var safeTitle = FormattedTitle.Replace(" - ", "_").Replace(" ", "_");
+            var fname = $"Form2_{safeTitle}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            await using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fname);
         }
     }
 }

@@ -416,17 +416,33 @@
     {
         <div class="card shadow-sm mt-4">
             <div class="card-body">
-                <!-- Print Button -->
-                <div class="print-button mb-3">
+                <!-- Print / Export Buttons -->
+                <div class="d-flex gap-2 align-items-center mb-3">
                     <button type="button" class="btn btn-primary" onclick="window.print()">
                         <i class="fas fa-print me-2"></i>Print Report
                     </button>
-                </div>
-                <!-- Print Title (hidden on screen, visible in print) -->
-                <div class="print-title">
-                    @(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - @(Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString())?.Text ?? "All Teachers") - Form 1
+
+                    <a class="btn btn-outline-success"
+                    asp-page-handler="Excel"
+                    asp-route-DistrictId="@Model.DistrictId"
+                    asp-route-UnitCycle="@Model.UnitCycle"
+                    asp-route-BatchId="@Model.BatchId"
+                    asp-route-SchoolId="@Model.SchoolId"
+                    asp-route-TeacherId="@Model.TeacherId">
+                        <i class="fas fa-file-excel me-2"></i>Export to Excel
+                    </a>
                 </div>
 
+                <!-- Print Title (hidden on screen, visible in print) -->
+                <div class="print-title">
+                    @(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment")
+                    -
+                    @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools")
+                    -
+                    @(Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString())?.Text ?? "All Teachers")
+                    -
+                    Form 1
+                </div>
                 <!-- Test Name Header for screen -->
                 <div class="mb-2">
                     <h5 class="mb-0 text-center">@(Model.AvailableBatches.FirstOrDefault(b => b.Value == Model.BatchId)?.Text ?? "Assessment") - @(Model.AvailableSchools.FirstOrDefault(s => s.Value == Model.SchoolId?.ToString())?.Text ?? "All Schools") - @(Model.AvailableTeachers.FirstOrDefault(t => t.Value == Model.TeacherId?.ToString())?.Text ?? "All Teachers") - Form 1</h5>

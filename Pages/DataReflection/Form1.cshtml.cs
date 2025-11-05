@@ -8,6 +8,9 @@ using System.Linq;
 using System;
 using System.Security.Claims;
 using ORSV2.Models;
+using ClosedXML.Excel;
+using System.IO;
+using System.Linq;
 
 namespace ORSV2.Pages.DataReflection
 {
@@ -392,5 +395,499 @@ namespace ORSV2.Pages.DataReflection
             var res = await cmd.ExecuteScalarAsync();
             return res?.ToString();
         }
+
+        // ========================================================================
+        // ===            *** CORRECTED EXPORT METHOD START *** ===
+        // ========================================================================
+
+        public async Task<IActionResult> OnGetExcelAsync()
+        {
+            InitializeUserDataScope();
+
+            if (!DistrictId.HasValue || string.IsNullOrWhiteSpace(BatchId) || !Guid.TryParse(BatchId, out var bid))
+                return RedirectToPage();
+
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            await using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+
+            // --- Populating dropdowns is required to get the text for the title ---
+            if (DistrictId.HasValue)
+            {
+                AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
+            }
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
+            {
+                AvailableBatches = await GetAssessmentsByUnitCycleAsync(conn, DistrictId.Value, UnitCycle);
+            }
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+            {
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId), 
+                    (IsSchoolAdmin || IsTeacher || User.IsInRole("Counselor")) ? UserSchoolIds : null);
+            }
+            if (DistrictId.HasValue && SchoolId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+            {
+                AvailableTeachers = await GetTeachersByAssessmentAsync(conn, DistrictId.Value, SchoolId.Value, Guid.Parse(BatchId), IsTeacher ? UserStaffId : null);
+            }
+            
+            // --- Load the actual report data ---
+            await LoadMatrixData(conn, bid);
+            BuildSummaries();
+
+            // --- Get the dynamic title strings, matching the CSHTML file ---
+            var batchForTitle = AvailableBatches.FirstOrDefault(b => b.Value == BatchId);
+            var schoolForTitle = AvailableSchools.FirstOrDefault(s => s.Value == SchoolId?.ToString());
+            var teacherForTitle = AvailableTeachers.FirstOrDefault(t => t.Value == TeacherId?.ToString());
+            
+            var dynamicTitle = batchForTitle != null 
+                ? $"{batchForTitle.Text} - {schoolForTitle?.Text ?? "All Schools"} - {teacherForTitle?.Text ?? "All Teachers"} - Form 1"
+                : "DRS Form 1";
+
+            // --- Group rows for looping, matching the CSHTML file ---
+            var groupedRows = Rows.GroupBy(r => r.TeacherName).Select(g => new 
+            {
+                TeacherName = g.Key,
+                Periods = g.GroupBy(p => p.Period).Select(pGroup => new 
+                {
+                    Period = pGroup.Key,
+                    Students = pGroup.ToList()
+                }).OrderBy(p => p.Period)
+            }).OrderBy(t => t.TeacherName);
+
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Form 1");
+            int row = 1;
+            int colCount = Columns.Count;
+            // Student Name, Local ID, [cols], Total Passed
+            int totalDataCols = colCount + 3;
+
+            // --- Define Styles ---
+            var paletteHeaderBg = XLColor.FromArgb(243, 244, 246); // f3f4f6
+            var paletteBorder = XLColor.FromArgb(229, 231, 235); // e5e7eb
+            var paletteTeacherBg = XLColor.FromArgb(233, 236, 239); // e9ecef
+            var palettePeriodBg = XLColor.FromArgb(248, 249, 250); // f8f9fa
+            var paletteSummaryBg = XLColor.FromArgb(248, 249, 250); // f8f9fa
+            var paletteGrandBg = XLColor.FromArgb(241, 245, 249); // f1f5f9
+            var passBg = XLColor.FromArgb(230, 250, 230);
+            var failBg = XLColor.FromArgb(250, 230, 230);
+            var nullBg = XLColor.FromArgb(248, 249, 250);
+            
+            // Quadrant Styles
+            var quadChallengeBg = XLColor.FromArgb(239, 246, 255);
+            var quadChallengeFg = XLColor.FromArgb(30, 64, 175);
+            var quadBenchmarkBg = XLColor.FromArgb(236, 253, 245);
+            var quadBenchmarkFg = XLColor.FromArgb(6, 95, 70);
+            var quadStrategicBg = XLColor.FromArgb(255, 251, 235);
+            var quadStrategicFg = XLColor.FromArgb(146, 64, 14);
+            var quadIntensiveBg = XLColor.FromArgb(254, 242, 242);
+            var quadIntensiveFg = XLColor.FromArgb(153, 27, 27);
+            var quadTotalBg = XLColor.FromArgb(255, 251, 235);
+            var quadTotalBorder = XLColor.FromArgb(245, 158, 11);
+
+
+            // --- 1. Report Title ---
+            var titleCell = ws.Cell(row, 1);
+            titleCell.Value = dynamicTitle;
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontSize = 14;
+            titleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Range(row, 1, row, totalDataCols).Merge();
+            row += 2;
+
+            // --- 2. Table Header ---
+            int headerRow = row;
+            int c = 1;
+            ws.Cell(row, c++).Value = "Student";
+            ws.Cell(row, c++).Value = "Local ID";
+
+            foreach (var colDef in Columns)
+            {
+                var cell = ws.Cell(row, c++);
+                cell.Value = $"{colDef.Code}\n{colDef.ShortStatement}";
+                cell.Style.Alignment.WrapText = true;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            ws.Cell(row, c).Value = "Total Passed";
+
+            var headerRange = ws.Range(headerRow, 1, headerRow, totalDataCols);
+            headerRange.Style.Fill.BackgroundColor = paletteHeaderBg;
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            headerRange.Style.Border.OutsideBorderColor = paletteBorder;
+            headerRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+            headerRange.Style.Border.InsideBorderColor = paletteBorder;
+            row++;
+
+            // --- 3. Main Data Body (Grouped) ---
+            const decimal PASS_CUTOFF = 4m;
+
+            foreach (var teacherGroup in groupedRows)
+            {
+                // --- Teacher Header ---
+                var teacherCell = ws.Cell(row, 1);
+                teacherCell.Value = $"Teacher: {teacherGroup.TeacherName}";
+                teacherCell.Style.Font.Bold = true;
+                teacherCell.Style.Fill.BackgroundColor = paletteTeacherBg;
+                teacherCell.Style.Border.SetTopBorder(XLBorderStyleValues.Thin);
+                teacherCell.Style.Border.TopBorderColor = paletteBorder;
+                ws.Range(row, 1, row, totalDataCols).Merge();
+                row++;
+                
+                foreach (var periodGroup in teacherGroup.Periods)
+                {
+                    // --- Period Header ---
+                    var periodCell = ws.Cell(row, 1);
+                    periodCell.Value = $"Period: {periodGroup.Period}";
+                    periodCell.Style.Font.Bold = true;
+                    periodCell.Style.Fill.BackgroundColor = palettePeriodBg;
+                    periodCell.Style.Border.SetTopBorder(XLBorderStyleValues.Thin);
+                    periodCell.Style.Border.TopBorderColor = paletteBorder;
+                    ws.Range(row, 1, row, totalDataCols).Merge();
+                    row++;
+
+                    // --- Student Rows ---
+                    foreach (var r in periodGroup.Students)
+                    {
+                        c = 1;
+                        ws.Cell(row, c++).Value = r.StudentName;
+                        ws.Cell(row, c++).Value = r.LocalId;
+
+                        for (int i = 0; i < colCount; i++)
+                        {
+                            var p = r.Points[i];
+                            var cell = ws.Cell(row, c++);
+                            if (p.HasValue)
+                            {
+                                cell.Value = p.Value;
+                                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                cell.Style.Fill.BackgroundColor = p.Value >= PASS_CUTOFF ? passBg : failBg;
+                            }
+                            else
+                            {
+                                cell.Value = "—";
+                                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                cell.Style.Fill.BackgroundColor = nullBg;
+                            }
+                        }
+
+                        var totalCell = ws.Cell(row, c);
+                        totalCell.Value = r.TotalPassed;
+                        totalCell.Style.Font.Bold = true;
+                        totalCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        row++;
+                    }
+
+                    // --- Group Summary Rows ---
+                    var gs = GroupSummaries.FirstOrDefault(
+                        x => x.Key.TeacherName == teacherGroup.TeacherName && x.Key.Period == periodGroup.Period
+                    );
+                    if (gs != null)
+                    {
+                        // "Passed" Row
+                        c = 1;
+                        var passedCell = ws.Cell(row, c);
+                        passedCell.Value = "Passed";
+                        passedCell.Style.Font.Bold = true; 
+                        ws.Range(row, c, row, c + 1).Merge();
+                        c += 2;
+
+                        for (int i = 0; i < colCount; i++)
+                        {
+                            var num = gs.PassedPerStd[i];
+                            var den = Math.Max(1, gs.DenomPerStd[i]);
+                            var frac = (double)num / den;
+                            var cell = ws.Cell(row, c++);
+                            cell.Value = $"{num} ({frac:P2})";
+                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        }
+                        
+                        var totalNum = gs.PassedByTotal;
+                        var totalDen = Math.Max(1, gs.PassedByTotal + gs.NotPassedByTotal);
+                        var totalFrac = (double)totalNum / totalDen;
+                        var totalPassedCell = ws.Cell(row, c);
+                        totalPassedCell.Value = $"{totalNum} ({totalFrac:P2})";
+                        totalPassedCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        totalPassedCell.Style.Font.Bold = true; 
+                        
+                        ws.Range(row, 1, row, totalDataCols).Style.Fill.BackgroundColor = paletteSummaryBg;
+                        ws.Range(row, 1, row, totalDataCols).Style.Border.SetTopBorder(XLBorderStyleValues.Medium);
+                        ws.Range(row, 1, row, totalDataCols).Style.Border.TopBorderColor = paletteBorder;
+                        row++;
+
+                        // "Not Passed" Row
+                        c = 1;
+                        var notPassedCell = ws.Cell(row, c);
+                        notPassedCell.Value = "Not Passed";
+                        notPassedCell.Style.Font.Bold = true;
+                        ws.Range(row, c, row, c + 1).Merge();
+                        c += 2;
+
+                        for (int i = 0; i < colCount; i++)
+                        {
+                            var num = gs.NotPassedPerStd[i];
+                            var den = Math.Max(1, gs.DenomPerStd[i]);
+                            var frac = (double)num / den;
+                            var cell = ws.Cell(row, c++);
+                            cell.Value = $"{num} ({frac:P2})";
+                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        }
+
+                        var totalNumNp = gs.NotPassedByTotal;
+                        var totalFracNp = (double)totalNumNp / totalDen;
+                        var totalNotPassedCell = ws.Cell(row, c);
+                        totalNotPassedCell.Value = $"{totalNumNp} ({totalFracNp:P2})";
+                        totalNotPassedCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        totalNotPassedCell.Style.Font.Bold = false;
+                        
+                        ws.Range(row, 1, row, totalDataCols).Style.Fill.BackgroundColor = paletteSummaryBg;
+                        row++;
+                    }
+                }
+            }
+
+            // --- 4. Grand Totals ---
+            if (GrandTotals != null)
+            {
+                // "Grand Total — Passed" Row
+                c = 1;
+                var grandPassedCell = ws.Cell(row, c);
+                grandPassedCell.Value = "Grand Total — Passed";
+                ws.Range(row, c, row, c + 1).Merge();
+                c += 2;
+
+                for (int i = 0; i < colCount; i++)
+                {
+                    var num = GrandTotals.PassedPerStd[i];
+                    var den = Math.Max(1, GrandTotals.DenomPerStd[i]);
+                    var frac = (double)num / den;
+                    var cell = ws.Cell(row, c++);
+                    cell.Value = $"{num} ({frac:P2})";
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                
+                var totalNum = GrandTotals.PassedByTotal;
+                var totalDen = Math.Max(1, GrandTotals.PassedByTotal + GrandTotals.NotPassedByTotal);
+                var totalFrac = (double)totalNum / totalDen;
+                var totalPassedCell = ws.Cell(row, c);
+                totalPassedCell.Value = $"{totalNum} ({totalFrac:P2})";
+                totalPassedCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                var grandPassedRange = ws.Range(row, 1, row, totalDataCols);
+                grandPassedRange.Style.Fill.BackgroundColor = paletteGrandBg;
+                grandPassedRange.Style.Font.Bold = true;
+                grandPassedRange.Style.Border.SetTopBorder(XLBorderStyleValues.Medium);
+                grandPassedRange.Style.Border.TopBorderColor = paletteBorder;
+                row++;
+
+                // "Grand Total — Not Passed" Row
+                c = 1;
+                var grandNotPassedCell = ws.Cell(row, c);
+                grandNotPassedCell.Value = "Grand Total — Not Passed";
+                ws.Range(row, c, row, c + 1).Merge();
+                c += 2;
+
+                for (int i = 0; i < colCount; i++)
+                {
+                    var num = GrandTotals.NotPassedPerStd[i];
+                    var den = Math.Max(1, GrandTotals.DenomPerStd[i]);
+                    var frac = (double)num / den;
+                    var cell = ws.Cell(row, c++);
+                    cell.Value = $"{num} ({frac:P2})";
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+
+                var totalNumNp = GrandTotals.NotPassedByTotal;
+                var totalFracNp = (double)totalNumNp / totalDen;
+                var totalNotPassedCell = ws.Cell(row, c);
+                totalNotPassedCell.Value = $"{totalNumNp} ({totalFracNp:P2})";
+                totalNotPassedCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                
+                var grandNotPassedRange = ws.Range(row, 1, row, totalDataCols);
+                grandNotPassedRange.Style.Fill.BackgroundColor = paletteGrandBg;
+                grandNotPassedRange.Style.Font.Bold = true;
+                row++;
+            }
+            
+            // Auto-adjust rows *before* the new quadrant section
+            ws.Rows(headerRow + 1, row - 1).AdjustToContents();
+
+            // --- 5. Quadrants ---
+            if (Quadrants != null)
+            {
+                row++; // Add a space
+                var qt = Quadrants;
+                int span = Math.Max(1, totalDataCols / 4);
+                int remainder = Math.Max(0, totalDataCols - (span * 4));
+                int colIdx = 1;
+
+                // *** THIS IS THE NEW LOGIC ***
+                
+                var quadTitleRow = row;
+                var quadPercentRow = row + 1;
+                var quadCountRow = row + 2;
+
+                // --- Quadrant Title Row ---
+                var qTitle1 = ws.Cell(quadTitleRow, colIdx);
+                qTitle1.Value = "Challenge";
+                qTitle1.Style.Fill.BackgroundColor = quadChallengeBg;
+                qTitle1.Style.Font.FontColor = quadChallengeFg;
+                ws.Range(quadTitleRow, colIdx, quadTitleRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qTitle2 = ws.Cell(quadTitleRow, colIdx);
+                qTitle2.Value = "Benchmark";
+                qTitle2.Style.Fill.BackgroundColor = quadBenchmarkBg;
+                qTitle2.Style.Font.FontColor = quadBenchmarkFg;
+                ws.Range(quadTitleRow, colIdx, quadTitleRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qTitle3 = ws.Cell(quadTitleRow, colIdx);
+                qTitle3.Value = "Strategic";
+                qTitle3.Style.Fill.BackgroundColor = quadStrategicBg;
+                qTitle3.Style.Font.FontColor = quadStrategicFg;
+                ws.Range(quadTitleRow, colIdx, quadTitleRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qTitle4 = ws.Cell(quadTitleRow, colIdx);
+                qTitle4.Value = "Intensive";
+                qTitle4.Style.Fill.BackgroundColor = quadIntensiveBg;
+                qTitle4.Style.Font.FontColor = quadIntensiveFg;
+                ws.Range(quadTitleRow, colIdx, quadTitleRow, totalDataCols).Merge();
+
+                var titleRange = ws.Range(quadTitleRow, 1, quadTitleRow, totalDataCols);
+                titleRange.Style.Font.Bold = true;
+                titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                titleRange.Style.Border.SetTopBorder(XLBorderStyleValues.Thick);
+                titleRange.Style.Border.TopBorderColor = XLColor.FromHtml("#fdba74");
+
+                // --- Quadrant Percent Row ---
+                colIdx = 1;
+                var qPct1 = ws.Cell(quadPercentRow, colIdx);
+                qPct1.Value = (double)qt.Challenge / Math.Max(1, qt.TotalTested);
+                qPct1.Style.NumberFormat.Format = "0.00%";
+                qPct1.Style.Fill.BackgroundColor = quadChallengeBg;
+                qPct1.Style.Font.FontColor = quadChallengeFg;
+                ws.Range(quadPercentRow, colIdx, quadPercentRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qPct2 = ws.Cell(quadPercentRow, colIdx);
+                qPct2.Value = (double)qt.Benchmark / Math.Max(1, qt.TotalTested);
+                qPct2.Style.NumberFormat.Format = "0.00%";
+                qPct2.Style.Fill.BackgroundColor = quadBenchmarkBg;
+                qPct2.Style.Font.FontColor = quadBenchmarkFg;
+                ws.Range(quadPercentRow, colIdx, quadPercentRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qPct3 = ws.Cell(quadPercentRow, colIdx);
+                qPct3.Value = (double)qt.Strategic / Math.Max(1, qt.TotalTested);
+                qPct3.Style.NumberFormat.Format = "0.00%";
+                qPct3.Style.Fill.BackgroundColor = quadStrategicBg;
+                qPct3.Style.Font.FontColor = quadStrategicFg;
+                ws.Range(quadPercentRow, colIdx, quadPercentRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qPct4 = ws.Cell(quadPercentRow, colIdx);
+                qPct4.Value = (double)qt.Intensive / Math.Max(1, qt.TotalTested);
+                qPct4.Style.NumberFormat.Format = "0.00%";
+                qPct4.Style.Fill.BackgroundColor = quadIntensiveBg;
+                qPct4.Style.Font.FontColor = quadIntensiveFg;
+                ws.Range(quadPercentRow, colIdx, quadPercentRow, totalDataCols).Merge();
+                
+                var percentRange = ws.Range(quadPercentRow, 1, quadPercentRow, totalDataCols);
+                percentRange.Style.Font.Bold = true;
+                percentRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // --- Quadrant Count Row ---
+                colIdx = 1;
+                var qCnt1 = ws.Cell(quadCountRow, colIdx);
+                qCnt1.Value = $"{qt.Challenge} students";
+                qCnt1.Style.Fill.BackgroundColor = quadChallengeBg;
+                qCnt1.Style.Font.FontColor = quadChallengeFg;
+                ws.Range(quadCountRow, colIdx, quadCountRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qCnt2 = ws.Cell(quadCountRow, colIdx);
+                qCnt2.Value = $"{qt.Benchmark} students";
+                qCnt2.Style.Fill.BackgroundColor = quadBenchmarkBg;
+                qCnt2.Style.Font.FontColor = quadBenchmarkFg;
+                ws.Range(quadCountRow, colIdx, quadCountRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qCnt3 = ws.Cell(quadCountRow, colIdx);
+                qCnt3.Value = $"{qt.Strategic} students";
+                qCnt3.Style.Fill.BackgroundColor = quadStrategicBg;
+                qCnt3.Style.Font.FontColor = quadStrategicFg;
+                ws.Range(quadCountRow, colIdx, quadCountRow, colIdx + span - 1).Merge();
+                colIdx += span;
+
+                var qCnt4 = ws.Cell(quadCountRow, colIdx);
+                qCnt4.Value = $"{qt.Intensive} students";
+                qCnt4.Style.Fill.BackgroundColor = quadIntensiveBg;
+                qCnt4.Style.Font.FontColor = quadIntensiveFg;
+                ws.Range(quadCountRow, colIdx, quadCountRow, totalDataCols).Merge();
+
+                var countRange = ws.Range(quadCountRow, 1, quadCountRow, totalDataCols);
+                countRange.Style.Font.Bold = false;
+                countRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // Adjust row height for all three new rows
+                ws.Row(quadTitleRow).AdjustToContents();
+                ws.Row(quadPercentRow).AdjustToContents();
+                ws.Row(quadCountRow).AdjustToContents();
+                
+                // Update the main row counter
+                row = quadCountRow + 1;
+                
+                // --- Quadrant Total Row ---
+                var totalRowCell = ws.Cell(row, 1);
+                totalRowCell.Value = $"Total Tested: {qt.TotalTested}";
+                totalRowCell.Style.Font.Bold = true;
+                totalRowCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                totalRowCell.Style.Fill.BackgroundColor = quadTotalBg;
+                totalRowCell.Style.Border.SetTopBorder(XLBorderStyleValues.Dashed);
+                totalRowCell.Style.Border.TopBorderColor = quadTotalBorder;
+                ws.Range(row, 1, row, totalDataCols).Merge();
+                row++;
+            }
+
+            // --- 6. Footer Note ---
+            var footerCell = ws.Cell(row, 1);
+            footerCell.Value = "PASS cutoff = score ≥ 4 (per standard). Overall Proficiency = student passed ≥ 3 standards.";
+            footerCell.Style.Font.Italic = true;
+            footerCell.Style.Font.FontSize = 9;
+            ws.Range(row, 1, row, totalDataCols).Merge();
+            row++;
+            
+            // --- 7. Final Formatting & Return ---
+            ws.SheetView.FreezeRows(headerRow);
+            ws.Column(1).Width = 28; // Student
+            ws.Column(2).Width = 14; // Local ID
+            for (int ci = 3; ci < 3 + colCount; ci++) ws.Column(ci).Width = 16;
+            ws.Column(3 + colCount).Width = 14; // Total Passed
+            
+            ws.Row(headerRow).Height = 30; // Ensure header is tall enough
+
+            // Create a safe filename and use the dynamic title
+            var safeTitle = dynamicTitle
+                .Replace(":", "-")
+                .Replace("/", "-")
+                .Replace("?", "")
+                .Replace("*", "");
+
+            var fname = $"{safeTitle}.xlsx";
+
+            await using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fname);
+        }
+
+        // ========================================================================
+        // ===            *** CORRECTED EXPORT METHOD END *** ===
+        // ========================================================================
     }
 }

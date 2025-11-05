@@ -7,6 +7,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Security.Claims;
 using ORSV2.Models;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace ORSV2.Pages.DataReflection
 {
@@ -342,5 +344,237 @@ namespace ORSV2.Pages.DataReflection
         }
 
         public static string Pct(int num, int den) => den <= 0 ? "—" : Math.Round((decimal)num * 100m / den).ToString("0") + "%";
+
+        // ========================================================================
+        // ===            *** NEW EXPORT METHOD START *** ===
+        // ========================================================================
+
+        public async Task<IActionResult> OnGetExcelAsync()
+        {
+            InitializeUserDataScope();
+
+            if (!DistrictId.HasValue || string.IsNullOrWhiteSpace(BatchId) || !SchoolId.HasValue || !Guid.TryParse(BatchId, out var bid))
+                return RedirectToPage();
+
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            await using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+
+            // --- 1. Re-run all data loading logic from OnGet ---
+            if (DistrictId.HasValue)
+                AvailableUnitCycles = await GetUnitCyclesByDistrictAsync(conn, DistrictId.Value);
+
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(UnitCycle))
+                AvailableBatches = await GetAssessmentsByUnitCycleAsync(conn, DistrictId.Value, UnitCycle);
+
+            if (DistrictId.HasValue && !string.IsNullOrWhiteSpace(BatchId))
+                AvailableSchools = await GetSchoolsByAssessmentAsync(conn, DistrictId.Value, Guid.Parse(BatchId),
+                    (IsSchoolAdmin || IsTeacher || User.IsInRole("Counselor")) ? UserSchoolIds : null);
+
+            // Load the actual data
+            await LoadMatrixData(conn, bid);
+            BuildGroupSummaries(); // Builds GroupSummaries and GrandTotals
+
+            // --- 2. Get Title String (matches CSHTML) ---
+            var batchForTitle = AvailableBatches.FirstOrDefault(b => b.Value == BatchId);
+            var schoolForTitle = AvailableSchools.FirstOrDefault(s => s.Value == SchoolId?.ToString());
+            var dynamicTitle = batchForTitle != null
+                ? $"{batchForTitle.Text} - {schoolForTitle?.Text ?? "All Schools"} - Form 3"
+                : "DRS – Form 3";
+
+            // --- 3. Build the Excel File ---
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Form 3");
+            int row = 1;
+
+            // --- Define Colors ---
+            var evenBg = XLColor.FromArgb(241, 243, 244); // #f1f3f4
+            var oddBg = XLColor.White;
+            var headerBg = XLColor.FromArgb(248, 249, 250); // #f8f9fa (table-light)
+            var border = XLColor.FromArgb(222, 226, 230); // #dee2e6
+
+            // --- 4. Add Main Title ---
+            int totalCols = 2 + (Columns.Count * 2) + 2; // Teacher, Period, (Standards * 2), (Overall * 2)
+            var titleCell = ws.Cell(row, 1);
+            titleCell.Value = dynamicTitle;
+            titleCell.Style.Font.Bold = true;
+            titleCell.Style.Font.FontSize = 14;
+            titleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Range(row, 1, row, totalCols).Merge();
+            row += 2;
+
+            // --- 5. Build Table Header ---
+            int headerRow1 = row;
+            int headerRow2 = row + 1;
+
+            // Merge Teacher Name and Period headers vertically
+            ws.Range(headerRow1, 1, headerRow2, 1).Merge().Value = "Teacher Name";
+            ws.Range(headerRow1, 2, headerRow2, 2).Merge().Value = "Period";
+
+            // Loop for Standard Headers (Row 1) and Sub-Headers (Row 2)
+            for (int i = 0; i < Columns.Count; i++)
+            {
+                var c = Columns[i];
+                int col = 3 + (i * 2);
+                var bg = i % 2 == 0 ? evenBg : oddBg;
+
+                // Row 1: Standard Code + Statement
+                var h1Cell = ws.Cell(headerRow1, col);
+                h1Cell.Value = $"{c.Code}\n{c.ShortStatement}";
+                h1Cell.Style.Alignment.WrapText = true;
+                ws.Range(headerRow1, col, headerRow1, col + 1).Merge();
+                ws.Range(headerRow1, col, headerRow2, col + 1).Style.Fill.BackgroundColor = bg; // Apply bg to both rows
+
+                // Row 2: Passed / Not Passed
+                ws.Cell(headerRow2, col).Value = "% (#)\nPassed";
+                ws.Cell(headerRow2, col + 1).Value = "% (#)\nNot Passed";
+            }
+
+            // Add "Overall Proficiency" Header
+            int overallCol = 3 + (Columns.Count * 2);
+            var h1Overall = ws.Cell(headerRow1, overallCol);
+            h1Overall.Value = "Overall Proficiency\n3+ standards passed";
+            h1Overall.Style.Alignment.WrapText = true;
+            ws.Range(headerRow1, overallCol, headerRow1, overallCol + 1).Merge();
+            ws.Range(headerRow1, overallCol, headerRow2, overallCol + 1).Style.Fill.BackgroundColor = oddBg;
+
+            ws.Cell(headerRow2, overallCol).Value = "% (#)\nPassed";
+            ws.Cell(headerRow2, overallCol + 1).Value = "% (#)\nNot Passed";
+
+            // Style all header rows
+            var headerRange = ws.Range(headerRow1, 1, headerRow2, totalCols);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            headerRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.OutsideBorderColor = border;
+            headerRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin).Border.InsideBorderColor = border;
+
+            row = headerRow2 + 1; // Start data after the header
+
+            // --- 6. Build Table Body (GroupSummaries) ---
+            foreach (var g in GroupSummaries)
+            {
+                int c = 1;
+                ws.Cell(row, c++).Value = g.Key.TeacherName;
+                ws.Cell(row, c++).Value = g.Key.Period;
+
+                for (int i = 0; i < Columns.Count; i++)
+                {
+                    var den = g.DenomPerStd[i];
+                    var pass = g.PassedPerStd[i];
+                    var notp = g.NotPassedPerStd[i];
+                    var bg = i % 2 == 0 ? evenBg : oddBg;
+                    
+                    var passCell = ws.Cell(row, c++);
+                    passCell.Value = $"{Pct(pass, den)} ({pass})";
+                    passCell.Style.Fill.BackgroundColor = bg;
+
+                    var notpCell = ws.Cell(row, c++);
+                    notpCell.Value = $"{Pct(notp, den)} ({notp})";
+                    notpCell.Style.Fill.BackgroundColor = bg;
+                }
+
+                // Overall Totals for the group
+                var totDen = g.StudentCount;
+                var totPass = g.PassedByTotal;
+                var totNot = g.NotPassedByTotal;
+                
+                var totalPassCell = ws.Cell(row, c++);
+                totalPassCell.Value = $"{Pct(totPass, totDen)} ({totPass})";
+                totalPassCell.Style.Fill.BackgroundColor = oddBg;
+                
+                var totalNotpCell = ws.Cell(row, c++);
+                totalNotpCell.Value = $"{Pct(totNot, totDen)} ({totNot})";
+                totalNotpCell.Style.Fill.BackgroundColor = oddBg;
+
+                row++;
+            }
+
+            // --- 7. Build Table Footer (GrandTotals) ---
+            if (GrandTotals != null)
+            {
+                int c = 1;
+                var hCell1 = ws.Cell(row, c++);
+                hCell1.Value = "OVERALL";
+                hCell1.Style.Font.Bold = true;
+
+                var hCell2 = ws.Cell(row, c++);
+                hCell2.Value = "All Classes";
+                hCell2.Style.Font.Bold = true;
+                
+                for (int i = 0; i < Columns.Count; i++)
+                {
+                    var den = GrandTotals.DenomPerStd[i];
+                    var pass = GrandTotals.PassedPerStd[i];
+                    var notp = GrandTotals.NotPassedPerStd[i];
+                    var bg = i % 2 == 0 ? evenBg : oddBg;
+
+                    var passCell = ws.Cell(row, c++);
+                    passCell.Value = $"{Pct(pass, den)} ({pass})";
+                    passCell.Style.Fill.BackgroundColor = bg;
+                    passCell.Style.Font.Bold = true;
+
+                    var notpCell = ws.Cell(row, c++);
+                    notpCell.Value = $"{Pct(notp, den)} ({notp})";
+                    notpCell.Style.Fill.BackgroundColor = bg;
+                    notpCell.Style.Font.Bold = true;
+                }
+
+                // Grand Overall Totals
+                var totDen = GrandTotals.StudentCount;
+                var totPass = GrandTotals.PassedByTotal;
+                var totNot = GrandTotals.NotPassedByTotal;
+                
+                var totalPassCell = ws.Cell(row, c++);
+                totalPassCell.Value = $"{Pct(totPass, totDen)} ({totPass})";
+                totalPassCell.Style.Fill.BackgroundColor = oddBg;
+                totalPassCell.Style.Font.Bold = true;
+                
+                var totalNotpCell = ws.Cell(row, c++);
+                totalNotpCell.Value = $"{Pct(totNot, totDen)} ({totNot})";
+                totalNotpCell.Style.Fill.BackgroundColor = oddBg;
+                totalNotpCell.Style.Font.Bold = true;
+
+                // Style the whole footer row
+                ws.Range(row, 1, row, totalCols).Style.Fill.BackgroundColor = headerBg;
+                row++;
+            }
+            
+            // Center all data cells
+            ws.Range(headerRow2 + 1, 3, row - 1, totalCols).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            // --- 8. Add Footer Note ---
+            var noteCell = ws.Cell(row, 1);
+            noteCell.Value = "PASS cutoff = score ≥ 4 (per standard). Overall Proficiency = student passed ≥ 3 standards.";
+            noteCell.Style.Font.Italic = true;
+            noteCell.Style.Font.FontSize = 9;
+            ws.Range(row, 1, row, totalCols).Merge();
+            row++;
+
+            // --- 9. Final Formatting & Return ---
+            ws.SheetView.FreezeRows(headerRow2);
+            ws.Column(1).Width = 24; // Teacher
+            ws.Column(2).Width = 10; // Period
+            // Set all data columns to a consistent width
+            ws.Columns(3, totalCols).Width = 15;
+            
+            ws.Rows().AdjustToContents();
+            ws.Row(headerRow1).Height = 30;
+            ws.Row(headerRow2).Height = 30;
+
+            // Create a safe filename
+            var safeTitle = dynamicTitle.Replace(" - ", "_").Replace(" ", "_");
+            var fname = $"Form3_{safeTitle}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            await using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fname);
+        }
+
+        // ========================================================================
+        // ===            *** NEW EXPORT METHOD END *** ===
+        // ========================================================================
     }
 }
