@@ -9,57 +9,13 @@ using ORSV2.Models;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using ClosedXML.Excel;
-using System.IO; // Required for MemoryStream
-using System; // Required for DBNull
+using System.IO; 
+using System;
+using Microsoft.AspNetCore.Authorization;
 
 // Note: We are in a new namespace for the Mega page
 namespace ORSV2.Pages.DataReflection
 {
-    // SchoolTarget class remains the same
-    /*
-     [REMOVED]
-    public class SchoolTarget
-    {
-        public int Grade { get; set; }
-        public string DemographicGroup { get; set; } = string.Empty;
-        public decimal TargetPct { get; set; }
-    }
-    */
-    
-    // MetaDataRow remains the same - it's the correct data structure from the DB
-    /*
-     [REMOVED]
-    public class MetaDataRow
-    {
-        public string Unit { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public int Grade { get; set; }
-        public string GradeGroup { get; set; } = string.Empty;
-        public string DemographicGroup { get; set; } = string.Empty;
-        public int TotalEnrolled { get; set; }
-        public int TotalTested { get; set; }
-        public int TotalProficient { get; set; }
-    }
-    */
-
-    // AggData remains the same
-    /*
-     [REMOVED]
-    public class AggData
-    {
-        public int TotalTested { get; set; }
-        public int TotalProficient { get; set; }
-        public decimal PctProficient => TotalTested > 0
-            ? Math.Round(100m * TotalProficient / TotalTested, 2)
-            : 0m;
-    }
-    */
-
-    // RowType enum remains the same
-    /*
-     [REMOVED]
-    public enum RowType { Grade, K2Total, G3PlusTotal, SubjectTotal }
-    */
 
     // ###############################################################
     // NEW VIEW MODELS FOR MEGA PAGE
@@ -117,7 +73,7 @@ namespace ORSV2.Pages.DataReflection
     // ###############################################################
     // MEGA MODEL
     // ###############################################################
-
+    [Authorize(Roles = "OrendaAdmin,OrendaManager,DistrictAdmin")]
     public class MegaModel : SecureReportPageModel
     {
         private readonly IConfiguration _config;
@@ -168,7 +124,7 @@ namespace ORSV2.Pages.DataReflection
         {
             InitializeUserDataScope();
 
-            if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser)
+            if (!IsDistrictAdmin && !IsOrendaUser)
             {
                 return Forbid();
             }

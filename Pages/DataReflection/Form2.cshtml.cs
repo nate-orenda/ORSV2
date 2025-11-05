@@ -20,13 +20,22 @@ namespace ORSV2.Pages.DataReflection
             string RaceEthnicity,
             string LanguageFluency,
             bool SWD,
-            int TotalPassed
+            int TotalPassed,
+            bool IsSed, // --- NEW ---
+            int? YearsEl  // --- NEW ---
         )
         {
             public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
+            public bool IsHispanic => Form2Model.IsHispanicLatino(RaceEthnicity); // --- NEW ---
             public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
             public bool IsSWD => SWD;
             public string SWDDisplay => SWD ? "True" : "";
+            public string SEDDisplay => IsSed ? "True" : ""; // --- NEW ---
+
+            // --- UPDATED ---
+            public string LanguageFluencyDisplay => IsEL && YearsEl.HasValue
+                                                ? $"EL ({YearsEl.Value})"
+                                                : LanguageFluency;
 
             public string Quadrant => TotalPassed >= 4 ? "Challenge"
                                 : TotalPassed == 3 ? "Benchmark"
@@ -41,18 +50,27 @@ namespace ORSV2.Pages.DataReflection
             public string LastName { get; set; } = "";
             public string FirstName { get; set; } = "";
             public string RaceEthnicity { get; set; } = "";
-            public string LanguageFluency { get; set; } = "";
+            public string LanguageFluency { get; set; } = ""; // Original value
             public bool SWD { get; set; }
             public int TotalPassed { get; set; }
             public bool IsQuadrantTotal { get; set; }
             public string? TotalsSummary { get; set; }
+
+            // --- NEW Properties ---
+            public bool IsSed { get; set; }
+            public int? YearsEl { get; set; }
+            public string LanguageFluencyDisplay { get; set; } = ""; // For display
             
             // Helper properties for CSS classes
             public bool IsAA => Form2Model.IsBlackAA(RaceEthnicity);
+            public bool IsHispanic => Form2Model.IsHispanicLatino(RaceEthnicity); // --- NEW ---
             public bool IsEL => Form2Model.IsEnglishLearner(LanguageFluency);
             public bool IsSWD => SWD;
             public string SWDDisplay => SWD ? "True" : "";
-            public bool HasMultipleFlags => (IsAA ? 1 : 0) + (IsEL ? 1 : 0) + (IsSWD ? 1 : 0) >= 2;
+            public string SEDDisplay => IsSed ? "True" : ""; // --- NEW ---
+
+            // --- UPDATED ---
+            public bool HasMultipleFlags => (IsAA ? 1 : 0) + (IsHispanic ? 1 : 0) + (IsEL ? 1 : 0) + (IsSWD ? 1 : 0) + (IsSed ? 1 : 0) >= 2;
             public string QuadrantCssClass => QuadrantName.ToLowerInvariant();
             
             public FlatStudentVm() { }
@@ -63,10 +81,15 @@ namespace ORSV2.Pages.DataReflection
                 LastName = student.LastName;
                 FirstName = student.FirstName;
                 RaceEthnicity = student.RaceEthnicity;
-                LanguageFluency = student.LanguageFluency;
+                LanguageFluency = student.LanguageFluency; // Store original
                 SWD = student.SWD;
                 TotalPassed = student.TotalPassed;
                 IsQuadrantTotal = false;
+
+                // --- NEW assignments ---
+                IsSed = student.IsSed;
+                YearsEl = student.YearsEl;
+                LanguageFluencyDisplay = student.LanguageFluencyDisplay;
             }
         }
 
@@ -80,8 +103,10 @@ namespace ORSV2.Pages.DataReflection
         public class QuadTotals
         {
             public TotalsBucket AA { get; } = new();
+            public TotalsBucket Hispanic { get; } = new(); // --- NEW ---
             public TotalsBucket EL { get; } = new();
             public TotalsBucket SWD { get; } = new();
+            public TotalsBucket SED { get; } = new(); // --- NEW ---
             public TotalsBucket All { get; } = new();
         }
 
@@ -257,8 +282,10 @@ namespace ORSV2.Pages.DataReflection
                     TotalPassed = 0,
                     IsQuadrantTotal = true,
                     TotalsSummary = $"AA: {quadVm.Totals.AA.PercentString} ({quadVm.Totals.AA.Passed}/{quadVm.Totals.AA.Total}) · " +
+                                  $"Hispanic: {quadVm.Totals.Hispanic.PercentString} ({quadVm.Totals.Hispanic.Passed}/{quadVm.Totals.Hispanic.Total}) · " + // --- NEW ---
                                   $"EL: {quadVm.Totals.EL.PercentString} ({quadVm.Totals.EL.Passed}/{quadVm.Totals.EL.Total}) · " +
                                   $"SWD: {quadVm.Totals.SWD.PercentString} ({quadVm.Totals.SWD.Passed}/{quadVm.Totals.SWD.Total}) · " +
+                                  $"SED: {quadVm.Totals.SED.PercentString} ({quadVm.Totals.SED.Passed}/{quadVm.Totals.SED.Total}) · " + // --- NEW ---
                                   $"All: {quadVm.Totals.All.PercentString} ({quadVm.Totals.All.Passed}/{quadVm.Totals.All.Total})"
                 });
             }
@@ -369,6 +396,7 @@ namespace ORSV2.Pages.DataReflection
             {
                 // Safely get the TotalPassed value
                 var totalPassedObj = rdr["TotalPassed"];
+                var yearsElObj = rdr["years_el"]; // --- This will now work ---
 
                 Students.Add(new StudentVm(
                     LastName: rdr["LastName"]?.ToString() ?? "",
@@ -378,9 +406,15 @@ namespace ORSV2.Pages.DataReflection
                     SWD: rdr["SWD"] is bool b ? b :
                                     string.Equals(rdr["SWD"]?.ToString(), "true", StringComparison.OrdinalIgnoreCase),
                     
-                    // --- THIS IS THE FIX ---
-                    // Was: TotalPassed: Convert.ToInt32(rdr["TotalPassed"])
-                    TotalPassed: totalPassedObj == DBNull.Value ? 0 : Convert.ToInt32(totalPassedObj)
+                    TotalPassed: totalPassedObj == DBNull.Value ? 0 : Convert.ToInt32(totalPassedObj),
+
+                    // --- This will now work ---
+                    IsSed: rdr["is_sed"] is bool bSed ? bSed :
+                                    string.Equals(rdr["is_sed"]?.ToString(), "true", StringComparison.OrdinalIgnoreCase) ||
+                                    rdr["is_sed"]?.ToString() == "1",
+                    
+                    // --- This will now work ---
+                    YearsEl: yearsElObj == DBNull.Value ? null : Convert.ToInt32(yearsElObj)
                 ));
             }
         }
@@ -397,14 +431,18 @@ namespace ORSV2.Pages.DataReflection
             // Denominators: Total students IN EACH SUBGROUP across all quadrants
             int totalAll = Students.Count;
             int totalAA = Students.Count(s => s.IsAA);
+            int totalHispanic = Students.Count(s => s.IsHispanic); // --- NEW ---
             int totalEL = Students.Count(s => s.IsEL);
             int totalSWD = Students.Count(s => s.IsSWD);
+            int totalSED = Students.Count(s => s.IsSed); // --- NEW ---
 
             // Numerators: # in this quadrant (overall + by subgroup)
             int numAll = q.Count;
             int numAA = q.Count(s => s.IsAA);
+            int numHispanic = q.Count(s => s.IsHispanic); // --- NEW ---
             int numEL = q.Count(s => s.IsEL);
             int numSWD = q.Count(s => s.IsSWD);
+            int numSED = q.Count(s => s.IsSed); // --- NEW ---
 
             var vm = new QuadVm
             {
@@ -421,11 +459,17 @@ namespace ORSV2.Pages.DataReflection
             vm.Totals.AA.Passed = numAA;
             vm.Totals.AA.Total = totalAA;
 
+            vm.Totals.Hispanic.Passed = numHispanic; // --- NEW ---
+            vm.Totals.Hispanic.Total = totalHispanic; // --- NEW ---
+
             vm.Totals.EL.Passed = numEL;
             vm.Totals.EL.Total = totalEL;
 
             vm.Totals.SWD.Passed = numSWD;
             vm.Totals.SWD.Total = totalSWD;
+
+            vm.Totals.SED.Passed = numSED; // --- NEW ---
+            vm.Totals.SED.Total = totalSED; // --- NEW ---
 
             return vm;
         }
@@ -444,6 +488,13 @@ namespace ORSV2.Pages.DataReflection
             var v = Normalize(race);
             // catch common variants across districts
             return v.Contains("black") || v.Contains("africanamerican");
+        }
+
+        private static bool IsHispanicLatino(string? race)
+        {
+            var v = Normalize(race);
+            // catch common variants
+            return v.Contains("hispanic") || v.Contains("latino");
         }
 
         private static bool IsEnglishLearner(string? lf)
@@ -527,6 +578,8 @@ namespace ORSV2.Pages.DataReflection
             var hiAaBg = XLColor.FromArgb(239, 246, 255); // var(--quad-challenge-bg)
             var hiElBg = XLColor.FromArgb(251, 207, 232); // #fbcfe8
             var hiSwdBg = XLColor.FromArgb(255, 251, 235); // var(--quad-strategic-bg)
+            var hiHispanicBg = XLColor.FromArgb(255, 179, 102); // #ffb366 --- NEW ---
+            var hiSedBg = XLColor.FromArgb(255, 179, 102); // #ffb366 --- NEW ---
             // Table Header
             var tableHeaderBg = XLColor.FromArgb(248, 249, 250); // #f8f9fa
             var tableBorder = XLColor.FromArgb(222, 226, 230); // #dee2e6
@@ -537,12 +590,114 @@ namespace ORSV2.Pages.DataReflection
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Font.FontSize = 14;
             titleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-            ws.Range(row, 1, row, 6).Merge();
+            ws.Range(row, 1, row, 7).Merge(); // Changed 6 to 7
             row += 2;
+
+            // --- 3a. Add Comprehensive Totals Summary Table ---
+            var summaryTitleCell = ws.Cell(row, 1);
+            summaryTitleCell.Value = "Quadrant Summary - All Student Groups";
+            summaryTitleCell.Style.Font.Bold = true;
+            summaryTitleCell.Style.Font.FontSize = 12;
+            summaryTitleCell.Style.Fill.BackgroundColor = XLColor.FromArgb(100, 116, 139); // #64748b - Toned down slate
+            summaryTitleCell.Style.Font.FontColor = XLColor.White;
+            summaryTitleCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+            ws.Range(row, 1, row, 7).Merge();
+            row++;
+
+            // Summary table headers
+            var summaryHeaders = new[] { "Quadrant", "African American", "Hispanic", "English Learner", "SWD", "SED", "All Students" };
+            for (int i = 0; i < summaryHeaders.Length; i++)
+            {
+                var cell = ws.Cell(row, i + 1);
+                cell.Value = summaryHeaders[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.FromArgb(30, 64, 175); // #1e40af
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            row++;
+
+            // Calculate and add quadrant summary data
+            var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" };
+            var quadrantColors = new Dictionary<string, XLColor>
+            {
+                { "Challenge", XLColor.FromArgb(30, 64, 175) },
+                { "Benchmark", XLColor.FromArgb(22, 163, 74) },
+                { "Strategic", XLColor.FromArgb(254, 196, 1) },
+                { "Intensive", XLColor.FromArgb(220, 38, 38) }
+            };
+
+            int totalAA = 0, totalHispanic = 0, totalEL = 0, totalSWD = 0, totalSED = 0, totalAll = 0;
+
+            foreach (var quadrantName in quadrantOrder)
+            {
+                var studentsInQuad = Students.Where(s => s.Quadrant.Equals(quadrantName, StringComparison.OrdinalIgnoreCase)).ToList();
+                
+                int aaCount = studentsInQuad.Count(s => s.IsAA);
+                int hispanicCount = studentsInQuad.Count(s => s.IsHispanic);
+                int elCount = studentsInQuad.Count(s => s.IsEL);
+                int swdCount = studentsInQuad.Count(s => s.IsSWD);
+                int sedCount = studentsInQuad.Count(s => s.IsSed);
+                int allCount = studentsInQuad.Count;
+
+                totalAA += aaCount;
+                totalHispanic += hispanicCount;
+                totalEL += elCount;
+                totalSWD += swdCount;
+                totalSED += sedCount;
+                totalAll += allCount;
+
+                ws.Cell(row, 1).Value = quadrantName;
+                ws.Cell(row, 1).Style.Font.Bold = true;
+                ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(249, 250, 251); // #f9fafb
+                ws.Cell(row, 1).Style.Border.SetLeftBorder(XLBorderStyleValues.Medium);
+                ws.Cell(row, 1).Style.Border.LeftBorderColor = quadrantColors[quadrantName];
+                
+                // Format: X% - # students
+                ws.Cell(row, 2).Value = totalAA > 0 ? $"{(aaCount * 100.0 / totalAA):0}% - {aaCount}" : aaCount.ToString();
+                ws.Cell(row, 3).Value = totalHispanic > 0 ? $"{(hispanicCount * 100.0 / totalHispanic):0}% - {hispanicCount}" : hispanicCount.ToString();
+                ws.Cell(row, 4).Value = totalEL > 0 ? $"{(elCount * 100.0 / totalEL):0}% - {elCount}" : elCount.ToString();
+                ws.Cell(row, 5).Value = totalSWD > 0 ? $"{(swdCount * 100.0 / totalSWD):0}% - {swdCount}" : swdCount.ToString();
+                ws.Cell(row, 6).Value = totalSED > 0 ? $"{(sedCount * 100.0 / totalSED):0}% - {sedCount}" : sedCount.ToString();
+                ws.Cell(row, 7).Value = totalAll > 0 ? $"{(allCount * 100.0 / totalAll):0}% - {allCount}" : allCount.ToString();
+
+                for (int i = 2; i <= 7; i++)
+                {
+                    ws.Cell(row, i).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                row++;
+            }
+
+            // Add grand total row
+            ws.Cell(row, 1).Value = "TOTAL";
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(243, 244, 246); // #f3f4f6
+            ws.Cell(row, 1).Style.Border.SetTopBorder(XLBorderStyleValues.Medium);
+            ws.Cell(row, 1).Style.Border.TopBorderColor = XLColor.FromArgb(30, 64, 175);
+            
+            ws.Cell(row, 2).Value = $"100% - {totalAA}";
+            ws.Cell(row, 3).Value = $"100% - {totalHispanic}";
+            ws.Cell(row, 4).Value = $"100% - {totalEL}";
+            ws.Cell(row, 5).Value = $"100% - {totalSWD}";
+            ws.Cell(row, 6).Value = $"100% - {totalSED}";
+            ws.Cell(row, 7).Value = $"100% - {totalAll}";
+
+            for (int i = 1; i <= 7; i++)
+            {
+                ws.Cell(row, i).Style.Font.Bold = true;
+                ws.Cell(row, i).Style.Fill.BackgroundColor = XLColor.FromArgb(243, 244, 246);
+                ws.Cell(row, i).Style.Border.SetTopBorder(XLBorderStyleValues.Medium);
+                ws.Cell(row, i).Style.Border.TopBorderColor = XLColor.FromArgb(30, 64, 175);
+            }
+            for (int i = 2; i <= 7; i++)
+            {
+                ws.Cell(row, i).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            row += 2; // Add spacing before student data
 
             // --- 4. Add Table Headers ---
             int headerRow = row;
-            var headers = new[] { "Last Name", "First Name", "Race/Ethnicity", "Language Fluency", "SWD", "Total Passed" };
+            var headers = new[] { "Last Name", "First Name", "Race/Ethnicity", "Language Fluency", "SWD", "SED", "Total Passed" };
             for (int i = 0; i < headers.Length; i++)
             {
                 var cell = ws.Cell(headerRow, i + 1);
@@ -556,7 +711,7 @@ namespace ORSV2.Pages.DataReflection
             row++;
 
             // --- 5. Loop through Quadrants and Add Rows ---
-            var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" };
+            // var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" }; // Already declared above in totals section
             var quadrantInfo = new Dictionary<string, string>
             {
                 { "Challenge", "4-5 standards passed" },
@@ -587,7 +742,7 @@ namespace ORSV2.Pages.DataReflection
                 
                 var headerCell = ws.Cell(row, 1);
                 headerCell.Value = headerText;
-                ws.Range(row, 1, row, 6).Merge();
+                ws.Range(row, 1, row, 7).Merge(); // Changed 6 to 7
                 headerCell.Style.Font.Bold = true;
                 headerCell.Style.Font.FontSize = 11;
 
@@ -603,23 +758,28 @@ namespace ORSV2.Pages.DataReflection
                 {
                     ws.Cell(row, 1).Value = student.LastName;
                     ws.Cell(row, 2).Value = student.FirstName;
-                    
+
                     var raceCell = ws.Cell(row, 3);
                     raceCell.Value = student.RaceEthnicity;
                     if (student.IsAA) raceCell.Style.Fill.BackgroundColor = hiAaBg;
+                    if (student.IsHispanic) raceCell.Style.Fill.BackgroundColor = hiHispanicBg; // --- NEW ---
 
                     var elCell = ws.Cell(row, 4);
-                    elCell.Value = student.LanguageFluency;
+                    elCell.Value = student.LanguageFluencyDisplay; // --- UPDATED ---
                     if (student.IsEL) elCell.Style.Fill.BackgroundColor = hiElBg;
 
                     var swdCell = ws.Cell(row, 5);
                     swdCell.Value = student.SWDDisplay;
                     if (student.IsSWD) swdCell.Style.Fill.BackgroundColor = hiSwdBg;
 
-                    ws.Cell(row, 6).Value = student.TotalPassed;
+                    var sedCell = ws.Cell(row, 6); // --- NEW ---
+                    sedCell.Value = student.SEDDisplay; // --- NEW ---
+                    if (student.IsSed) sedCell.Style.Fill.BackgroundColor = hiSedBg; // --- NEW ---
+
+                    ws.Cell(row, 7).Value = student.TotalPassed; // --- Column index changed from 6 to 7 ---
 
                     // Center student data
-                    ws.Range(row, 3, row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Range(row, 3, row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // --- Changed 6 to 7 ---
                     row++;
                 }
 
@@ -628,7 +788,7 @@ namespace ORSV2.Pages.DataReflection
                 {
                     var footerCell = ws.Cell(row, 1);
                     footerCell.Value = $"Totals: {totalRowForQuad.TotalsSummary}";
-                    ws.Range(row, 1, row, 6).Merge();
+                    ws.Range(row, 1, row, 7).Merge(); // Changed 6 to 7
                     footerCell.Style.Font.Bold = true;
                     footerCell.Style.Font.Italic = true;
                     footerCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -649,7 +809,8 @@ namespace ORSV2.Pages.DataReflection
             ws.Column(3).Width = 20; // Race
             ws.Column(4).Width = 20; // Language
             ws.Column(5).Width = 10; // SWD
-            ws.Column(6).Width = 14; // Total Passed
+            ws.Column(6).Width = 10; // SED --- NEW ---
+            ws.Column(7).Width = 14; // Total Passed
             
             ws.Rows().AdjustToContents();
             ws.Row(headerRow).Height = 25;

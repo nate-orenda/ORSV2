@@ -46,10 +46,15 @@
                                 <a asp-page="/Index" class="nav-link">
                                     <i class="bi bi-house me-1"></i>Dashboard
                                 </a>
-                                <a asp-page="/GuidanceAlignment/Index" class="nav-link">
-                                    <i class="bi bi-compass me-1"></i>Guidance Alignment
-                                </a>
-                                
+                                @{
+                                    var isTeacher = User.IsInRole("Teacher");
+                                }
+                                @if (!User.IsInRole("Teacher"))
+                                {
+                                    <a asp-page="/GuidanceAlignment/Index" class="nav-link">
+                                        <i class="bi bi-compass me-1"></i>Guidance Alignment
+                                    </a>
+                                }
                                 <!-- Curriculum Alignment as direct link -->
                                 <a asp-page="/DataReflection/Index" class="nav-link">
                                     <i class="bi bi-book me-1"></i>Data Reflection

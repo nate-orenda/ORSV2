@@ -79,18 +79,28 @@
 
         /* Student Attribute Highlights */
         .hi-aa {
-            background-color: var(--quad-challenge-bg) !important;
+            background-color: var(--quad-challenge-bg) !important; 
             color: var(--quad-challenge-fg) !important;
         }
 
         .hi-el {
-            background-color: #fbcfe8 !important;
+            background-color: #fbcfe8 !important; 
         }
 
         /* Retaining unique color not in site.css */
         .hi-swd {
-            background-color: var(--quad-strategic-bg) !important;
+            background-color: var(--quad-strategic-bg) !important; 
             color: var(--quad-strategic-fg) !important;
+        }
+
+        /* --- NEW STYLES --- */
+        .hi-hispanic {
+            background-color: #ffe6b3 !important; /* UPDATED from Meta.cshtml */
+            color: #664d00 !important; /* UPDATED from Meta.cshtml */
+        }
+        .hi-sed {
+            background-color: #ffb366 !important;
+            color: #422006 !important; /* Added dark text for readability */
         }
 
         .student-multi-flag {
@@ -272,6 +282,8 @@
             .hi-aa { background-color: #d1fae5 !important; }
             .hi-el { background-color: #fbcfe8 !important; }
             .hi-swd { background-color: #fef3c7 !important; }
+            .hi-hispanic { background-color: #ffe6b3 !important; color: #664d00 !important; } /* ADDED */
+            .hi-sed { background-color: #ffb366 !important; color: #422006 !important; } /* ADDED */
 
             /* Page break controls */
             .dtrg-start { 
@@ -300,6 +312,127 @@
                 margin-bottom: 20px;
                 page-break-after: avoid;
             }
+
+            /* Totals summary table for print */
+            .totals-summary-table {
+                page-break-inside: avoid;
+                page-break-after: always;
+                margin-bottom: 1.5rem;
+            }
+
+            .totals-summary-table table {
+                border: 1px solid #333 !important;
+            }
+
+            .totals-summary-table th {
+                background: #1e40af !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .totals-summary-table .section-title {
+                background: #64748b !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .totals-summary-table .quadrant-label {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .totals-summary-table .grand-total-row {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Comprehensive Totals Table Styling */
+        .totals-summary-table {
+            margin-bottom: 2rem;
+        }
+
+        .totals-summary-table table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .totals-summary-table th {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+            text-align: center;
+            border-bottom: 2px solid #1e3a8a;
+        }
+
+        .totals-summary-table td {
+            padding: 0.6rem;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+        }
+
+        .totals-summary-table td:last-child {
+            border-right: none;
+        }
+
+        .totals-summary-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .totals-summary-table .quadrant-label {
+            font-weight: 600;
+            text-align: left;
+            padding-left: 1rem;
+            background-color: #f9fafb;
+        }
+
+        .totals-summary-table .quadrant-label.challenge {
+            border-left: 4px solid #1e40af;
+        }
+
+        .totals-summary-table .quadrant-label.benchmark {
+            border-left: 4px solid #16a34a;
+        }
+
+        .totals-summary-table .quadrant-label.strategic {
+            border-left: 4px solid #FEC401;
+        }
+
+        .totals-summary-table .quadrant-label.intensive {
+            border-left: 4px solid #dc2626;
+        }
+
+        .totals-summary-table .metric-value {
+            font-weight: 500;
+            color: #111827;
+        }
+
+        .totals-summary-table .metric-percent {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .totals-summary-table .grand-total-row {
+            background-color: #f3f4f6;
+            font-weight: 700;
+            border-top: 3px solid #1e40af !important;
+        }
+
+        .totals-summary-table .section-title {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 1rem;
+            text-align: left;
         }
     </style>
 }
@@ -362,12 +495,23 @@
 <div class="orenda-card mb-3">
     <div class="orenda-card-body d-flex flex-wrap gap-3">
         <div><span class="badge-compact"
-                style="background-color: var(--quad-challenge-bg); color: var(--quad-challenge-fg);">Race/Ethnicity =
+                style="background-color: var(--quad-challenge-bg);
+                       color: var(--quad-challenge-fg);">Race/Ethnicity =
                 Black or African American</span></div>
-        <div><span class="badge-compact" style="background-color: #fce7f3; color: #9d174d;">Language Fluency = EL</span>
+        <div><span class="badge-compact"
+                style="background-color: #ffe6b3;
+                       color: #664d00;">Race/Ethnicity =
+                Hispanic/Latino</span></div>
+        <div><span class="badge-compact" style="background-color: #fce7f3;
+                       color: #9d174d;">Language Fluency = EL</span>
         </div>
         <div><span class="badge-compact"
-                style="background-color: var(--quad-strategic-bg); color: var(--quad-strategic-fg);">SWD = true</span>
+                style="background-color: var(--quad-strategic-bg);
+                       color: var(--quad-strategic-fg);">SWD = true</span>
+        </div>
+        <div><span class="badge-compact"
+                style="background-color: #ffb366;
+                       color: #422006;">SED = true</span>
         </div>
     </div>
 </div>
@@ -380,6 +524,151 @@
 }
 else
 {
+    <!-- Comprehensive Totals Summary -->
+    <div class="orenda-card totals-summary-table">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="7" class="section-title">Quadrant Summary - All Student Groups</th>
+                </tr>
+                <tr>
+                    <th style="width: 20%;">Quadrant</th>
+                    <th style="width: 13%;">African American</th>
+                    <th style="width: 13%;">Hispanic</th>
+                    <th style="width: 13%;">English Learner</th>
+                    <th style="width: 13%;">SWD</th>
+                    <th style="width: 13%;">SED</th>
+                    <th style="width: 15%;">All Students</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var quadrantOrder = new[] { "Challenge", "Benchmark", "Strategic", "Intensive" };
+                    var quadrantData = new Dictionary<string, ORSV2.Pages.DataReflection.Form2Model.QuadTotals>();
+                    
+                    foreach (var quadrantName in quadrantOrder)
+                    {
+                        var totals = new ORSV2.Pages.DataReflection.Form2Model.QuadTotals();
+                        var studentsInQuad = Model.Students.Where(s => s.Quadrant.Equals(quadrantName, StringComparison.OrdinalIgnoreCase)).ToList();
+                        
+                        totals.All.Total = studentsInQuad.Count;
+                        totals.All.Passed = studentsInQuad.Count;
+                        
+                        totals.AA.Total = studentsInQuad.Count(s => s.IsAA);
+                        totals.AA.Passed = studentsInQuad.Count(s => s.IsAA);
+                        
+                        totals.Hispanic.Total = studentsInQuad.Count(s => s.IsHispanic);
+                        totals.Hispanic.Passed = studentsInQuad.Count(s => s.IsHispanic);
+                        
+                        totals.EL.Total = studentsInQuad.Count(s => s.IsEL);
+                        totals.EL.Passed = studentsInQuad.Count(s => s.IsEL);
+                        
+                        totals.SWD.Total = studentsInQuad.Count(s => s.IsSWD);
+                        totals.SWD.Passed = studentsInQuad.Count(s => s.IsSWD);
+                        
+                        totals.SED.Total = studentsInQuad.Count(s => s.IsSed);
+                        totals.SED.Passed = studentsInQuad.Count(s => s.IsSed);
+                        
+                        quadrantData[quadrantName] = totals;
+                    }
+                    
+                    // Calculate grand totals
+                    var grandTotals = new ORSV2.Pages.DataReflection.Form2Model.QuadTotals();
+                    grandTotals.All.Total = Model.Students.Count;
+                    grandTotals.All.Passed = Model.Students.Count;
+                    grandTotals.AA.Total = Model.Students.Count(s => s.IsAA);
+                    grandTotals.AA.Passed = Model.Students.Count(s => s.IsAA);
+                    grandTotals.Hispanic.Total = Model.Students.Count(s => s.IsHispanic);
+                    grandTotals.Hispanic.Passed = Model.Students.Count(s => s.IsHispanic);
+                    grandTotals.EL.Total = Model.Students.Count(s => s.IsEL);
+                    grandTotals.EL.Passed = Model.Students.Count(s => s.IsEL);
+                    grandTotals.SWD.Total = Model.Students.Count(s => s.IsSWD);
+                    grandTotals.SWD.Passed = Model.Students.Count(s => s.IsSWD);
+                    grandTotals.SED.Total = Model.Students.Count(s => s.IsSed);
+                    grandTotals.SED.Passed = Model.Students.Count(s => s.IsSed);
+                }
+                
+                @foreach (var quadrantName in quadrantOrder)
+                {
+                    var totals = quadrantData[quadrantName];
+                    var cssClass = quadrantName.ToLower();
+                    <tr>
+                        <td class="quadrant-label @cssClass">@quadrantName</td>
+                        <td>
+                            @if (grandTotals.AA.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.AA.Total * 100.0 / grandTotals.AA.Total).ToString("0"))% - @totals.AA.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.AA.Total</span>
+                            }
+                        </td>
+                        <td>
+                            @if (grandTotals.Hispanic.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.Hispanic.Total * 100.0 / grandTotals.Hispanic.Total).ToString("0"))% - @totals.Hispanic.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.Hispanic.Total</span>
+                            }
+                        </td>
+                        <td>
+                            @if (grandTotals.EL.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.EL.Total * 100.0 / grandTotals.EL.Total).ToString("0"))% - @totals.EL.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.EL.Total</span>
+                            }
+                        </td>
+                        <td>
+                            @if (grandTotals.SWD.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.SWD.Total * 100.0 / grandTotals.SWD.Total).ToString("0"))% - @totals.SWD.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.SWD.Total</span>
+                            }
+                        </td>
+                        <td>
+                            @if (grandTotals.SED.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.SED.Total * 100.0 / grandTotals.SED.Total).ToString("0"))% - @totals.SED.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.SED.Total</span>
+                            }
+                        </td>
+                        <td>
+                            @if (grandTotals.All.Total > 0)
+                            {
+                                <span class="metric-value">@((totals.All.Total * 100.0 / grandTotals.All.Total).ToString("0"))% - @totals.All.Total</span>
+                            }
+                            else
+                            {
+                                <span class="metric-value">@totals.All.Total</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                <tr class="grand-total-row">
+                    <td class="quadrant-label">TOTAL</td>
+                    <td><span class="metric-value">100% - @grandTotals.AA.Total</span></td>
+                    <td><span class="metric-value">100% - @grandTotals.Hispanic.Total</span></td>
+                    <td><span class="metric-value">100% - @grandTotals.EL.Total</span></td>
+                    <td><span class="metric-value">100% - @grandTotals.SWD.Total</span></td>
+                    <td><span class="metric-value">100% - @grandTotals.SED.Total</span></td>
+                    <td><span class="metric-value">100% - @grandTotals.All.Total</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     <div class="orenda-table-wrapper" id="quadrantExportRoot">
         @if (!string.IsNullOrEmpty(Model.FormattedTitle))
         {
@@ -394,7 +683,7 @@ else
                     <th>Race/Ethnicity</th>
                     <th>Language Fluency</th>
                     <th>SWD</th>
-                    <th>Total Passed</th>
+                    <th>SED</th> <th>Total Passed</th>
                 </tr>
             </thead>
             <tbody>
@@ -402,12 +691,15 @@ else
                 {
                     <tr>
                         <td style="display:none;">@student.QuadrantName</td>
+      
                         <td>@student.LastName</td>
                         <td>@student.FirstName</td>
-                        <td class="@(student.IsAA ? "hi-aa" : "")">@student.RaceEthnicity</td>
-                        <td class="@(student.IsEL ? "hi-el" : "")">@student.LanguageFluency</td>
+                        <td class="@(student.IsAA ? "hi-aa" : "") @(student.IsHispanic ? "hi-hispanic" : "")">@student.RaceEthnicity</td>
+                        <td class="@(student.IsEL ? "hi-el" : "")">@student.LanguageFluencyDisplay</td>
                         <td class="@(student.IsSWD ? "hi-swd" : "")">@student.SWDDisplay</td>
+                        <td class="@(student.IsSed ? "hi-sed" : "")">@student.SEDDisplay</td>
                         <td>@student.TotalPassed</td>
+                
                     </tr>
                 }
             </tbody>
@@ -477,13 +769,13 @@ else
                         var groupClass = group.toLowerCase();
                         var standardsInfo = getQuadrantInfo(group);
                         return $('<tr class="dtrg-start ' + groupClass + '"></tr>')
-                            .append('<td colspan="6">' + group + ' (' + rows.count() + ' students) - ' + standardsInfo + '</td>');
+                            .append('<td colspan="7">' + group + ' (' + rows.count() + ' students) - ' + standardsInfo + '</td>');
                     },
                     endRender: function (rows, group) {
                         var groupClass = group.toLowerCase();
                         var totals = totalsData[group] || 'No data available';
                         return $('<tr class="dtrg-end ' + groupClass + '"></tr>')
-                            .append('<td colspan="6" style="text-align:left;"><strong>Totals: ' + totals + '</strong></td>');
+                            .append('<td colspan="7" style="text-align:left;"><strong>Totals: ' + totals + '</strong></td>');
                     }
                 },
                 buttons: [
@@ -527,14 +819,25 @@ else
             withAllRows(datatable, function () {
                 const tableElement = document.getElementById('quadrantTable');
                 const tableRows = document.querySelectorAll('#quadrantTable tbody tr');
+                const totalsSummaryTable = document.querySelector('.totals-summary-table table');
                 
                 // Build enhanced HTML with better structure for printing
                 let printHtml = `
                     <div class="print-title">${title}</div>
-                    <table class="table" style="width:100%">
                 `;
 
-                const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'Total Passed'];
+                // Add the totals summary table if it exists
+                if (totalsSummaryTable) {
+                    printHtml += `
+                        <div class="totals-summary-table">
+                            ${totalsSummaryTable.outerHTML}
+                        </div>
+                    `;
+                }
+
+                printHtml += `<table class="table" style="width:100%">`;
+
+                const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'SED', 'Total Passed'];
                 let currentQuadrant = '';
                 let studentCount = 0;
                 const studentsPerPage = 25; 
@@ -551,7 +854,7 @@ else
                         
                         printHtml += `
                             <tr class="dtrg-start ${currentQuadrant} ${pageBreakClass}">
-                                <td colspan="6">${headerText}</td>
+                                <td colspan="7">${headerText}</td>
                             </tr>
                             <tr class="print-column-header">
                                 ${columnHeaders.map(h => `<th>${h}</th>`).join('')}
@@ -563,7 +866,7 @@ else
                         const footerText = row.querySelector('td').textContent.trim();
                         printHtml += `
                             <tr class="dtrg-end ${currentQuadrant}">
-                                <td colspan="6"><strong>${footerText}</strong></td>
+                                <td colspan="7"><strong>${footerText}</strong></td>
                             </tr>
                         `;
                     }
@@ -577,7 +880,7 @@ else
                             const standardsInfo = getQuadrantInfo(quadrantName);
                             printHtml += `
                                 <tr class="dtrg-start ${currentQuadrant} quadrant-page-break">
-                                    <td colspan="6">${quadrantName} (continued) - ${standardsInfo}</td>
+                                    <td colspan="7">${quadrantName} (continued) - ${standardsInfo}</td>
                                 </tr>
                                 <tr class="print-column-header">
                                     ${columnHeaders.map(h => `<th>${h}</th>`).join('')}
@@ -590,7 +893,7 @@ else
                             const startIndex = cells[0].style.display === 'none' ? 1 : 0;
                             
                             printHtml += '<tr>';
-                            for (let i = 0; i < 6 && (startIndex + i) < cells.length; i++) {
+                            for (let i = 0; i < 7 && (startIndex + i) < cells.length; i++) {
                                 const cell = cells[startIndex + i];
                                 const classes = cell.className;
                                 printHtml += `<td class="${classes}">${cell.textContent.trim()}</td>`;
@@ -694,6 +997,12 @@ else
                         .hi-aa { background-color: #d1fae5 !important; }
                         .hi-el { background-color: #fbcfe8 !important; }
                         .hi-swd { background-color: #fef3c7 !important; }
+                        
+                        /* Totals summary table page break */
+                        .totals-summary-table {
+                            page-break-after: always !important;
+                            page-break-inside: avoid !important;
+                        }
                         
                         /* Page break controls */
                         .quadrant-page-break {

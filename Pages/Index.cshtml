@@ -11,8 +11,8 @@
         <p class="mb-0">Review the calendar for upcoming deadlines and select a district to get started.</p>
     </div>
 
-    @if (Model.DistrictBlocks != null && Model.DistrictBlocks.Any())
-    {
+    @if (Model.DistrictBlocks != null && Model.DistrictBlocks.Any() && Model.DistrictBlocks.Any(db => db.Schools.Any(s => s.GA)))
+{
         <!-- Collapsible Gantt Chart Section -->
         var districtTimeline = Model.CheckpointSchedules
             .GroupBy(s => new { s.DistrictId })
@@ -27,6 +27,7 @@
                 CP4 = g.Min(x => x.Checkpoint4Date),
                 CP5 = g.Min(x => x.Checkpoint5Date)
             })
+            .Where(d => Model.DistrictBlocks.Any(db => db.DistrictId == d.DistrictId && db.Schools.Any(s => s.GA)))
             .OrderBy(x => x.DistrictName)
             .ToList();
 

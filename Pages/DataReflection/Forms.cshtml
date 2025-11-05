@@ -13,6 +13,7 @@
     </div>
 
     <div class="row g-4 mt-4">
+        <!-- Form 1 - Everyone -->
         <div class="col-12 col-md-6 col-lg-4">
             <a href="@Url.Page("/DataReflection/Form1", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
@@ -22,6 +23,7 @@
             </a>
         </div>
 
+        <!-- Form 2 - Everyone -->
         <div class="col-12 col-md-6 col-lg-4">
             <a href="@Url.Page("/DataReflection/Form2", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                 <div class="orenda-card-body">
@@ -30,36 +32,43 @@
                 </div>
             </a>
         </div>
-    @if (Model.ShowAdvancedForms)
+
+        <!-- Form 3 - School Admin, District Admin, Orenda -->
+        @if (Model.ShowForm3)
         {
-        <div class="col-12 col-md-6 col-lg-4">
-            <a href="@Url.Page("/DataReflection/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
-                <div class="orenda-card-body">
-                    <h5 class="text-orenda-primary">Form 3</h5>
-                    <p class="text-muted small">School and teacher level summary for a single assessment.</p>
-                </div>
-            </a>
-        </div>
-
-        
             <div class="col-12 col-md-6 col-lg-4">
-                    <a href="@Url.Page("/DataReflection/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
-                        <div class="orenda-card-body">
-                            <h5 class="text-orenda-primary">Meta</h5>
-                            <p class="text-muted small">Meta-analysis across multiple grades, demographic groups, and cycles/units.</p>
-                        </div>
-                    </a>
-            </div>
-
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="orenda-card h-100 is-disabled">
-                     <a href="@Url.Page("/DataReflection/Mega", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                <a href="@Url.Page("/DataReflection/Form3", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
                     <div class="orenda-card-body">
-                            <h5 class="text-orenda-primary mb-0">Mega</h5>
-                            <p class="text-muted small">Comprehensive district-wide analysis with predictive insights.</p>        
+                        <h5 class="text-orenda-primary">Form 3</h5>
+                        <p class="text-muted small">School and teacher level summary for a single assessment.</p>
                     </div>
-                    </a>
-                </div>
+                </a>
+            </div>
+        }
+
+        <!-- Meta - School Admin, District Admin, Orenda -->
+        @if (Model.ShowMeta)
+        {
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="@Url.Page("/DataReflection/Meta", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                    <div class="orenda-card-body">
+                        <h5 class="text-orenda-primary">Meta</h5>
+                        <p class="text-muted small">Meta-analysis across multiple grades, demographic groups, and cycles/units.</p>
+                    </div>
+                </a>
+            </div>
+        }
+
+        <!-- Mega - District Admin, Orenda only -->
+        @if (Model.ShowMega)
+        {
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="@Url.Page("/DataReflection/Mega", new { DistrictId = Model.DistrictId })" class="orenda-card shadow-orenda-hover h-100 text-decoration-none d-flex flex-column">
+                    <div class="orenda-card-body">
+                        <h5 class="text-orenda-primary mb-0">Mega</h5>
+                        <p class="text-muted small">Comprehensive district-wide analysis with predictive insights.</p>        
+                    </div>
+                </a>
             </div>
         }
     </div>

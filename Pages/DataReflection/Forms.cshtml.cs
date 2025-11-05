@@ -20,8 +20,10 @@ namespace ORSV2.Pages.DataReflection
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
         public string DistrictName { get; set; } = string.Empty;
         
-        // Property to control visibility of advanced forms
-        public bool ShowAdvancedForms { get; private set; }
+        // Granular access control properties
+        public bool ShowForm3 { get; private set; }
+        public bool ShowMeta { get; private set; }
+        public bool ShowMega { get; private set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -42,8 +44,13 @@ namespace ORSV2.Pages.DataReflection
 
             DistrictName = district.Name;
 
-            // Use the properties from SecureReportPageModel for cleaner role checking
-            ShowAdvancedForms = IsOrendaUser || IsDistrictAdmin || IsSchoolAdmin;
+            // Form 1 & 2: Everyone (Teacher, School Admin, District Admin, Orenda)
+            // Form 3 & Meta: School Admin, District Admin, Orenda
+            // Mega: District Admin, Orenda only
+            
+            ShowForm3 = IsOrendaUser || IsDistrictAdmin || IsSchoolAdmin;
+            ShowMeta = IsOrendaUser || IsDistrictAdmin || IsSchoolAdmin;
+            ShowMega = IsOrendaUser || IsDistrictAdmin;
 
             Breadcrumbs = new List<BreadcrumbItem>
             {
