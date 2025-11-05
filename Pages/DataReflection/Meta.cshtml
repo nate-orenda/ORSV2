@@ -802,37 +802,31 @@
                                     <th colspan="3" class="col-header-swd">SWD</th>
                                     <th colspan="3" class="col-header-aa">AA</th>
                                     <th colspan="3" class="col-header-sed">SED</th>
-                                    <th colspan="3" class="col-header-hisp">Hispanic</th>
-                                    <th rowspan="2" class="col-header-participation">Participation</th>
+                                    <th colspan="3" class="col-header-all">Hispanic</th>
+                                    <th colspan="1" class="col-header-all">Participation</th>
                                 </tr>
                                 <tr>
-                                    <!-- All -->
                                     <th class="data-all target-cell">% Target</th>
                                     <th class="data-all prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-all diff-cell">%/# Diff</th>
-                                    <!-- EL -->
                                     <th class="data-el target-cell">% Target</th>
                                     <th class="data-el prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-el diff-cell">%/# Diff</th>
-                                    <!-- SWD -->
                                     <th class="data-swd target-cell">% Target</th>
                                     <th class="data-swd prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-swd diff-cell">%/# Diff</th>
-                                    <!-- AA -->
                                     <th class="data-aa target-cell">% Target</th>
                                     <th class="data-aa prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-aa diff-cell">%/# Diff</th>
-                                    <!-- SED -->
                                     <th class="data-sed target-cell">% Target</th>
                                     <th class="data-sed prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-sed diff-cell">%/# Diff</th>
-                                    <!-- HISP -->
                                     <th class="data-hisp target-cell">% Target</th>
                                     <th class="data-hisp prof-cell">% Proficient (Prof/Tested)</th>
                                     <th class="data-hisp diff-cell">%/# Diff</th>
-                                </tr>
+                                    <th class="data-all prof-cell">% Participation (Tested/Enrolled)</th>
+                                    </tr>
                             </thead>
-
                             <tbody>
                                 @foreach (var row in subjectGroup.BodyRows)
                                 {
@@ -1002,7 +996,7 @@
                                 </tfoot>
                             }
                         </table>
-                    </div>
+                    </div> <br/>
                 } <!-- === ADDED: Closing brace for the 'if' check === -->
             }
         }

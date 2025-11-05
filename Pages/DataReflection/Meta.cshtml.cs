@@ -452,16 +452,26 @@ namespace ORSV2.Pages.DataReflection
                         setHeaderGroup(17, "HISP", "Hispanic");
                         
                         // Participation Header
+                        // === MODIFIED: Participation Header (Row 1) - styled like 'All Students' ===
                         var partHeaderCell = ws.Cell(headerRow1, totalCols);
                         partHeaderCell.Value = "Participation";
-                        partHeaderCell.Style.Fill.BackgroundColor = headerBgColors["Participation"];
-                        partHeaderCell.Style.Font.FontColor = headerFontColors["Participation"];
+                        partHeaderCell.Style.Fill.BackgroundColor = headerBgColors["All"]; // Use "All" style
+                        partHeaderCell.Style.Font.FontColor = headerFontColors["All"]; // Use "All" style
                         partHeaderCell.Style.Font.Bold = true;
                         partHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        partHeaderCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                         partHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                         partHeaderCell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
-                        ws.Range(headerRow1, totalCols, headerRow2, totalCols).Merge();
+                        // No merge
+
+                        // === MODIFIED: Participation Sub-Header (Row 2) - styled like 'data-all' ===
+                        var partSubHeaderCell = ws.Cell(headerRow2, totalCols);
+                        partSubHeaderCell.Value = "% Participation (Tested/Enrolled)";
+                        partSubHeaderCell.Style.Fill.BackgroundColor = dataBgColors["All"]; // Use "data-all" style
+                        partSubHeaderCell.Style.Font.Bold = true;
+                        partSubHeaderCell.Style.Font.FontColor = headerFontColors["All"]; // Use "All" font style
+                        partSubHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        partSubHeaderCell.Style.Alignment.WrapText = true;
+                        partSubHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                 
                         ws.Row(headerRow2).Height = 30;
                         row += 2; 
@@ -491,7 +501,7 @@ namespace ORSV2.Pages.DataReflection
                             {
                                 partCell.Value = "—";
                             }
-                            partCell.Style.Fill.BackgroundColor = dataBgColors["Participation"];
+                            partCell.Style.Fill.BackgroundColor = dataBgColors["All"];
                             partCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                             
                             if (bodyRow.Type == RowType.K2Total || bodyRow.Type == RowType.G3PlusTotal)
@@ -534,7 +544,7 @@ namespace ORSV2.Pages.DataReflection
                             {
                                 partTotalCell.Value = "—";
                             }
-                            partTotalCell.Style.Fill.BackgroundColor = dataBgColors["Participation"];
+                            partTotalCell.Style.Fill.BackgroundColor = dataBgColors["All"];
                             partTotalCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
                             var totalRowStyle = ws.Range(row, 1, row, totalCols).Style;
