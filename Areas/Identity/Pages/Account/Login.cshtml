@@ -1,407 +1,359 @@
 ﻿@page
-@model LoginModel
+@model ORSV2.Areas.Identity.Pages.Account.LoginModel
 @{
-    ViewData["Title"] = "Log in";
-    Layout = null; // Remove layout to avoid conflicts
+    ViewData["Title"] = "Orenda Reporting System";
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ORSV2</title>
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/x-icon" href="~/favicon.ico"> 
-</head>
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    /* Orenda Login Page Styles */
+    .auth-wrapper {
+        max-width: 650px;
+        margin: 4rem auto;
+        padding: 0 1rem;
     }
     
-    html, body {
-        height: 100%;
-        overflow: hidden; /* Prevent scroll during load */
-    }
-    /* Fix the scroll issue by removing conflicting height settings */
-    body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #f8f9fa;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        overflow-y: auto; /* Allow scroll only if absolutely needed */
-    }
-    
-
-    
-    .login-wrapper {
-        width: 100%;
-        max-width: 400px; /* Back to your original width */
-        min-height: auto; /* Remove min-height conflicts */
-    }
-    
-    .login-card {
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e9ecef;
-        overflow: hidden;
-        animation: fadeInUp 0.6s ease-out;
-    }
-    
-    @@keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .login-header {
+    .logo-container {
         text-align: center;
-        padding: 2rem 2rem 1.5rem 2rem; /* Reduced padding like Google */
-        background: white;
-        /* Remove the border-bottom line */
+        margin-bottom: 2.5rem;
     }
     
-    .logo {
-        height: 64px;
-        margin-bottom: 1rem;
+    .orenda-logo {
+        height: 60px;
+        width: 60px;
         max-width: 100%;
+        margin-bottom: .75rem;
     }
     
-    .welcome-text {
-        color: #495057;
-        font-size: 1rem;
-        margin: 0;
-        font-weight: 400;
+    .brand-title {
+        font-weight: 700;
+        font-size: 1.75rem;
+        letter-spacing: .3px;
+        margin-bottom: .5rem;
+        color: #0022C5;
+        text-align: center;
     }
     
-    .login-form {
-        padding: 2rem; /* Reduced to Google-like spacing */
+    .brand-subtitle {
+        color: #64748b;
+        margin-bottom: 2.5rem;
+        text-align: center;
+        font-size: 1.1rem;
     }
     
-    .form-floating {
-        margin-bottom: 1.25rem; /* Reduced spacing like Google */
-        position: relative;
+    .auth-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 2rem;
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 34, 197, .08);
+        transition: all .3s ease;
     }
     
-    .form-floating .form-control {
-        border: 2px solid #e9ecef;
-        border-radius: 8px; /* Slightly less rounded like Google */
-        padding: 1rem 1.25rem; /* Reduced padding */
-        height: auto;
-        font-size: 1rem; /* Standard font size */
-        transition: all 0.3s ease;
-        background: #fafbfc;
+    .auth-card:hover {
+        box-shadow: 0 8px 25px rgba(0, 34, 197, .1);
     }
     
-    .form-floating .form-control:focus {
-        border-color: #0022C5;
-        box-shadow: 0 0 0 0.2rem rgba(0, 34, 197, 0.15);
-        background: white;
-        transform: translateY(-1px);
+    /* Google Sign-In Card */
+    .google-cta {
+        text-align: center;
     }
     
-    .form-floating .form-control:not(:placeholder-shown) {
-        background: white;
+    .google-cta h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
     }
     
-    .form-floating label {
-        color: #6c757d;
-        font-weight: 500;
-        padding: 1rem 1.25rem; /* Match the input padding */
+    .google-cta p {
+        color: #64748b;
+        margin-bottom: 1.75rem;
+        font-size: .95rem;
+        line-height: 1.6;
     }
     
-    .form-check {
-        margin: 1.5rem 0;
-    }
-    
-    .form-check-input:checked {
-        background-color: #0022C5;
-        border-color: #0022C5;
-    }
-    
-    .form-check-input:focus {
-        box-shadow: 0 0 0 0.25rem rgba(0, 34, 197, 0.15);
-    }
-    
-    .form-check-label {
-        color: #495057;
-        font-weight: 400;
-        cursor: pointer;
-    }
-    
-    .login-btn {
-        background: linear-gradient(135deg, #0022C5 0%, #1a4fb8 100%);
-        border: none;
-        border-radius: 8px; /* Match the input border radius */
-        padding: 0.875rem 2rem; /* Slightly reduced padding */
-        font-size: 1rem;
+    .google-cta .btn-google {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
         font-weight: 600;
         width: 100%;
-        color: white;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        background: linear-gradient(135deg, #0022C5 0%, #1a4fb8 100%);
+        color: #fff !important;
+        border: none;
+        border-radius: .5rem;
+        box-shadow: 0 4px 12px rgba(0, 34, 197, .15);
+        transition: all .2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .75rem;
     }
     
-    .login-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
-    }
-    
-    .login-btn:hover::before {
-        left: 100%;
-    }
-    
-    .login-btn:hover {
+    .google-cta .btn-google:hover {
         background: linear-gradient(135deg, #001aa0 0%, #1640a0 100%);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 34, 197, 0.3);
+        box-shadow: 0 8px 20px rgba(0, 34, 197, .25);
     }
     
-    .login-btn:active {
+    .google-cta .btn-google:active {
         transform: translateY(0);
     }
     
-    .divider {
-        text-align: center;
-        margin: 1.5rem 0;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    
-    .google-btn {
-        background: white;
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
-        padding: 1rem;
-        width: 100%;
-        color: #495057;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        display: flex;
+    /* Google Icon - SVG for white background */
+    .google-icon {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        text-decoration: none;
-        margin-bottom: 1rem;
     }
     
-    .google-btn:hover {
-        background: #f8f9fa;
-        border-color: #0022C5;
-        color: #0022C5;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .google-logo {
-        width: 18px;
-        height: 18px;
-        margin-right: 0.75rem;
-    }
-    
-    .forgot-password {
+    /* Divider */
+    .auth-divider {
+        margin: 2rem 0 1.5rem 0;
         text-align: center;
-        margin-top: 1.5rem;
-    }
-    
-    .register-section {
-        text-align: center;
-        margin-top: 1.5rem;
-        /* Remove the border-top line */
-    }
-    
-    .register-text {
-        color: #6c757d;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem; /* Reduced margin for link style */
-    }
-    
-    .validation-summary {
-        background: #f8d7da;
-        border: 1px solid #f5c6cb;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        color: #721c24;
-    }
-    
-    .text-danger {
-        color: #dc3545 !important;
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-    }
-    
-    /* Loading state */
-    .btn-loading {
         position: relative;
-        color: transparent !important;
     }
     
-    .btn-loading::after {
+    .auth-divider::before {
         content: '';
         position: absolute;
-        width: 16px;
-        height: 16px;
         top: 50%;
-        left: 50%;
-        margin-left: -8px;
-        margin-top: -8px;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        border-top-color: #ffffff;
-        animation: spin 1s ease-in-out infinite;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e2e8f0;
     }
     
-    @@keyframes spin {
-        to { transform: rotate(360deg); }
+    .auth-divider span {
+        background: #fff;
+        padding: 0 1rem;
+        position: relative;
+        color: #94a3b8;
+        font-size: .875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: .5px;
     }
     
-    /* Responsive Design */
-    @@media (max-width: 480px) {
-        body {
-            padding: 10px;
+    /* Manual Sign-In Accordion */
+    details.auth-accordion {
+        border: 1px solid #e2e8f0;
+        border-radius: .5rem;
+        overflow: hidden;
+    }
+    
+    details.auth-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        font-weight: 500;
+        margin: 0;
+        padding: .875rem 1.25rem;
+        background: #f8fafc;
+        user-select: none;
+        color: #64748b;
+        font-size: .95rem;
+        transition: all .2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    details.auth-accordion summary:hover {
+        background: #eef2ff;
+        color: #0022C5;
+    }
+    
+    details.auth-accordion summary::after {
+        content: '▼';
+        font-size: .75rem;
+        transition: transform .2s ease;
+        color: #94a3b8;
+    }
+    
+    details.auth-accordion[open] summary::after {
+        transform: rotate(-180deg);
+    }
+    
+    details.auth-accordion .accordion-body {
+        padding: 1.5rem 1.25rem;
+        background: #fff;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    /* Form Elements */
+    .accordion-body .form-label {
+        font-weight: 500;
+        color: #1e293b;
+        margin-bottom: .5rem;
+    }
+    
+    .accordion-body .form-control {
+        border-radius: .5rem;
+        border: 1px solid #e2e8f0;
+        padding: .625rem .875rem;
+        font-size: .95rem;
+    }
+    
+    .accordion-body .form-control:focus {
+        border-color: #0022C5;
+        box-shadow: 0 0 0 .2rem rgba(0, 34, 197, .1);
+    }
+    
+    .accordion-body .btn-outline-primary {
+        border: 2px solid #0022C5;
+        color: #0022C5;
+        font-weight: 600;
+        padding: .625rem 1rem;
+        border-radius: .5rem;
+        transition: all .2s ease;
+    }
+    
+    .accordion-body .btn-outline-primary:hover {
+        background: #0022C5;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    
+    /* Footer Links */
+    .auth-footer {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: .95rem;
+    }
+    
+    .auth-footer a {
+        color: #64748b;
+        text-decoration: none;
+        transition: color .2s ease;
+        font-weight: 500;
+    }
+    
+    .auth-footer a:hover {
+        color: #0022C5;
+    }
+    
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .auth-wrapper {
+            margin: 2rem auto;
         }
         
-        .login-card {
-            border-radius: 12px;
+        .orenda-logo {
+            height: 50px;
+            width: 50px;
         }
         
-        .login-header {
-            padding: 1.5rem 1.5rem 1rem 1.5rem;
+        .brand-title {
+            font-size: 1.5rem;
         }
         
-        .login-form {
+        .auth-card {
             padding: 1.5rem;
         }
         
-        .logo {
-            height: 56px;
+        .google-cta .btn-google {
+            font-size: 1rem;
+            padding: .875rem 1.5rem;
         }
     }
-    
-
 </style>
-<body>
-<div class="page-container">
-    <div class="login-wrapper">
-    <div class="login-card">
-        <div class="login-header">
-            <img src="~/images/orenda-login.png" alt="Orenda Logo" class="logo" />
-            <p class="welcome-text">Sign in to continue</p>
-        </div>
 
-        <div class="login-form">
-            <form id="account" method="post">
-                <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+<div class="auth-wrapper">
+    <!-- Logo -->
+    <div class="logo-container">
+        <img src="~/images/orenda-logo-no-words.png" alt="Orenda Logo" class="orenda-logo" />
+        <h1 class="brand-title">Orenda Reporting System</h1>
+    </div>
+    
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-                <div class="form-floating">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" placeholder="name@example.com" required />
-                    <label asp-for="Input.Email">Email</label>
+    <!-- GOOGLE SIGN-IN (Primary Path) -->
+    <div class="auth-card google-cta mb-3">
+        <h2>Sign in with Google</h2>
+        <p>
+            Use your school district Google account for quick and secure access. 
+            This is the recommended sign-in method for all users.
+        </p>
+
+        @if ((Model.ExternalLogins?.Any()) == true)
+        {
+            var google = Model.ExternalLogins.FirstOrDefault(x => x.Name == "Google");
+            if (google != null)
+            {
+                <form asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                    <button type="submit" class="btn-google" name="provider" value="@google.Name">
+                        <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+                </form>
+            }
+            else
+            {
+                <div class="alert alert-warning mb-0">
+                    Google sign-in is temporarily unavailable. Please use the manual sign-in below or contact support.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-warning mb-0">
+                External logins are not configured. Please use the manual sign-in below or contact support.
+            </div>
+        }
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="auth-divider">
+        <span>Or</span>
+    </div>
+
+    <!-- MANUAL SIGN-IN (Secondary Path) -->
+    <details class="auth-accordion">
+        <summary>Sign in with email and password</summary>
+        <div class="accordion-body">
+            <form id="account" method="post" novalidate>
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label">Email</label>
+                    <input asp-for="Input.Email" class="form-control" autocomplete="username" />
                     <span asp-validation-for="Input.Email" class="text-danger"></span>
                 </div>
 
-                <div class="form-floating">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" placeholder="password" required />
-                    <label asp-for="Input.Password">Password</label>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label">Password</label>
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
                     <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
 
-                <div class="form-check">
+                <div class="mb-3 form-check">
                     <input class="form-check-input" asp-for="Input.RememberMe" />
-                    <label class="form-check-label" asp-for="Input.RememberMe">
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
+                    <label class="form-check-label" asp-for="Input.RememberMe">Remember me</label>
                 </div>
 
-                <button type="submit" class="login-btn" id="loginButton">
-                    Log in
+                <button id="login-submit" type="submit" class="btn-outline-primary w-100">
+                    Sign in
                 </button>
             </form>
-
-            @if ((Model.ExternalLogins?.Count ?? 0) > 0)
-            {
-                <div class="divider">
-                    or
-                </div>
-                
-                <form asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-                    @foreach (var provider in Model.ExternalLogins!)
-                    {
-                        <button type="submit" class="google-btn" name="provider" value="@provider.Name" title="Log in using @provider.DisplayName">
-                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-logo" />
-                            Sign in with @provider.DisplayName
-                        </button>
-                    }
-                </form>
-            }
-
-            <div class="forgot-password">
-                <a asp-page="./ForgotPassword" class="orenda-link">Forgot your password?</a>
-            </div>
-
-            <div class="register-section">
-                <p class="register-text">Don't have an account? <a asp-page="./Register" class="orenda-link">Create Account</a></p>
-            </div>
         </div>
+    </details>
+
+    <!-- FOOTER LINKS -->
+    <div class="auth-footer">
+        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a>
+        <a asp-page="./ForgotPassword">Forgot your password?</a>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@3.2.12/dist/jquery.validate.unobtrusive.min.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('account');
-        const loginButton = document.getElementById('loginButton');
-        
-        // Add loading state to login button
-        form.addEventListener('submit', function() {
-            loginButton.classList.add('btn-loading');
-            loginButton.disabled = true;
-        });
-        
-        // Prevent double submission
-        let formSubmitted = false;
-        form.addEventListener('submit', function(e) {
-            if (formSubmitted) {
-                e.preventDefault();
-                return false;
-            }
-            formSubmitted = true;
-        });
-        
-        // Auto-hide validation messages after 5 seconds
-        const validationSummary = document.querySelector('.validation-summary');
-        if (validationSummary) {
-            setTimeout(() => {
-                validationSummary.style.opacity = '0';
-                validationSummary.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => {
-                    validationSummary.style.display = 'none';
-                }, 500);
-            }, 5000);
-        }
-    });
-</script>
-</body>
-</html>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
