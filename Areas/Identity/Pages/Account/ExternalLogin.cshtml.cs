@@ -241,7 +241,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                     }
 
                     // SchoolAccess - in-memory lookups
-                    if (!string.IsNullOrWhiteSpace(staff.SchoolAccess))
+                    /*if (!string.IsNullOrWhiteSpace(staff.SchoolAccess))
                     {
                         try
                         {
@@ -264,7 +264,7 @@ namespace ORSV2.Areas.Identity.Pages.Account
                         {
                              _logger.LogWarning(ex, "Failed to parse SchoolAccess for {Email} during external login", staff.EmailAddress);
                         }
-                    }
+                    }*/
                 }
                 else
                 {
