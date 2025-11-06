@@ -44,6 +44,9 @@ namespace ORSV2.Models
         public bool Inactive { get; set; } = false;
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }
+        
+        [MaxLength(255)]
+        public string? AlternateEmailDomains { get; set; }
 
         public ICollection<School> Schools { get; set; } = new List<School>();
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();

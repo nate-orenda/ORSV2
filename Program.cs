@@ -163,7 +163,7 @@ else
     app.UseDeveloperExceptionPage();
 }
 
-app.MapControllers();
+//app.MapControllers();
 
 app.UseStatusCodePagesWithReExecute("/StatusCode", "?code={0}");
 
@@ -174,5 +174,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapRazorPages();
+
 app.Run();

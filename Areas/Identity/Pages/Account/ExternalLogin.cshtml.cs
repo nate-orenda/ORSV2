@@ -19,7 +19,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using ORSV2.Data;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Data.SqlClient; // <-- ADDED for SqlParameter
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.Extensions.Logging; 
@@ -213,8 +213,8 @@ namespace ORSV2.Areas.Identity.Pages.Account
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
 
-                var staff = await _context.Staff
-                    .FirstOrDefaultAsync(s => s.EmailAddress == Input.Email);
+                // UPDATED: Enhanced staff matching with cross-domain support using Districts.AlternateEmailDomains
+                var staff = await FindMatchingStaffAsync(Input.Email);
 
                 if (staff != null && staff.Inactive != true)
                 {
@@ -354,6 +354,115 @@ namespace ORSV2.Areas.Identity.Pages.Account
             return Page();
         }
         
+        /// <summary>
+        /// Finds a matching Staff record for the given email address.
+        /// Supports cross-domain matching using Districts.AlternateEmailDomains.
+        /// 
+        /// Matching strategy:
+        /// 1. Try exact email match (fast path)
+        /// 2. Extract username prefix and look for matches in same district's alternate domains
+        /// </summary>
+        /// <param name="loginEmail">The email address from the external login provider</param>
+        /// <returns>Matching Staff record or null</returns>
+        private async Task<Staff> FindMatchingStaffAsync(string loginEmail)
+        {
+            if (string.IsNullOrWhiteSpace(loginEmail) || !loginEmail.Contains("@"))
+            {
+                return null;
+            }
+
+            // Step 1: Try exact email match first (most common case - fast path)
+            var staff = await _context.Staff
+                .FirstOrDefaultAsync(s => s.EmailAddress == loginEmail && s.Inactive != true);
+            
+            if (staff != null)
+            {
+                _logger.LogInformation("Exact email match found for {Email}", loginEmail);
+                return staff;
+            }
+
+            // Step 2: Extract username prefix and domain from login email
+            var loginParts = loginEmail.Split('@');
+            var loginUsername = loginParts[0].ToLower().Trim();
+            var loginDomain = loginParts[1].ToLower().Trim();
+
+            _logger.LogInformation("No exact match for {Email}. Attempting username prefix match for '{Username}@{Domain}'", 
+                loginEmail, loginUsername, loginDomain);
+
+            // Step 3: Find all districts that have this login domain as an alternate domain
+            var districtsWithThisDomain = await _context.Districts
+                .Where(d => d.AlternateEmailDomains != null && 
+                           d.AlternateEmailDomains.Contains(loginDomain))
+                .Select(d => new { d.Id, d.AlternateEmailDomains })
+                .ToListAsync();
+
+            if (!districtsWithThisDomain.Any())
+            {
+                _logger.LogWarning("Login domain '{Domain}' is not configured as an alternate domain for any district", loginDomain);
+                return null;
+            }
+
+            // Step 4: For each district with this alternate domain, try to find matching staff
+            foreach (var district in districtsWithThisDomain)
+            {
+                // Parse the comma-separated list of alternate domains
+                var alternateDomains = district.AlternateEmailDomains
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(d => d.Trim().ToLower())
+                    .ToList();
+
+                // Verify the login domain is actually in this district's list
+                if (!alternateDomains.Contains(loginDomain))
+                {
+                    continue;
+                }
+
+                _logger.LogInformation("Login domain '{Domain}' is configured for DistrictId {DistrictId}", 
+                    loginDomain, district.Id);
+
+                // Step 5: Look for staff in this district with matching username prefix
+                var potentialMatches = await _context.Staff
+                    .Where(s => s.DistrictId == district.Id &&
+                               s.EmailAddress.Contains("@") && 
+                               s.Inactive != true &&
+                               EF.Functions.Like(s.EmailAddress, loginUsername + "@%"))
+                    .ToListAsync();
+
+                if (!potentialMatches.Any())
+                {
+                    _logger.LogInformation("No staff found with username '{Username}' in DistrictId {DistrictId}", 
+                        loginUsername, district.Id);
+                    continue;
+                }
+
+                // Step 6: Find exact username match
+                foreach (var candidate in potentialMatches)
+                {
+                    var candidateParts = candidate.EmailAddress.Split('@');
+                    if (candidateParts.Length != 2) continue;
+
+                    var candidateUsername = candidateParts[0].ToLower().Trim();
+                    var candidateDomain = candidateParts[1].ToLower().Trim();
+
+                    // Username must match exactly
+                    if (candidateUsername != loginUsername) continue;
+
+                    // Both domains must belong to this district (login domain already verified above)
+                    // Candidate domain is either the primary (in Staff table) or also an alternate
+                    _logger.LogInformation(
+                        "✓ Username prefix match SUCCESS: Login {LoginEmail} matched to Staff {StaffEmail} (StaffId: {StaffId}, DistrictId: {DistrictId})",
+                        loginEmail, candidate.EmailAddress, candidate.StaffId, candidate.DistrictId);
+                    
+                    return candidate;
+                }
+            }
+
+            _logger.LogWarning("Username '{Username}' not found in any district with alternate domain '{Domain}'", 
+                loginUsername, loginDomain);
+
+            return null;
+        }
+
         /// <summary>
         /// Generates email content and sends user confirmation and admin notification emails.
         /// This method is intended to be run in the background ("fire-and-forget") to avoid
@@ -579,4 +688,3 @@ namespace ORSV2.Areas.Identity.Pages.Account
         }
     }
 }
-
