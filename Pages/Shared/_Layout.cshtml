@@ -46,10 +46,16 @@
                                 <a asp-page="/Index" class="nav-link">
                                     <i class="bi bi-house me-1"></i>Dashboard
                                 </a>
+                                @inject UserManager<ApplicationUser> UserManager
+                                @inject ApplicationDbContext DbContext
+
                                 @{
-                                    var isTeacher = User.IsInRole("Teacher");
+                                    var currentUser = await UserManager.GetUserAsync(User);
+                                    var hasGASchools = currentUser?.DistrictId != null && 
+                                        await DbContext.Schools.AnyAsync(s => s.DistrictId == currentUser.DistrictId && s.GA == true);
                                 }
-                                @if (!User.IsInRole("Teacher"))
+
+                                @if (!User.IsInRole("Teacher") && hasGASchools)
                                 {
                                     <a asp-page="/GuidanceAlignment/Index" class="nav-link">
                                         <i class="bi bi-compass me-1"></i>Guidance Alignment
