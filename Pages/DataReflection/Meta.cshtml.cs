@@ -943,7 +943,8 @@ namespace ORSV2.Pages.DataReflection
 
                             bodyRows.AddRange(k2_GradeRows);
 
-                            var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total", null, subjectGroup.Key); // Pass subject
+                            var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total", null, subjectGroup.Key, 
+                                isGroupTotal: true, childRows: k2_GradeRows); // ADDED: isGroupTotal and childRows for averaging
                             k2_TotalRow.Type = RowType.K2Total;
                             if (!k2_TotalRow.IsEmpty)
                             {
@@ -966,7 +967,8 @@ namespace ORSV2.Pages.DataReflection
 
                             bodyRows.AddRange(g3Plus_GradeRows);
 
-                            var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total", null, subjectGroup.Key); // Pass subject
+                            var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total", null, subjectGroup.Key,
+                                isGroupTotal: true, childRows: g3Plus_GradeRows); // ADDED: isGroupTotal and childRows for averaging
                             g3Plus_TotalRow.Type = RowType.G3PlusTotal;
                             if (!g3Plus_TotalRow.IsEmpty)
                             {
@@ -974,7 +976,8 @@ namespace ORSV2.Pages.DataReflection
                             }
 
                             subjectDisplayGroup.BodyRows = bodyRows;
-                            subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total", null, subjectGroup.Key); // Pass subject
+                            subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total", null, subjectGroup.Key,
+                                isGroupTotal: true, childRows: bodyRows.Where(r => r.Type == RowType.Grade).ToList()); // ADDED: isGroupTotal and childRows for averaging
                             subjectDisplayGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
 
                             return subjectDisplayGroup;
@@ -983,7 +986,8 @@ namespace ORSV2.Pages.DataReflection
         }
 
         // PivotDemographics
-        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade, string subject)
+        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade, string subject, 
+            bool isGroupTotal = false, List<MetaDisplayRow>? childRows = null)
         {
             var row = new MetaDisplayRow { RowLabel = rowLabel };
             var groups = rows
@@ -1012,8 +1016,25 @@ namespace ORSV2.Pages.DataReflection
                 row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "SED")?.TargetPct;
                 row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "HISP")?.TargetPct;
             }
+            else if (isGroupTotal && childRows != null && childRows.Any())
+            {
+                // === ADDED: Total rows: average targets from child rows ===
+                row.AllTarget = AverageTargets(childRows.Select(r => r.AllTarget));
+                row.ELTarget = AverageTargets(childRows.Select(r => r.ELTarget));
+                row.SWDTarget = AverageTargets(childRows.Select(r => r.SWDTarget));
+                row.AATarget = AverageTargets(childRows.Select(r => r.AATarget));
+                row.SEDTarget = AverageTargets(childRows.Select(r => r.SEDTarget));
+                row.HISPTarget = AverageTargets(childRows.Select(r => r.HISPTarget));
+            }
             
             return row;
+        }
+
+        // === ADDED: Helper to average target percentages (ignoring nulls) ===
+        private decimal? AverageTargets(IEnumerable<decimal?> targets)
+        {
+            var nonNullTargets = targets.Where(t => t.HasValue).Select(t => t!.Value).ToList();
+            return nonNullTargets.Any() ? Math.Round(nonNullTargets.Average(), 2) : null;
         }
 
         // BuildBreadcrumbs

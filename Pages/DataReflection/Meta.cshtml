@@ -1096,6 +1096,7 @@
                         showToast('Saved!');
                         // === ADDED: Refresh the diff cell on success ===
                         updateDiffCell(e.target);
+                        refreshTotalRows(e.target);
                     } else {
                         showToast(data.message || 'Error saving.', 'error');
                         // TODO: Optionally revert the input value on failure
@@ -1107,6 +1108,113 @@
                 });
             });
         });
+
+        // === ADDED: Refresh total rows when grade row changes ===
+        function refreshTotalRows(inputElement) {
+            const row = inputElement.closest('tr');
+            if (!row) return;
+            
+            // Locate all total rows below this row
+            let currentRow = row.nextElementSibling;
+            while (currentRow) {
+                const totalLabel = currentRow.querySelector('.col-core')?.textContent.trim();
+                
+                // Stop if we hit a subject/unit header
+                if (!totalLabel || totalLabel.includes('Subject') || totalLabel.includes('Unit')) {
+                    break;
+                }
+                
+                // If it's a total row, refresh its diff cells
+                if (totalLabel?.includes('Total')) {
+                    refreshTotalRowDiffs(currentRow);
+                }
+                
+                currentRow = currentRow.nextElementSibling;
+            }
+        }
+
+        // === ADDED: Recalculate total row diffs by averaging targets from child grade rows ===
+        function refreshTotalRowDiffs(totalRow) {
+            // Get all grade rows above this total row (within the same group)
+            const gradeRows = [];
+            let checkRow = totalRow.previousElementSibling;
+            
+            while (checkRow) {
+                const checkLabel = checkRow.querySelector('.col-core')?.textContent.trim();
+                
+                // Stop if we hit another total row or header
+                if (!checkLabel || checkLabel.includes('Total') || checkLabel.includes('Subject') || checkLabel.includes('Unit')) {
+                    break;
+                }
+                
+                gradeRows.unshift(checkRow); // Add to beginning to maintain order
+                checkRow = checkRow.previousElementSibling;
+            }
+            
+            if (gradeRows.length === 0) return;
+            
+            // Recalculate each demographic's diff in the total row
+            const diffCells = totalRow.querySelectorAll('.diff-cell');
+            const profCells = totalRow.querySelectorAll('.prof-cell');
+            const targetCells = totalRow.querySelectorAll('.target-cell');
+            
+            diffCells.forEach((diffCell, demoIndex) => {
+                const profCell = profCells[demoIndex];
+                
+                if (!profCell) return;
+                
+                // 1. Get aggregated proficiency from this total row
+                const profBadge = profCell.querySelector('.proficiency-badge');
+                const pctProficient = profBadge ? parseFloat(profBadge.textContent.replace('%', '')) : 0;
+                
+                const countSpan = profCell.querySelector('.combined-count');
+                let totalTested = 0;
+                if (countSpan) {
+                    const parts = countSpan.textContent.replace(/[()]/g, '').split(' / ');
+                    totalTested = parseInt(parts[1], 10) || 0;
+                }
+                
+                // 2. Calculate averaged target from child grade rows
+                const gradeTargets = gradeRows.map(gradeRow => {
+                    const gradeTargetCell = gradeRow.querySelectorAll('.target-cell')[demoIndex];
+                    if (!gradeTargetCell) return null;
+                    
+                    const input = gradeTargetCell.querySelector('input');
+                    const targetVal = input ? parseFloat(input.value) : null;
+                    return !isNaN(targetVal) && targetVal !== null ? targetVal : null;
+                }).filter(t => t !== null);
+                
+                // === ADDED: Guard against no targets or NaN ===
+                if (gradeTargets.length === 0 || !gradeTargets.every(t => !isNaN(t))) {
+                    diffCell.innerHTML = '—';
+                    diffCell.className = `${diffCell.classList[0]} diff-cell`;
+                    return;
+                }
+                
+                const avgTarget = gradeTargets.reduce((a, b) => a + b, 0) / gradeTargets.length;
+                
+                // === ADDED: Guard against NaN result ===
+                if (isNaN(avgTarget)) {
+                    diffCell.innerHTML = '—';
+                    diffCell.className = `${diffCell.classList[0]} diff-cell`;
+                    return;
+                }
+                
+                // 3. Calculate diff using averaged target vs aggregated proficiency
+                const pctDiff = avgTarget - pctProficient;
+                let nDiff = 0;
+                if (pctDiff > 0) {
+                    nDiff = Math.ceil((totalTested * pctDiff) / 100);
+                }
+                
+                let diffClass = 'diff-neutral';
+                if (pctDiff > 0) diffClass = 'diff-negative';
+                if (pctDiff < 0) diffClass = 'diff-positive';
+                
+                diffCell.className = `${diffCell.classList[0]} diff-cell ${diffClass}`;
+                diffCell.innerHTML = `${pctDiff.toFixed(1).replace('.0', '')}%<span class="combined-count">(${nDiff})</span>`;
+            });
+        }
 
         // === ADDED: New function to update the Diff cell ===
         function updateDiffCell(inputElement) {
