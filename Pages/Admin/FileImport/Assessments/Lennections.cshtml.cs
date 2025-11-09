@@ -728,35 +728,33 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                         var rawPts = (cells[m.ScoreCol] ?? "").Trim();
                         var standardValue = (cells[m.StdCol] ?? "").Trim();
 
-                        if (!string.IsNullOrEmpty(standardValue) &&
-                            decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out var pts))
+                        if (!string.IsNullOrEmpty(standardValue))
                         {
-                            // Handle pipe-separated sub-standards - take the last (rightmost) GUID
+                            // rightmost GUID after pipes
                             var standardParts = standardValue.Split('|');
-                            var lastStandardId = standardParts[standardParts.Length - 1].Trim();
+                            var lastStandardId = standardParts[^1].Trim();
 
                             if (Guid.TryParse(lastStandardId, out var standardId))
                             {
-                                // ✨ FIX: Apply the standard mapping here.
                                 if (standardMap.TryGetValue(standardId, out var newStandardId))
-                                {
                                     standardId = newStandardId;
-                                }
+
+                                // 🔑 NEW: coerce non-numeric/blank scores to 0
+                                decimal pts;
+                                if (!decimal.TryParse(rawPts, NumberStyles.Any, CultureInfo.InvariantCulture, out pts))
+                                    pts = 0m;
 
                                 allIds.Add(standardId);
                                 var key = (localId, standardId);
                                 if (agg.TryGetValue(key, out var cur))
-                                {
                                     agg[key] = (cur.points + pts, cur.count + 1);
-                                }
                                 else
-                                {
                                     agg[key] = (pts, 1);
-                                }
                             }
                         }
                     }
                 }
+
 
                 // Read the first data line.
                 string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
