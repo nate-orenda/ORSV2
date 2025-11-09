@@ -21,7 +21,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         [BindProperty] public string Delimiter { get; set; } = "comma";
         [BindProperty] public IFormFile? Upload { get; set; }
         [BindProperty] public string? TempPath { get; set; }
-        [BindProperty] public string Subject { get; set; } = "";
+        [BindProperty] public string Subject { get; set; } = "ELA";
         [BindProperty, Range(1, 5)] public int UnitCycle { get; set; } = 1;
 
         public bool HasPreview => Preview.Count > 0;
@@ -140,7 +140,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public LennectionsModel(IConfiguration config) => _config = config;
 
         private static readonly string[] PossibleTestHeaders = { "Assessment Name", "Assessment", "Test Name", "Test" };
-        private static readonly Regex UnitCyclePattern = new(@"(?:unit|cycle|quarter|q)\s*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex UnitCyclePattern =
+            new(@"(?:unit|cycle|quarter|q)\s*(?<num>\d+|I|II|III|IV|V)",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
 
         public async Task OnGet()
         {
@@ -252,6 +255,9 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             {
                 UnitCycle = AnalysisResults.DetectedUnitCycle.Value;
             }
+
+            // ✅ Keep the dropdown in sync with whatever Subject is now
+            BuildSubjectOptions(Subject);
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
 
@@ -657,6 +663,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         {
             await LoadDistrictOptionsAsync();
 
+            BuildSubjectOptions(Subject);
+
             // Only validate required fields for import (not preview)
             if (DistrictId == 0)
             {
@@ -835,7 +843,25 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (!Guid.TryParse(obj?.ToString(), out var batchGuid))
                     throw new InvalidOperationException($"Import failed - invalid batch ID returned: '{obj}'");
 
+                // --- Ensure batch metadata is filled before FreezeBatch is called downstream ---
+                var testYear = GetSchoolYearFromUtcNow();
+                using (var metaCmd = new SqlCommand(@"
+                    UPDATE dbo.assessment_import_batches
+                    SET 
+                        districtid   = COALESCE(districtid, @DistrictId),
+                        test_year    = COALESCE(test_year, @TestYear),
+                        import_source= COALESCE(import_source, @ImportSource)
+                    WHERE batch_id = @BatchId;", conn, transaction))
+                {
+                    metaCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
+                    metaCmd.Parameters.AddWithValue("@TestYear", testYear);
+                    metaCmd.Parameters.AddWithValue("@ImportSource", "Lennections"); // or "CASA/Lennections" if you prefer
+                    metaCmd.Parameters.AddWithValue("@BatchId", batchGuid);
+                    await metaCmd.ExecuteNonQueryAsync();
+                }
+
                 // Step 2: Update student totals
+                /*
                 using (var totalsCmd = new SqlCommand("dbo.UpsertAssessmentStudentTotals", conn, transaction)
                 {
                     CommandType = CommandType.StoredProcedure,
@@ -856,7 +882,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     rosterCmd.Parameters.AddWithValue("@BatchId", batchGuid);
                     rosterCmd.Parameters.AddWithValue("@DistrictId", DistrictId);
                     await rosterCmd.ExecuteNonQueryAsync();
-                }
+                }*/
 
                 transaction.Commit();
 
@@ -896,8 +922,14 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
         // ---------- HELPER METHODS ----------
 
-        private record QuestionMap(int Q, string ScoreHeader, int ScoreCol, string StdHeader, int StdCol);
+        private static int GetSchoolYearFromUtcNow()
+        {
+            var now = DateTime.UtcNow;
+            return now.Month >= 7 ? now.Year + 1 : now.Year; // July–Dec => next year; Jan–Jun => current
+        }
 
+        private record QuestionMap(int Q, string ScoreHeader, int ScoreCol, string StdHeader, int StdCol);
+        
         private List<QuestionMap> FindItemColumnBlocks(string[] headers)
         {
             var maps = new List<QuestionMap>();
