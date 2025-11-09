@@ -9,6 +9,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CsvHelper; // Added for robust CSV parsing
+using CsvHelper.Configuration; // Added for robust CSV parsing
 
 namespace ORSV2.Pages.Admin.FileImport.Assessments
 {
@@ -260,149 +262,180 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             BuildSubjectOptions(Subject);
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
-
-            using var sr = new StreamReader(System.IO.File.OpenRead(tempFilePath), Encoding.UTF8, true);
-            var header = await sr.ReadLineAsync();
-            if (string.IsNullOrWhiteSpace(header))
+            
+            // --- PATCH: Use CsvReader ---
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                ModelState.AddModelError("", "Missing header row.");
-                return Page();
-            }
+                HasHeaderRecord = true,
+                Delimiter = delimiterChar.ToString(),
+            };
 
-            var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-
-            int colLocalId;
-            try { colLocalId = FindStudentIdColumnOrThrow(headers); }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", ex.Message); return Page();
-            }
-
-            // Read the first data row to find the Assessment Name
-            string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
-            if (!string.IsNullOrWhiteSpace(firstDataLine))
-            {
-                var firstDataCells = firstDataLine.Split(delimiterChar);
-                int? testNameCol = FindFirst(headers, PossibleTestHeaders);
-                if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
-                {
-                    var detectedTestId = firstDataCells[testNameCol.Value].Trim();
-                    if (!string.IsNullOrWhiteSpace(detectedTestId))
-                    {
-                        AutoDetectedTestId = TestId = detectedTestId;
-                    }
-                }
-            }
-
-            var maps = FindItemColumnBlocks(headers);
-            if (maps.Count == 0)
-            {
-                ModelState.AddModelError("", "Couldn't find any question columns."); return Page();
-            }
-
-            // ENHANCED: Build standard preview with question count per standard
-            var standardQuestionCounts = new Dictionary<Guid, int>();
+            var standardQuestionCounts = new Dictionary<Guid, HashSet<int>>(); // standard -> set of question numbers
             var seenStandardIds = new HashSet<Guid>();
-
-            // First, process the first data line that we already read for test ID detection
-            if (!string.IsNullOrWhiteSpace(firstDataLine))
+            int colLocalId = -1;
+            var localIds = new HashSet<int>();
+            int scannedCount = 0;
+            string[] headers;
+            
+            // --- PATCH: Define helper function here to fix scope ---
+            void RecordStandardForQuestion(int qNumber, Guid standardId)
             {
-                var cells = firstDataLine.Split(delimiterChar);
-
-                foreach (var qm in maps)
+                if (!standardQuestionCounts.TryGetValue(standardId, out var set))
                 {
-                    if (qm.StdCol >= cells.Length) continue;
+                    set = new HashSet<int>();
+                    standardQuestionCounts[standardId] = set;
+                }
+                set.Add(qNumber);
+                seenStandardIds.Add(standardId);
+            }
 
-                    var standardValue = (cells[qm.StdCol] ?? "").Trim();
+            using (var reader = new StreamReader(System.IO.File.OpenRead(tempFilePath), Encoding.UTF8, true))
+            using (var csv = new CsvReader(reader, csvConfig))
+            {
+                if (!await csv.ReadAsync())
+                {
+                    ModelState.AddModelError("", "File is empty.");
+                    return Page();
+                }
+                csv.ReadHeader();
+                if (csv.HeaderRecord == null)
+                {
+                    ModelState.AddModelError("", "Missing header row.");
+                    return Page();
+                }
+                headers = csv.HeaderRecord;
 
-                    if (!string.IsNullOrEmpty(standardValue))
+                try { colLocalId = FindStudentIdColumnOrThrow(headers); }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", ex.Message); return Page();
+                }
+
+                // Read the first data row to find the Assessment Name
+                string[]? firstDataCells = null;
+                if (await csv.ReadAsync())
+                {
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    firstDataCells = csv.Context.Parser.Record;
+                }
+                
+                if (firstDataCells != null)
+                {
+                    int? testNameCol = FindFirst(headers, PossibleTestHeaders);
+                    if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
                     {
-                        // Handle pipe-separated sub-standards - take the last (rightmost) GUID
-                        var standardParts = standardValue.Split('|');
-                        var lastStandardId = standardParts[standardParts.Length - 1].Trim();
-
-                        if (Guid.TryParse(lastStandardId, out var standardId))
+                        var detectedTestId = firstDataCells[testNameCol.Value].Trim();
+                        if (!string.IsNullOrWhiteSpace(detectedTestId))
                         {
-                            // ✨ FIX: Apply the standard mapping. This fixes the compiler errors.
-                            if (standardMap.TryGetValue(standardId, out var newStandardId))
-                            {
-                                standardId = newStandardId;
-                            }
-                            seenStandardIds.Add(standardId);
-                            standardQuestionCounts[standardId] = standardQuestionCounts.GetValueOrDefault(standardId, 0) + 1;
+                            AutoDetectedTestId = TestId = detectedTestId;
                         }
                     }
                 }
-            }
 
-            // Then process the remaining data rows
-            string? line;
-            while ((line = await sr.ReadLineAsync()) != null)
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                var cells = line.Split(delimiterChar);
-                foreach (var qm in maps)
+                var maps = FindItemColumnBlocks(headers);
+                if (maps.Count == 0)
                 {
-                    if (qm.StdCol >= cells.Length) continue;
-                    var standardValue = (cells[qm.StdCol] ?? "").Trim();
+                    ModelState.AddModelError("", "Couldn't find any question columns."); return Page();
+                }
 
-                    if (!string.IsNullOrEmpty(standardValue))
+                // First, try the very first data line (often fully populated)
+                if (firstDataCells != null)
+                {
+                    foreach (var qm in maps)
                     {
-                        // Handle pipe-separated sub-standards - take the last (rightmost) GUID
-                        var standardParts = standardValue.Split('|');
-                        var lastStandardId = standardParts[standardParts.Length - 1].Trim();
+                        if (qm.StdCol >= firstDataCells.Length) continue;
 
+                        var standardValue = (firstDataCells[qm.StdCol] ?? "").Trim();
+                        if (string.IsNullOrEmpty(standardValue)) continue;
+
+                        var lastStandardId = standardValue.Split('|')[^1].Trim();
                         if (Guid.TryParse(lastStandardId, out var standardId))
                         {
-                            // ✨ FIX: Apply the standard mapping here as well.
-                            if (standardMap.TryGetValue(standardId, out var newStandardId))
-                            {
-                                standardId = newStandardId;
-                            }
-                            seenStandardIds.Add(standardId);
-                            // Only count from first row to avoid duplicates
+                            if (standardMap.TryGetValue(standardId, out var mapped)) standardId = mapped;
+                            RecordStandardForQuestion(qm.Q, standardId);
                         }
                     }
                 }
-            }
 
+                // Reset reader to scan for all standards and students
+            } // CsvReader is disposed, file is closed.
+
+            // Re-open file to scan all rows for standards and students
+            using (var reader = new StreamReader(System.IO.File.OpenRead(tempFilePath), Encoding.UTF8, true))
+            using (var csv = new CsvReader(reader, csvConfig))
+            {
+                csv.Read();
+                csv.ReadHeader(); // Skip header
+                colLocalId = FindStudentIdColumnOrThrow(csv.HeaderRecord!); // Re-find student ID col
+                var maps = FindItemColumnBlocks(csv.HeaderRecord!); // Re-find maps
+
+                // Process first data line for student validation
+                if (await csv.ReadAsync())
+                {
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    var cells = csv.Context.Parser.Record;
+                    if (cells != null && colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
+                        localIds.Add(lid);
+                    scannedCount++;
+                }
+
+                // Scan remaining rows
+                while (await csv.ReadAsync())
+                {
+                    // --- PATCH: Use csv.Context.Parser.RawRecord ---
+                    if (string.IsNullOrWhiteSpace(csv.Context.Parser.RawRecord)) continue;
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    var cells = csv.Context.Parser.Record;
+                    if (cells == null) continue;
+
+                    // Student validation
+                    if (scannedCount < 2000)
+                    {
+                        if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
+                            localIds.Add(lid);
+                        scannedCount++;
+                    }
+
+                    // Standard finding
+                    foreach (var qm in maps)
+                    {
+                        // If we already captured a standard for this question, skip
+                        var alreadyCaptured = standardQuestionCounts.Values.Any(set => set.Contains(qm.Q));
+                        if (alreadyCaptured) continue;
+
+                        if (qm.StdCol >= cells.Length) continue;
+
+                        var standardValue = (cells[qm.StdCol] ?? "").Trim();
+                        if (string.IsNullOrEmpty(standardValue)) continue;
+
+                        var lastStandardId = standardValue.Split('|')[^1].Trim();
+                        if (Guid.TryParse(lastStandardId, out var standardId))
+                        {
+                            if (standardMap.TryGetValue(standardId, out var mapped)) standardId = mapped;
+                            RecordStandardForQuestion(qm.Q, standardId);
+                        }
+                    }
+
+                    // Optional micro-optimization: stop if every question has a captured standard
+                    var capturedQuestions = standardQuestionCounts.Values.SelectMany(v => v).ToHashSet();
+                    if (maps.All(m => capturedQuestions.Contains(m.Q)) && scannedCount >= 2000) break;
+                }
+            }
+            // --- END OF PATCH ---
+
+            // Build preview objects
             var existingStandardsMap = await LoadSchemesForIds(seenStandardIds);
             Preview = seenStandardIds
                 .Select(id => new StandardPreview(
                     id,
                     existingStandardsMap.GetValueOrDefault(id),
                     existingStandardsMap.ContainsKey(id),
-                    standardQuestionCounts.GetValueOrDefault(id, 0)))
-                .OrderBy(p => p.HumanCodingScheme).ToList();
+                    standardQuestionCounts.TryGetValue(id, out var qs) ? qs.Count : 0))
+                .OrderBy(p => p.HumanCodingScheme)
+                .ToList();
+
             MissingIds = Preview.Where(r => !r.ExistsInStandards).Select(r => r.StandardId).ToList();
 
-            // Rewind stream to validate student IDs from the beginning (skipping header)
-            sr.BaseStream.Seek(0, SeekOrigin.Begin);
-            sr.DiscardBufferedData();
-            await sr.ReadLineAsync(); // Skip header
-
-            // Read the first data line again to include it in validation
-            firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
-
-            var localIds = new HashSet<int>();
-            int scannedCount = 0;
-
-            // Process the first line for validation
-            if (!string.IsNullOrWhiteSpace(firstDataLine))
-            {
-                var cells = firstDataLine.Split(delimiterChar);
-                if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
-                    localIds.Add(lid);
-                scannedCount++;
-            }
-
-            while ((line = await sr.ReadLineAsync()) != null && scannedCount < 2000)
-            {
-                var cells = line.Split(delimiterChar);
-                if (colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
-                    localIds.Add(lid);
-                scannedCount++;
-            }
             if (localIds.Count > 0)
             {
                 var (found, sampleMissing) = await ValidateLocalStudents(DistrictId, localIds);
@@ -423,68 +456,89 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             var result = new FileAnalysisResult();
             var delimiterChar = delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
 
-            using var sr = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true);
-
-            // Read header
-            var header = await sr.ReadLineAsync();
-            if (string.IsNullOrWhiteSpace(header))
+            // --- PATCH: Use CsvReader ---
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                result.IsValid = false;
-                result.ValidationMessages.Add("File is empty or missing header row.");
-                return result;
-            }
-
-            var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-            result.Headers = headers.ToList();
-
-            // Check for StudentId column
-            var studentIdIndex = FindStudentIdColumn(headers);
-            result.HasStudentId = studentIdIndex >= 0;
-            result.StudentIdColumn = studentIdIndex >= 0 ? headers[studentIdIndex] : null;
-
-            if (!result.HasStudentId)
+                HasHeaderRecord = true,
+                Delimiter = delimiterChar.ToString(),
+            };
+            
+            using (var reader = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true))
+            using (var csv = new CsvReader(reader, csvConfig))
             {
-                result.ValidationMessages.Add("Required 'StudentId' or 'Local Student ID' column not found.");
-                result.IsValid = false;
-            }
-
-            // Read first data row for test ID detection
-            string? firstDataLine = await sr.ReadLineAsync();
-            if (!string.IsNullOrWhiteSpace(firstDataLine))
-            {
-                var firstDataCells = firstDataLine.Split(delimiterChar);
-
-                // Detect Test ID from known columns
-                foreach (var testHeader in PossibleTestHeaders)
+                // Read header
+                if (!await csv.ReadAsync())
                 {
-                    var testIndex = Array.FindIndex(headers, h => h.Equals(testHeader, StringComparison.OrdinalIgnoreCase));
-                    if (testIndex >= 0 && testIndex < firstDataCells.Length && !string.IsNullOrWhiteSpace(firstDataCells[testIndex]))
-                    {
-                        result.DetectedTestId = firstDataCells[testIndex].Trim();
-                        result.TestIdSource = testHeader;
-                        break;
-                    }
+                    result.IsValid = false;
+                    result.ValidationMessages.Add("File is empty.");
+                    return result;
                 }
 
-                // Detect subject from test name or file content
-                result.DetectedSubject = DetectSubject(result.DetectedTestId, headers);
+                csv.ReadHeader();
+                if (csv.HeaderRecord == null)
+                {
+                    result.IsValid = false;
+                    result.ValidationMessages.Add("File is empty or missing header row.");
+                    return result;
+                }
 
-                // Detect unit cycle from test name
-                result.DetectedUnitCycle =
-                    DetectUnitCycle(result.DetectedTestId) ??
-                    DetectUnitCycle(originalFileName);
+                var headers = csv.HeaderRecord;
+                result.Headers = headers.ToList();
+
+                // Check for StudentId column
+                var studentIdIndex = FindStudentIdColumn(headers);
+                result.HasStudentId = studentIdIndex >= 0;
+                result.StudentIdColumn = studentIdIndex >= 0 ? headers[studentIdIndex] : null;
+
+                if (!result.HasStudentId)
+                {
+                    result.ValidationMessages.Add("Required 'StudentId' or 'Local Student ID' column not found.");
+                    result.IsValid = false;
+                }
+
+                // Read first data row for test ID detection
+                string[]? firstDataCells = null;
+                if (await csv.ReadAsync())
+                {
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    firstDataCells = csv.Context.Parser.Record;
+                }
+                
+                if (firstDataCells != null)
+                {
+                    // Detect Test ID from known columns
+                    foreach (var testHeader in PossibleTestHeaders)
+                    {
+                        var testIndex = Array.FindIndex(headers, h => h.Equals(testHeader, StringComparison.OrdinalIgnoreCase));
+                        if (testIndex >= 0 && testIndex < firstDataCells.Length && !string.IsNullOrWhiteSpace(firstDataCells[testIndex]))
+                        {
+                            result.DetectedTestId = firstDataCells[testIndex].Trim();
+                            result.TestIdSource = testHeader;
+                            break;
+                        }
+                    }
+
+                    // Detect subject from test name or file content
+                    result.DetectedSubject = DetectSubject(result.DetectedTestId, headers);
+
+                    // Detect unit cycle from test name
+                    result.DetectedUnitCycle =
+                        DetectUnitCycle(result.DetectedTestId) ??
+                        DetectUnitCycle(originalFileName);
+                }
+
+                // Count total rows
+                int rowCount = 1; // Already read first data row
+                while (await csv.ReadAsync())
+                {
+                    rowCount++;
+                }
+                result.TotalRows = rowCount;
+
+                // Count standards columns (ItemStandard pattern)
+                result.StandardsColumns = headers.Count(h => h.Contains("ItemStandard", StringComparison.OrdinalIgnoreCase));
             }
-
-            // Count total rows
-            int rowCount = 1; // Already read first data row
-            while (await sr.ReadLineAsync() != null)
-            {
-                rowCount++;
-            }
-            result.TotalRows = rowCount;
-
-            // Count standards columns (ItemStandard pattern)
-            result.StandardsColumns = headers.Count(h => h.Contains("ItemStandard", StringComparison.OrdinalIgnoreCase));
+            // --- END OF PATCH ---
 
             return result;
         }
@@ -600,61 +654,74 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         {
             var metrics = new ColumnMatchingMetrics();
             var delimiterChar = delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
-
-            using var sr = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true);
-            var headerLine = await sr.ReadLineAsync();
-            if (string.IsNullOrWhiteSpace(headerLine)) return metrics;
-
-            var headers = headerLine.Split(delimiterChar).Select(h => h.Trim()).ToArray();
-
-            // Find all Item positions first
-            var itemPositions = new List<int>();
-            for (int i = 0; i < headers.Length; i++)
+            
+            // --- PATCH: Use CsvReader ---
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                if (headers[i].Trim().Equals("Item", StringComparison.OrdinalIgnoreCase))
-                {
-                    itemPositions.Add(i);
-                }
-            }
+                HasHeaderRecord = true,
+                Delimiter = delimiterChar.ToString(),
+            };
 
-            metrics.TotalQuestionBlocks = itemPositions.Count;
-
-            // For each Item position, analyze the block structure
-            for (int itemIndex = 0; itemIndex < itemPositions.Count; itemIndex++)
+            using (var reader = new StreamReader(System.IO.File.OpenRead(filePath), Encoding.UTF8, true))
+            using (var csv = new CsvReader(reader, csvConfig))
             {
-                var itemPos = itemPositions[itemIndex];
-                var blockStatus = new QuestionBlockStatus
-                {
-                    QuestionNumber = itemIndex + 1,
-                    StartColumn = itemPos,
-                    HasItemColumn = true,
-                    ItemHeader = headers[itemPos]
-                };
+                if (!await csv.ReadAsync()) return metrics; // Empty file
+                
+                csv.ReadHeader();
+                if (csv.HeaderRecord == null) return metrics; // No header
+                
+                var headers = csv.HeaderRecord;
 
-                // Look for Score and ItemStandard in the next few columns after Item
-                for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
+                // Find all Item positions first
+                var itemPositions = new List<int>();
+                for (int i = 0; i < headers.Length; i++)
                 {
-                    var columnHeader = headers[itemPos + offset].Trim();
-
-                    if (columnHeader.Equals("Score", StringComparison.OrdinalIgnoreCase) && !blockStatus.HasScoreColumn)
+                    if (headers[i].Trim().Equals("Item", StringComparison.OrdinalIgnoreCase))
                     {
-                        blockStatus.HasScoreColumn = true;
-                        blockStatus.ScoreHeader = columnHeader;
-                    }
-                    else if (columnHeader.Equals("ItemStandard", StringComparison.OrdinalIgnoreCase) && !blockStatus.HasStandardColumn)
-                    {
-                        blockStatus.HasStandardColumn = true;
-                        blockStatus.StandardHeader = columnHeader;
+                        itemPositions.Add(i);
                     }
                 }
 
-                metrics.QuestionBlocks.Add(blockStatus);
+                metrics.TotalQuestionBlocks = itemPositions.Count;
 
-                if (blockStatus.IsComplete)
+                // For each Item position, analyze the block structure
+                for (int itemIndex = 0; itemIndex < itemPositions.Count; itemIndex++)
                 {
-                    metrics.ValidQuestionBlocks++;
+                    var itemPos = itemPositions[itemIndex];
+                    var blockStatus = new QuestionBlockStatus
+                    {
+                        QuestionNumber = itemIndex + 1,
+                        StartColumn = itemPos,
+                        HasItemColumn = true,
+                        ItemHeader = headers[itemPos]
+                    };
+
+                    // Look for Score and ItemStandard in the next few columns after Item
+                    for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
+                    {
+                        var columnHeader = headers[itemPos + offset].Trim();
+
+                        if (columnHeader.Equals("Score", StringComparison.OrdinalIgnoreCase) && !blockStatus.HasScoreColumn)
+                        {
+                            blockStatus.HasScoreColumn = true;
+                            blockStatus.ScoreHeader = columnHeader;
+                        }
+                        else if (columnHeader.Equals("ItemStandard", StringComparison.OrdinalIgnoreCase) && !blockStatus.HasStandardColumn)
+                        {
+                            blockStatus.HasStandardColumn = true;
+                            blockStatus.StandardHeader = columnHeader;
+                        }
+                    }
+
+                    metrics.QuestionBlocks.Add(blockStatus);
+
+                    if (blockStatus.IsComplete)
+                    {
+                        metrics.ValidQuestionBlocks++;
+                    }
                 }
             }
+            // --- END OF PATCH ---
 
             return metrics;
         }
@@ -698,10 +765,31 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             var agg = new Dictionary<(int localId, Guid standardId), (decimal points, int count)>();
             var allIds = new HashSet<Guid>();
 
-            using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, true))
+            // --- PATCH: Use CsvReader ---
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                var header = await sr.ReadLineAsync() ?? string.Empty;
-                var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
+                HasHeaderRecord = true,
+                Delimiter = delimiterChar.ToString(),
+            };
+
+            using (var reader = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, true))
+            using (var csv = new CsvReader(reader, csvConfig))
+            {
+                if (!await csv.ReadAsync())
+                {
+                    ModelState.AddModelError("", "File is empty.");
+                    return Page();
+                }
+
+                csv.ReadHeader();
+                if (csv.HeaderRecord == null)
+                {
+                    ModelState.AddModelError("", "Could not read file header.");
+                    return Page();
+                }
+
+                var headers = csv.HeaderRecord;
+
                 int colLocalId;
                 try { colLocalId = FindStudentIdColumnOrThrow(headers); }
                 catch (Exception ex)
@@ -716,10 +804,9 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 }
 
                 // Local function to process a single data row to avoid duplicate code.
-                void ProcessLine(string? line)
+                void ProcessLine(string[]? cells) // Changed parameter to string[]
                 {
-                    if (string.IsNullOrWhiteSpace(line)) return;
-                    var cells = line.Split(delimiterChar);
+                    if (cells == null) return; // Skip if record is null
                     if (colLocalId >= cells.Length || !int.TryParse(cells[colLocalId].Trim(), out var localId)) return;
 
                     foreach (var m in maps)
@@ -755,14 +842,17 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     }
                 }
 
-
                 // Read the first data line.
-                string? firstDataLine = sr.Peek() >= 0 ? await sr.ReadLineAsync() : null;
+                string[]? firstDataCells = null;
+                if (await csv.ReadAsync())
+                {
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    firstDataCells = csv.Context.Parser.Record;
+                }
 
                 // If TestId is blank, try to detect it from this first line.
-                if (string.IsNullOrWhiteSpace(TestId) && !string.IsNullOrWhiteSpace(firstDataLine))
+                if (string.IsNullOrWhiteSpace(TestId) && firstDataCells != null)
                 {
-                    var firstDataCells = firstDataLine.Split(delimiterChar);
                     int? testNameCol = FindFirst(headers, PossibleTestHeaders);
                     if (testNameCol.HasValue && testNameCol.Value < firstDataCells.Length)
                     {
@@ -776,15 +866,16 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 }
 
                 // CRITICAL: Process the first data line that was just read.
-                ProcessLine(firstDataLine);
+                ProcessLine(firstDataCells);
 
                 // Loop through the REST of the file.
-                string? currentLine;
-                while ((currentLine = await sr.ReadLineAsync()) != null)
+                while (await csv.ReadAsync())
                 {
-                    ProcessLine(currentLine);
+                    // --- PATCH: Use csv.Context.Parser.Record ---
+                    ProcessLine(csv.Context.Parser.Record);
                 }
             }
+            // --- END OF PATCH ---
 
             if (agg.Count == 0)
             {
@@ -1001,6 +1092,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             for (int i = 0; i < headers.Length; i++)
                 if (headers[i].Trim().Equals("Local Student ID", StringComparison.OrdinalIgnoreCase))
+                    return i;
+
+            // PATCH: Add LocalStudentId as a fallback
+            for (int i = 0; i < headers.Length; i++)
+                if (headers[i].Trim().Equals("LocalStudentId", StringComparison.OrdinalIgnoreCase))
                     return i;
 
             throw new InvalidOperationException("Required column 'StudentId' or 'Local Student ID' was not found in the file header.");
