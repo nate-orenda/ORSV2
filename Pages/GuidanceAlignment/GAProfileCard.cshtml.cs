@@ -336,6 +336,7 @@ namespace ORSV2.Pages.GuidanceAlignment
 
                         var newRcGrade = new SubjectGrade
                         {
+                            SchoolYear = "Current", // <-- ADD THIS LINE
                             Term = rc.Term?.ToString() ?? "",
                             CourseNumber = rc.CN,
                             Title = rc.Title,
