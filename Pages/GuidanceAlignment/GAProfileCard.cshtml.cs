@@ -304,18 +304,36 @@ namespace ORSV2.Pages.GuidanceAlignment
                     if (!string.IsNullOrEmpty(subjectCode) && validSubjectCodes.Contains(subjectCode))
                     {
                         var subjectGroup = SubjectGradesByArea.FirstOrDefault(s => s.SubjectCode == subjectCode);
+                        
+                        // *** START FIX ***
+
+                        var newRcGrade = new SubjectGrade
+                        {
+                            Term = rc.Term?.ToString() ?? "",
+                            CourseNumber = rc.CN,
+                            Title = rc.Title,
+                            Mark = rc.Mark,
+                            Type = "Report Card",
+                            CreditsEarned = rc.CreditsEarned
+                        };
+
                         if (subjectGroup != null)
                         {
-                            subjectGroup.Grades.Add(new SubjectGrade
-                            {
-                                Term = rc.Term?.ToString() ?? "",
-                                CourseNumber = rc.CN,
-                                Title = rc.Title,
-                                Mark = rc.Mark,
-                                Type = "Report Card",
-                                CreditsEarned = rc.CreditsEarned
-                            });
+                            // Group exists, just add the grade
+                            subjectGroup.Grades.Add(newRcGrade);
                         }
+                        else
+                        {
+                            // Group DOES NOT EXIST, so create it
+                            var newGroup = new SubjectGradesGroup
+                            {
+                                SubjectCode = subjectCode,
+                                SubjectLabel = subjectMap[subjectCode], // Get label from your map
+                                Grades = new List<SubjectGrade> { newRcGrade }
+                            };
+                            SubjectGradesByArea.Add(newGroup); // Add the new group to the main list
+                        }
+                        // *** END FIX ***
                     }
                 }
             }
