@@ -239,7 +239,21 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .Where(rp => rp.IsCurrent == true && rp.DistrictId == districtId && rp.SchoolId == Student.SchoolId)
                     .ToListAsync();
 
+                // *** START MODIFICATION ***
+
+                // Create a lookup dictionary: Key = MarkingPeriod (int), Value = ShortDescription (string)
+                // We add a check for duplicates, though MarkingPeriod should be unique per school/district.
+                var periodMap = currentPeriods
+                    .GroupBy(rp => rp.MarkingPeriod)
+                    .ToDictionary(
+                        g => g.Key, 
+                        g => g.First().ShortDescription ?? "" // Use the first ShortDescription, fallback to empty
+                    );
+
+                // Keep this HashSet for efficient filtering in the next step
                 var currentPeriodIds = currentPeriods.Select(rp => rp.MarkingPeriod).ToHashSet();
+                
+                // *** END MODIFICATION ***
 
                 rcRaw = rcRaw
                     .Where(r => r.Term != null && int.TryParse(r.Term, out var mp) && currentPeriodIds.Contains(mp))
@@ -257,18 +271,31 @@ namespace ORSV2.Pages.GuidanceAlignment
                     .Where(r => !string.IsNullOrWhiteSpace(r.CourseNumber) && courseMap.ContainsKey(r.CourseNumber))
                     .Select(r => {
                         var course = courseMap[r.CourseNumber!];
+
+                        // *** START MODIFICATION ***
+
+                        // Default to the raw term number if parsing or lookup fails
+                        string termDescription = r.Term ?? "N/A"; 
+                        
+                        // Try to parse the term and look it up in our map
+                        if (int.TryParse(r.Term, out var mp) && periodMap.ContainsKey(mp))
+                        {
+                            termDescription = periodMap[mp]; // Success! Get "S1", "P1", etc.
+                        }
+
                         return new {
-                            Term = r.Term,
+                            Term = termDescription, // <-- Use the new description
                             CN = r.CourseNumber,
                             Title = course.Title,
                             Mark = r.Mark,
                             CreditsEarned = r.CreditsEarned,
                             SubjectCode = course.CSU_SubjectAreaCode ?? course.UC_SubjectAreaCode
                         };
+                        // *** END MODIFICATION ***
                     })
                     .Cast<object>()
                     .ToList();
-            }
+                        }
 
             // Process A-G grades from transcript
             var agGrades = gradesData
