@@ -88,12 +88,12 @@ namespace ORSV2.Pages.DataReflection
         [BindProperty(SupportsGet = true)]
         public int? SchoolYear { get; set; }
 
-        [BindProperty]
-        public string? NewTargetGrade { get; set; }
-        [BindProperty]
-        public string? NewTargetDemographic { get; set; }
-        [BindProperty]
-        public decimal? NewTargetPercent { get; set; }
+        //[BindProperty]
+        //public string? NewTargetGrade { get; set; }
+        //[BindProperty]
+        //public string? NewTargetDemographic { get; set; }
+        //[BindProperty]
+        //public decimal? NewTargetPercent { get; set; }
 
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableSchoolYears { get; set; } = new SelectList(new List<SelectListItem>());
@@ -170,10 +170,10 @@ namespace ORSV2.Pages.DataReflection
                     SchoolName = items.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
                 }
 
-                if (SubjectGroups.Any()) // Changed from UnitGroups
-                {
-                    LoadTargetUIData();
-                }
+                //if (SubjectGroups.Any()) // Changed from UnitGroups
+                //{
+                //    LoadTargetUIData();
+                //}
             }
 
             BuildBreadcrumbs();
@@ -181,7 +181,7 @@ namespace ORSV2.Pages.DataReflection
         }
 
         // OnPostSetTargetAsync - This logic remains identical to MetaModel
-        public async Task<IActionResult> OnPostSetTargetAsync()
+        /*public async Task<IActionResult> OnPostSetTargetAsync()
         {
             InitializeUserDataScope();
 
@@ -248,7 +248,7 @@ namespace ORSV2.Pages.DataReflection
             }
 
             return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
-        }
+        } */
 
         // OnGetExcelAsync - This needs to be completely rewritten for the new format
         public async Task<IActionResult> OnGetExcelAsync()
