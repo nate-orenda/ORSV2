@@ -1023,53 +1023,58 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         {
             var maps = new List<QuestionMap>();
 
-            // Find all Item positions first
-            var itemPositions = new List<int>();
+            // Create a fast lookup for all headers
+            var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < headers.Length; i++)
             {
-                if (headers[i].Trim().Equals("Item", StringComparison.OrdinalIgnoreCase))
+                var headerName = headers[i].Trim();
+                if (!string.IsNullOrEmpty(headerName) && !headerMap.ContainsKey(headerName))
                 {
-                    itemPositions.Add(i);
+                    headerMap[headerName] = i;
                 }
             }
 
-            if (itemPositions.Count == 0) return maps;
-
-            // For each Item position, find the corresponding Score and ItemStandard columns
-            for (int itemIndex = 0; itemIndex < itemPositions.Count; itemIndex++)
+            // Find all "Item" columns (e.g., "Item", "Item.1", "Item.2")
+            var itemHeaders = new List<string>();
+            foreach (var header in headers)
             {
-                var itemPos = itemPositions[itemIndex];
-
-                // Look for Score and ItemStandard in the next few columns after Item
-                int? scoreCol = null;
-                int? standardCol = null;
-
-                // Search in the next 6 positions for Score and ItemStandard
-                for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
+                var headerTrim = header.Trim();
+                if (headerTrim.Equals("Item", StringComparison.OrdinalIgnoreCase) ||
+                    (headerTrim.StartsWith("Item.", StringComparison.OrdinalIgnoreCase) &&
+                     headerTrim.Length > "Item.".Length && char.IsDigit(headerTrim["Item.".Length])))
                 {
-                    var header = headers[itemPos + offset].Trim();
+                    itemHeaders.Add(headerTrim);
+                }
+            }
 
-                    if (header.Equals("Score", StringComparison.OrdinalIgnoreCase) && !scoreCol.HasValue)
-                    {
-                        scoreCol = itemPos + offset;
-                    }
-                    else if (header.Equals("ItemStandard", StringComparison.OrdinalIgnoreCase) && !standardCol.HasValue)
-                    {
-                        standardCol = itemPos + offset;
-                    }
+            if (itemHeaders.Count == 0) return maps;
+
+            // For each "Item" column, find its matching "Score" and "ItemStandard"
+            foreach (var itemHeaderName in itemHeaders)
+            {
+                // Determine suffix. For "Item", suffix is "". For "Item.1", suffix is ".1".
+                string suffix = "";
+                if (itemHeaderName.Length > "Item".Length)
+                {
+                    suffix = itemHeaderName.Substring("Item".Length); // e.g., ".1"
                 }
 
-                // Only add if we found both Score and ItemStandard
-                if (scoreCol.HasValue && standardCol.HasValue)
+                string scoreHeader = "Score" + suffix;
+                string stdHeader = "ItemStandard" + suffix;
+
+                // Find the corresponding Score and ItemStandard columns using the suffix
+                if (headerMap.TryGetValue(scoreHeader, out int scoreCol) &&
+                    headerMap.TryGetValue(stdHeader, out int stdCol))
                 {
                     maps.Add(new QuestionMap(
                         maps.Count + 1,
-                        headers[scoreCol.Value],
-                        scoreCol.Value,
-                        headers[standardCol.Value],
-                        standardCol.Value
+                        scoreHeader,
+                        scoreCol,
+                        stdHeader,
+                        stdCol
                     ));
                 }
+                // If not found, that "Item" column is skipped (e.g., missing data)
             }
 
             return maps;
