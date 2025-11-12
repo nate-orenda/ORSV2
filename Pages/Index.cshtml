@@ -3,12 +3,125 @@
 @{
     ViewData["Title"] = "Overview";
 }
+@using System.Security.Claims
 
 <div class="orenda-container">
     <!-- Welcome Header -->
     <div class="orenda-header shadow-orenda">
         <h2 class="mb-1">Welcome, @Model.FirstName</h2>
-        <p class="mb-0">Review the calendar for upcoming deadlines and select a district to get started.</p>
+        <div class="mt-2 text-sm">
+            <p class="font-semibold">Please review the information below:</p>
+
+            @{
+                // ----- Roles -----
+                var roles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                var isOrendaUser = roles.Any(r =>
+                    r.StartsWith("orenda", StringComparison.OrdinalIgnoreCase));
+
+                var isDistrictAdmin = roles.Any(r =>
+                    r.Equals("DistrictAdmin", StringComparison.OrdinalIgnoreCase) ||
+                    r.Equals("districtadmin", StringComparison.OrdinalIgnoreCase));
+
+                // ----- District + school info from DistrictBlocks -----
+                var districtGroups = Model.DistrictBlocks
+                    .Select(b => new
+                    {
+                        b.DistrictName,
+                        SchoolCount = b.Schools.Count
+                    })
+                    .ToList();
+
+                var districtNames = districtGroups
+                    .Select(g => g.DistrictName)
+                    .Distinct()
+                    .ToList();
+
+                var totalSchoolCount = districtGroups.Sum(g => g.SchoolCount);
+
+                // ----- District summary text -----
+                string districtSummary;
+                if (!districtNames.Any())
+                {
+                    districtSummary = "No district assigned";
+                }
+                else if (isOrendaUser)
+                {
+                    districtSummary = $"{districtNames.Count} district(s) (system-wide access)";
+                }
+                else if (districtNames.Count == 1)
+                {
+                    districtSummary = districtNames[0];
+                }
+                else
+                {
+                    districtSummary = $"{districtNames.Count} district(s)";
+                }
+
+                // ----- School summary text -----
+                var schoolNames = Model.DistrictBlocks
+                    .SelectMany(d => d.Schools)
+                    .Select(s => s.SchoolName)
+                    .Distinct()
+                    .ToList();
+
+                string schoolSummary;
+                if (!schoolNames.Any())
+                {
+                    schoolSummary = "No schools assigned";
+                }
+                else if (isOrendaUser)
+                {
+                    // Orenda users: high-level count, no giant list
+                    schoolSummary = $"{totalSchoolCount} schools across {districtNames.Count} district(s)";
+                }
+                else if (isDistrictAdmin && schoolNames.Count > 10)
+                {
+                    // District admins with a ton of schools: summarized view
+                    schoolSummary = $"{schoolNames.Count} schools (district-wide access)";
+                }
+                else if (schoolNames.Count <= 5)
+                {
+                    // Small list: show all names
+                    schoolSummary = string.Join(", ", schoolNames);
+                }
+                else
+                {
+                    // Medium/large list: preview + "and N more"
+                    var preview = string.Join(", ", schoolNames.Take(3));
+                    var remaining = schoolNames.Count - 3;
+                    schoolSummary = $"{preview} and {remaining} more";
+                }
+            }
+
+            <!-- Current role -->
+            <p>
+                <strong>Your current role:</strong>
+                @(roles.Any() ? string.Join(", ", roles) : "No role assigned")
+            </p>
+
+            <!-- Current district -->
+            <p>
+                <strong>Your current district(s):</strong> @districtSummary
+            </p>
+
+            <!-- Current schools -->
+            <p>
+                <strong>Your current school(s):</strong> @schoolSummary
+            </p>
+
+            <!-- Help text -->
+            <p class="mt-2 text-xs text-gray-200">
+                If you see an issue with your current level of access or assigned schools,
+                please contact us directly at
+                <a class="underline" href="mailto:help@orendaed.org">help@orendaed.org</a>.
+                We will be able to assist you.
+            </p>
+        </div>
+
     </div>
 
     @if (Model.DistrictBlocks != null && Model.DistrictBlocks.Any() && Model.DistrictBlocks.Any(db => db.Schools.Any(s => s.GA)))
