@@ -316,7 +316,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.Record ---
-                    firstDataCells = csv.Context.Parser.Record;
+                    firstDataCells = csv.Context.Parser?.Record;
                 }
                 
                 if (firstDataCells != null)
@@ -373,7 +373,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.Record ---
-                    var cells = csv.Context.Parser.Record;
+                    var cells = csv.Context.Parser?.Record;
                     if (cells != null && colLocalId < cells.Length && int.TryParse(cells[colLocalId].Trim(), out var lid))
                         localIds.Add(lid);
                     scannedCount++;
@@ -383,7 +383,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 while (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.RawRecord ---
-                    if (string.IsNullOrWhiteSpace(csv.Context.Parser.RawRecord)) continue;
+                    if (string.IsNullOrWhiteSpace(csv.Context.Parser?.RawRecord)) continue;
                     // --- PATCH: Use csv.Context.Parser.Record ---
                     var cells = csv.Context.Parser.Record;
                     if (cells == null) continue;
@@ -501,7 +501,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.Record ---
-                    firstDataCells = csv.Context.Parser.Record;
+                    firstDataCells = csv.Context.Parser?.Record;
                 }
                 
                 if (firstDataCells != null)
@@ -756,11 +756,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             var delimiterChar = Delimiter.Equals("tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ',';
             var tvp = new DataTable();
-            tvp.Columns.Add("local_student_id", typeof(int));
-            tvp.Columns.Add("test_id", typeof(string));
+            tvp.Columns.Add("local_student_id", typeof(string));
             tvp.Columns.Add("human_coding_scheme", typeof(string));
             tvp.Columns.Add("points", typeof(decimal));
             tvp.Columns.Add("max_points", typeof(decimal));
+            tvp.Columns.Add("standard_id", typeof(string));
 
             var agg = new Dictionary<(int localId, Guid standardId), (decimal points, int count)>();
             var allIds = new HashSet<Guid>();
@@ -847,7 +847,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.Record ---
-                    firstDataCells = csv.Context.Parser.Record;
+                    firstDataCells = csv.Context.Parser?.Record;
                 }
 
                 // If TestId is blank, try to detect it from this first line.
@@ -872,7 +872,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 while (await csv.ReadAsync())
                 {
                     // --- PATCH: Use csv.Context.Parser.Record ---
-                    ProcessLine(csv.Context.Parser.Record);
+                    ProcessLine(csv.Context.Parser?.Record);
                 }
             }
             // --- END OF PATCH ---
@@ -890,11 +890,11 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 if (schemesMap.TryGetValue(standardId, out var scheme))
                 {
                     var r = tvp.NewRow();
-                    r["local_student_id"] = kvp.Key.localId;
-                    r["test_id"] = TestId;
-                    r["human_coding_scheme"] = scheme;
-                    r["points"] = kvp.Value.points;
-                    r["max_points"] = (decimal)kvp.Value.count;
+                    r["local_student_id"]    = kvp.Key.localId;
+                    r["human_coding_scheme"] = scheme ?? (object)DBNull.Value;
+                    r["points"]              = (decimal)kvp.Value.points;
+                    r["max_points"]          = (decimal)kvp.Value.count;
+                    r["standard_id"]         = standardId.ToString("D") ?? (object)DBNull.Value;
                     tvp.Rows.Add(r);
                 }
             }
