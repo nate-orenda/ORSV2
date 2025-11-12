@@ -1021,63 +1021,116 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         
         private List<QuestionMap> FindItemColumnBlocks(string[] headers)
         {
-            var maps = new List<QuestionMap>();
-
-            // Create a fast lookup for all headers
-            var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var headerName = headers[i].Trim();
-                if (!string.IsNullOrEmpty(headerName) && !headerMap.ContainsKey(headerName))
-                {
-                    headerMap[headerName] = i;
-                }
-            }
-
-            // Find all "Item" columns (e.g., "Item", "Item.1", "Item.2")
-            var itemHeaders = new List<string>();
+            // Check if this file uses the ".1, .2" suffix format
+            bool usesSuffixFormat = false;
             foreach (var header in headers)
             {
                 var headerTrim = header.Trim();
-                if (headerTrim.Equals("Item", StringComparison.OrdinalIgnoreCase) ||
-                    (headerTrim.StartsWith("Item.", StringComparison.OrdinalIgnoreCase) &&
-                     headerTrim.Length > "Item.".Length && char.IsDigit(headerTrim["Item.".Length])))
+                if (headerTrim.StartsWith("Item.", StringComparison.OrdinalIgnoreCase) &&
+                    headerTrim.Length > "Item.".Length && char.IsDigit(headerTrim["Item.".Length]))
                 {
-                    itemHeaders.Add(headerTrim);
+                    usesSuffixFormat = true;
+                    break;
                 }
             }
 
-            if (itemHeaders.Count == 0) return maps;
-
-            // For each "Item" column, find its matching "Score" and "ItemStandard"
-            foreach (var itemHeaderName in itemHeaders)
+            if (usesSuffixFormat)
             {
-                // Determine suffix. For "Item", suffix is "". For "Item.1", suffix is ".1".
-                string suffix = "";
-                if (itemHeaderName.Length > "Item".Length)
+                // --- LOGIC FOR FORMAT 1 (e.g., Item, Item.1, Item.2) ---
+                var maps = new List<QuestionMap>();
+                var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int i = 0; i < headers.Length; i++)
                 {
-                    suffix = itemHeaderName.Substring("Item".Length); // e.g., ".1"
+                    var headerName = headers[i].Trim();
+                    if (!string.IsNullOrEmpty(headerName) && !headerMap.ContainsKey(headerName))
+                    {
+                        headerMap[headerName] = i;
+                    }
                 }
 
-                string scoreHeader = "Score" + suffix;
-                string stdHeader = "ItemStandard" + suffix;
-
-                // Find the corresponding Score and ItemStandard columns using the suffix
-                if (headerMap.TryGetValue(scoreHeader, out int scoreCol) &&
-                    headerMap.TryGetValue(stdHeader, out int stdCol))
+                var itemHeaders = new List<string>();
+                foreach (var header in headers)
                 {
-                    maps.Add(new QuestionMap(
-                        maps.Count + 1,
-                        scoreHeader,
-                        scoreCol,
-                        stdHeader,
-                        stdCol
-                    ));
+                    var headerTrim = header.Trim();
+                    if (headerTrim.Equals("Item", StringComparison.OrdinalIgnoreCase) ||
+                        (headerTrim.StartsWith("Item.", StringComparison.OrdinalIgnoreCase) &&
+                         headerTrim.Length > "Item.".Length && char.IsDigit(headerTrim["Item.".Length])))
+                    {
+                        itemHeaders.Add(headerTrim);
+                    }
                 }
-                // If not found, that "Item" column is skipped (e.g., missing data)
+
+                if (itemHeaders.Count == 0) return maps;
+
+                foreach (var itemHeaderName in itemHeaders)
+                {
+                    string suffix = "";
+                    if (itemHeaderName.Length > "Item".Length)
+                    {
+                        suffix = itemHeaderName.Substring("Item".Length); // e.g., ".1"
+                    }
+                    string scoreHeader = "Score" + suffix;
+                    string stdHeader = "ItemStandard" + suffix;
+
+                    if (headerMap.TryGetValue(scoreHeader, out int scoreCol) &&
+                        headerMap.TryGetValue(stdHeader, out int stdCol))
+                    {
+                        maps.Add(new QuestionMap(maps.Count + 1, scoreHeader, scoreCol, stdHeader, stdCol));
+                    }
+                }
+                return maps;
             }
+            else
+            {
+                // --- LOGIC FOR FORMAT 2 (e.g., Item, Item, Item) ---
+                // This logic finds each "Item" and searches forward for the next "Score" and "ItemStandard"
+                var maps = new List<QuestionMap>();
 
-            return maps;
+                var itemPositions = new List<int>();
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    if (headers[i].Trim().Equals("Item", StringComparison.OrdinalIgnoreCase))
+                    {
+                        itemPositions.Add(i);
+                    }
+                }
+
+                if (itemPositions.Count == 0) return maps;
+
+                for (int itemIndex = 0; itemIndex < itemPositions.Count; itemIndex++)
+                {
+                    var itemPos = itemPositions[itemIndex];
+                    int? scoreCol = null;
+                    int? standardCol = null;
+
+                    // Search in the next 6 positions for the *first available* Score/Standard
+                    for (int offset = 1; offset <= 6 && itemPos + offset < headers.Length; offset++)
+                    {
+                        var header = headers[itemPos + offset].Trim();
+
+                        if (header.Equals("Score", StringComparison.OrdinalIgnoreCase) && !scoreCol.HasValue)
+                        {
+                            scoreCol = itemPos + offset;
+                        }
+                        else if (header.Equals("ItemStandard", StringComparison.OrdinalIgnoreCase) && !standardCol.HasValue)
+                        {
+                            standardCol = itemPos + offset;
+                        }
+                    }
+
+                    if (scoreCol.HasValue && standardCol.HasValue)
+                    {
+                        maps.Add(new QuestionMap(
+                            maps.Count + 1,
+                            headers[scoreCol.Value],
+                            scoreCol.Value,
+                            headers[standardCol.Value],
+                            standardCol.Value
+                        ));
+                    }
+                }
+                return maps;
+            }
         }
 
         private static int? FindFirst(string[] headers, string[] candidates)
