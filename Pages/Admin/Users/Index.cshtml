@@ -13,15 +13,28 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="searchTerm" class="form-label">Search</label>
                 <input type="text" name="searchTerm" id="searchTerm" class="form-control" 
-                    placeholder="Email or name..." value="@Model.SearchTerm">
+                    placeholder="Name, email..." value="@Model.SearchTerm">
             </div>
             
+            <div class="col-md-3">
+                <label for="roleFilter" class="form-label">Role</label>
+                <select name="roleFilter" id="roleFilter" class="form-select">
+                    <option value="">All Roles</option>
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        <option value="@role.Id" selected="@(role.Id == Model.RoleFilter)">
+                            @role.Name
+                        </option>
+                    }
+                </select>
+            </div>
+
             @if (User.IsInRole("OrendaAdmin"))
             {
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="districtFilter" class="form-label">District</label>
                     <select name="districtFilter" id="districtFilter" class="form-select">
                         <option value="">All Districts</option>
@@ -35,7 +48,7 @@
                 </div>
             }
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="lockedFilter" class="form-label">Status</label>
                 <select name="lockedFilter" id="lockedFilter" class="form-select">
                     <option value="">All Users</option>
@@ -70,11 +83,91 @@
         <table class="table table-hover">
             <thead class="table-light">
                 <tr>
-                    <th>Email</th>
-                    <th>Status</th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="FirstName"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("FirstName")"
+                           class="text-decoration-none text-dark">
+                            First Name <i class="bi @Model.GetSortIcon("FirstName")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="LastName"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("LastName")"
+                           class="text-decoration-none text-dark">
+                            Last Name <i class="bi @Model.GetSortIcon("LastName")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="Email"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("Email")"
+                           class="text-decoration-none text-dark">
+                            Email <i class="bi @Model.GetSortIcon("Email")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="Status"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("Status")"
+                           class="text-decoration-none text-dark">
+                            Status <i class="bi @Model.GetSortIcon("Status")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="Confirmed"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("Confirmed")"
+                           class="text-decoration-none text-dark">
+                            Confirmed <i class="bi @Model.GetSortIcon("Confirmed")"></i>
+                        </a>
+                    </th>
                     <th>Roles</th>
-                    <th>District</th>
-                    <th>Schools</th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="District"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("District")"
+                           class="text-decoration-none text-dark">
+                            District <i class="bi @Model.GetSortIcon("District")"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a asp-page="Index" 
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-roleFilter="@Model.RoleFilter"
+                           asp-route-districtFilter="@Model.DistrictFilter"
+                           asp-route-lockedFilter="@Model.LockedFilter"
+                           asp-route-sortBy="Schools"
+                           asp-route-sortOrder="@Model.GetNextSortOrder("Schools")"
+                           class="text-decoration-none text-dark">
+                            Schools <i class="bi @Model.GetSortIcon("Schools")"></i>
+                        </a>
+                    </th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -82,6 +175,26 @@
             @foreach (var user in Model.Users)
             {
                 <tr>
+                    <td>
+                        @if (string.IsNullOrEmpty(user.FirstName))
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                        else
+                        {
+                            @user.FirstName
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(user.LastName))
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                        else
+                        {
+                            @user.LastName
+                        }
+                    </td>
                     <td>
                         <span class="fw-500">@user.Email</span>
                     </td>
@@ -96,12 +209,38 @@
                         }
                     </td>
                     <td>
-                        @foreach (var role in user.Roles)
+                        @if (user.EmailConfirmed)
                         {
-                            <span class="badge bg-secondary">@role</span>
+                            <i class="bi bi-check-circle-fill text-success" title="Email Confirmed"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-circle-fill text-danger" title="Email Not Confirmed"></i>
                         }
                     </td>
-                    <td>@user.DistrictName</td>
+                    <td>
+                        @if (user.Roles.Any())
+                        {
+                            @foreach (var role in user.Roles)
+                            {
+                                <span class="badge bg-secondary">@role</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>
+                        @if (string.IsNullOrEmpty(user.DistrictName))
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                        else
+                        {
+                            @user.DistrictName
+                        }
+                    </td>
                     <td>
                         @if (string.IsNullOrEmpty(user.SchoolName))
                         {
@@ -118,20 +257,24 @@
                             @user.SchoolName
                         }
                     </td>
-                    <td>
-                        <a asp-page="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <td class="text-nowrap">
+                        <a asp-page="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
                         @if (user.Id != Model.CurrentUserId)
                         {
                             <form method="post" asp-page-handler="Delete" asp-route-id="@user.Id"
                                 onsubmit="return confirm('Are you sure you want to delete this user?');"
                                 style="display:inline;">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </form>
                         }
                         else
                         {
                             <button class="btn btn-sm btn-outline-secondary" disabled title="You cannot delete your own account">
-                                Delete
+                                <i class="bi bi-trash"></i>
                             </button>
                         }
                     </td>
@@ -140,10 +283,29 @@
             </tbody>
         </table>
     </div>
+
+    <div class="mt-3 text-muted">
+        Showing @Model.Users.Count user(s)
+    </div>
 }
 else
 {
     <div class="alert alert-info">
-        No users found matching your criteria.
+        <i class="bi bi-info-circle"></i> No users found matching your criteria.
     </div>
 }
+
+<style>
+    /* Make sortable column headers more interactive */
+    thead th a:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+        padding: 4px 8px;
+        margin: -4px -8px;
+    }
+    
+    thead th a {
+        display: inline-block;
+        white-space: nowrap;
+    }
+</style>
