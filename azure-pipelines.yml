@@ -1,0 +1,185 @@
+# ASP.NET Core
+# Build, test, and deploy ASP.NET Core app to Azure Web App with staging slot
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetSdkVersion: '9.x'
+  azureSubscription: 'AzurePipelineServicePrincipal2'
+  webAppName: 'ORSV2'
+  resourceGroupName: 'OrendaEd'
+  stagingSlotName: 'ors-stage'
+  stagingUrl: 'https://orsv2-ors-stage-g2cecegnfec5hnff.westus2-01.azurewebsites.net/'
+  productionUrl: 'https://ors.orendaed.org/'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Use .NET Core SDK $(dotnetSdkVersion)'
+      inputs:
+        version: '$(dotnetSdkVersion)'
+        includePreviewVersions: false
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore dependencies'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Run tests'
+      inputs:
+        command: 'test'
+        projects: '**/*Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --logger trx --collect:"XPlat Code Coverage"'
+        publishTestResults: true
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results'
+      condition: always()
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '**/*.trx'
+        mergeTestResults: true
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish'
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Upload artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: DeployStaging
+  displayName: 'Deploy to Staging'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToStaging
+    displayName: 'Deploy to Staging Slot'
+    environment: 'staging'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download artifact'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy to staging slot'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'
+              appName: '$(webAppName)'
+              deployToSlotOrASE: true
+              resourceGroupName: '$(resourceGroupName)'
+              slotName: '$(stagingSlotName)'
+              package: '$(System.ArtifactsDirectory)/drop/**/*.zip'
+
+          - task: PowerShell@2
+            displayName: 'Health check staging'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $maxAttempts = 30
+                $attempt = 0
+                $healthCheckUrl = "$(stagingUrl)"
+                
+                Write-Host "Starting health check for staging deployment..."
+                
+                while ($attempt -lt $maxAttempts) {
+                  try {
+                    $response = Invoke-WebRequest -Uri $healthCheckUrl -ErrorAction Stop -TimeoutSec 5 -UseBasicParsing
+                    if ($response.StatusCode -eq 200) {
+                      Write-Host "✓ Staging deployment is healthy"
+                      exit 0
+                    }
+                  } catch {
+                    Write-Host "Attempt $($attempt + 1)/$maxAttempts : Waiting for staging to be ready..."
+                  }
+                  Start-Sleep -Seconds 2
+                  $attempt++
+                }
+                
+                Write-Host "✗ Staging deployment health check failed after $maxAttempts attempts"
+                exit 1
+
+- stage: DeployProduction
+  displayName: 'Deploy to Production'
+  dependsOn: DeployStaging
+  condition: succeeded()
+  jobs:
+  - deployment: SwapToProduction
+    displayName: 'Swap Staging to Production'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureAppServiceManage@0
+            displayName: 'Swap staging to production'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              action: 'Swap Slots'
+              webAppName: '$(webAppName)'
+              resourceGroupName: '$(resourceGroupName)'
+              sourceSlot: '$(stagingSlotName)'
+              targetSlot: 'production'
+
+          - task: PowerShell@2
+            displayName: 'Health check production'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $maxAttempts = 30
+                $attempt = 0
+                $healthCheckUrl = "$(productionUrl)"
+                
+                Write-Host "Starting health check for production deployment..."
+                
+                while ($attempt -lt $maxAttempts) {
+                  try {
+                    $response = Invoke-WebRequest -Uri $healthCheckUrl -ErrorAction Stop -TimeoutSec 5 -UseBasicParsing
+                    if ($response.StatusCode -eq 200) {
+                      Write-Host "✓ Production deployment is healthy"
+                      exit 0
+                    }
+                  } catch {
+                    Write-Host "Attempt $($attempt + 1)/$maxAttempts : Waiting for production to be ready..."
+                  }
+                  Start-Sleep -Seconds 2
+                  $attempt++
+                }
+                
+                Write-Host "✗ Production deployment health check failed after $maxAttempts attempts"
+                Write-Host "Consider rolling back by swapping slots again"
+                exit 1
