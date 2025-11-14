@@ -9,8 +9,9 @@
 <h2 class="mb-4">Select a School</h2>
 
 <div class="row row-cols-1 row-cols-md-3 g-4">
-    @foreach (var school in Model.Schools)
+    @foreach (var card in Model.SchoolCards)
     {
+        var school = card.School;
         <div class="col">
             <a asp-page="/GuidanceAlignment/Overview"
                asp-route-schoolId="@school.Id"
@@ -20,6 +21,20 @@
                     <div class="card-body border-start border-5 border-success">
                         <h5 class="card-title">@school.Name</h5>
                         <p class="card-text text-muted">@school.SchoolType</p>
+                        @if (card.CurrentCheckpoint > 0)
+                        {
+                            <p class="card-text small text-muted mb-0">
+                                Checkpoint @card.CurrentCheckpoint
+                                @if (card.LastUpdated.HasValue)
+                                {
+                                    <span>– Updated @card.LastUpdated.Value.ToString("MM/dd/yyyy")</span>
+                                }
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="card-text small text-muted mb-0">No current checkpoint</p>
+                        }
                     </div>
                 </div>
             </a>
