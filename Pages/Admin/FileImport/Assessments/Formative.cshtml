@@ -42,7 +42,7 @@
                     <p class="text-muted mb-3">
                         The file should contain columns for student identifiers, standard codes, and scores.
                     </p>
-                    <input asp-for="Upload" type="file" id="fileInput" class="d-none" accept=".csv,.tsv,.txt">
+                    <input asp-for="Uploads" type="file" id="fileInput" class="d-none" accept=".csv,.tsv,.txt" multiple>
                     <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
                         <i class="fas fa-folder-open me-2"></i>
                         Choose File
@@ -168,6 +168,13 @@
                 </div>
             </div>
         </div>
+        @if (!string.IsNullOrWhiteSpace(Model.StudentValidationSummary))
+        {
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                @Model.StudentValidationSummary
+            </div>
+        }
     }
     
     @if (TempData["ImportSuccessMessage"] is string msg)
@@ -191,10 +198,9 @@
         const previewBtn = document.getElementById('previewBtn');
         const analysisResultContainer = document.getElementById('analysisResultContainer');
 
-        let selectedFile = null;
+        let selectedFiles = null;
 
         // --- Event Listeners ---
-        uploadZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', () => handleFileSelect(fileInput.files));
         analyzeBtn.addEventListener('click', handleAnalysis);
 
@@ -214,8 +220,8 @@
 
         function handleFileSelect(files) {
             if (files.length > 0) {
-                selectedFile = files[0];
-                displayFileInfo(selectedFile);
+                selectedFiles = files; // Store the whole FileList
+                displayFileInfo(selectedFiles);
             }
         }
 
@@ -223,20 +229,35 @@
             handleFileSelect(e.dataTransfer.files);
         }
         
-        function displayFileInfo(file) {
-            fileNameEl.textContent = file.name;
-            fileSizeEl.textContent = formatFileSize(file.size);
+        function displayFileInfo(files) {
+            if (files.length === 1) {
+                // Show info for a single file
+                fileNameEl.textContent = files[0].name;
+                fileSizeEl.textContent = formatFileSize(files[0].size);
+            } else {
+                // Show a summary for multiple files
+                fileNameEl.textContent = `${files.length} files selected`;
+                let totalSize = 0;
+                for (const file of files) {
+                    totalSize += file.size;
+                }
+                fileSizeEl.textContent = formatFileSize(totalSize);
+            }
             fileInfo.classList.remove('d-none');
         }
 
         async function handleAnalysis() {
-            if (!selectedFile) {
-                alert('Please select a file first.');
+            if (!selectedFiles || selectedFiles.length === 0) { // Check the list
+                alert('Please select one or more files first.');
                 return;
             }
             loadingOverlay.classList.remove('d-none');
             const formData = new FormData(uploadForm);
-            formData.append('Upload', selectedFile);
+
+            // Loop and append all selected files
+            for (const file of selectedFiles) {
+                formData.append('Uploads', file); // 'Uploads' must match C# model
+            }
 
             try {
                 const response = await fetch('/Admin/FileImport/Assessments/Formative?handler=AnalyzeFile', {
@@ -253,12 +274,6 @@
                     // Make the analyze button a "re-analyze" button
                     analyzeBtn.innerHTML = '<i class="fas fa-redo me-1"></i> Re-Analyze';
                     // Re-wire analyze button to show the upload zone again if clicked
-                    analyzeBtn.onclick = () => {
-                         uploadZone.classList.remove('d-none');
-                         analysisResultContainer.innerHTML = '';
-                         previewBtn.disabled = true;
-                    };
-
 
                     renderAnalysisResults(data.analysis);
                     handleAnalysisResponse(data.analysis, data.tempPath);
