@@ -809,7 +809,7 @@ namespace ORSV2.Pages.DataReflection
                             ELSE 'Other'
                         END AS GradeGroup,
                         ma.demographic_group AS DemographicGroup,
-                        SUM(ma.total_enrolled) AS total_enrolled,
+                        MAX(ma.total_enrolled) AS total_enrolled,
                         SUM(ma.total_tested) AS total_tested,
                         SUM(ma.total_proficient) AS total_proficient
                     FROM [dbo].[MetaAggregation] ma
@@ -834,7 +834,7 @@ namespace ORSV2.Pages.DataReflection
                             ELSE 'Other'
                         END != 'Other'
                     ORDER BY
-                        Unit,
+                        Unit DESC,
                         Subject,
                         Grade,
                         DemographicGroup", conn))
