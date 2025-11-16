@@ -89,18 +89,8 @@
 
         /* Retaining unique color not in site.css */
         .hi-swd {
-            background-color: var(--quad-strategic-bg) !important; 
-            color: var(--quad-strategic-fg) !important;
-        }
-
-        /* --- NEW STYLES --- */
-        .hi-hispanic {
-            background-color: #ffe6b3 !important; /* UPDATED from Meta.cshtml */
-            color: #664d00 !important; /* UPDATED from Meta.cshtml */
-        }
-        .hi-sed {
-            background-color: #ffb366 !important;
-            color: #422006 !important; /* Added dark text for readability */
+            background-color: #Fdff00 !important; 
+            color: #000000 !important;
         }
 
         .student-multi-flag {
@@ -281,9 +271,10 @@
             /* Student highlights */
             .hi-aa { background-color: #d1fae5 !important; }
             .hi-el { background-color: #fbcfe8 !important; }
-            .hi-swd { background-color: #fef3c7 !important; }
-            .hi-hispanic { background-color: #ffe6b3 !important; color: #664d00 !important; } /* ADDED */
-            .hi-sed { background-color: #ffb366 !important; color: #422006 !important; } /* ADDED */
+            .hi-swd {
+                background-color: #Fdff00 !important; 
+                color: #000000 !important;
+            }
 
             /* Page break controls */
             .dtrg-start { 
@@ -498,20 +489,12 @@
                 style="background-color: var(--quad-challenge-bg);
                        color: var(--quad-challenge-fg);">Race/Ethnicity =
                 Black or African American</span></div>
-        <div><span class="badge-compact"
-                style="background-color: #ffe6b3;
-                       color: #664d00;">Race/Ethnicity =
-                Hispanic/Latino</span></div>
         <div><span class="badge-compact" style="background-color: #fce7f3;
                        color: #9d174d;">Language Fluency = EL</span>
         </div>
         <div><span class="badge-compact"
-                style="background-color: var(--quad-strategic-bg);
-                       color: var(--quad-strategic-fg);">SWD = true</span>
-        </div>
-        <div><span class="badge-compact"
-                style="background-color: #ffb366;
-                       color: #422006;">SED = true</span>
+                style="background-color: #Fdff00;
+                       color: #000000;">SWD = true</span>
         </div>
     </div>
 </div>
@@ -683,7 +666,8 @@ else
                     <th>Race/Ethnicity</th>
                     <th>Language Fluency</th>
                     <th>SWD</th>
-                    <th>SED</th> <th>Total Passed</th>
+                    <!--<th>SED</th>-->
+                    <th>Total Passed</th>
                 </tr>
             </thead>
             <tbody>
@@ -694,10 +678,10 @@ else
       
                         <td>@student.LastName</td>
                         <td>@student.FirstName</td>
-                        <td class="@(student.IsAA ? "hi-aa" : "") @(student.IsHispanic ? "hi-hispanic" : "")">@student.RaceEthnicity</td>
+                        <td class="@(student.IsAA ? "hi-aa" : "")">@student.RaceEthnicity</td>
                         <td class="@(student.IsEL ? "hi-el" : "")">@student.LanguageFluencyDisplay</td>
                         <td class="@(student.IsSWD ? "hi-swd" : "")">@student.SWDDisplay</td>
-                        <td class="@(student.IsSed ? "hi-sed" : "")">@student.SEDDisplay</td>
+                        <!--<td>@student.SEDDisplay</td>-->
                         <td>@student.TotalPassed</td>
                 
                     </tr>
@@ -837,7 +821,7 @@ else
 
                 printHtml += `<table class="table" style="width:100%">`;
 
-                const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'SED', 'Total Passed'];
+                const columnHeaders = ['Last Name', 'First Name', 'Race/Ethnicity', 'Language Fluency', 'SWD', 'Total Passed'];
                 let currentQuadrant = '';
                 let studentCount = 0;
                 const studentsPerPage = 25; 
@@ -854,7 +838,7 @@ else
                         
                         printHtml += `
                             <tr class="dtrg-start ${currentQuadrant} ${pageBreakClass}">
-                                <td colspan="7">${headerText}</td>
+                                <td colspan="6">${headerText}</td>
                             </tr>
                             <tr class="print-column-header">
                                 ${columnHeaders.map(h => `<th>${h}</th>`).join('')}
@@ -866,7 +850,7 @@ else
                         const footerText = row.querySelector('td').textContent.trim();
                         printHtml += `
                             <tr class="dtrg-end ${currentQuadrant}">
-                                <td colspan="7"><strong>${footerText}</strong></td>
+                                <td colspan="6"><strong>${footerText}</strong></td>
                             </tr>
                         `;
                     }
@@ -880,7 +864,7 @@ else
                             const standardsInfo = getQuadrantInfo(quadrantName);
                             printHtml += `
                                 <tr class="dtrg-start ${currentQuadrant} quadrant-page-break">
-                                    <td colspan="7">${quadrantName} (continued) - ${standardsInfo}</td>
+                                    <td colspan="6">${quadrantName} (continued) - ${standardsInfo}</td>
                                 </tr>
                                 <tr class="print-column-header">
                                     ${columnHeaders.map(h => `<th>${h}</th>`).join('')}
@@ -893,7 +877,7 @@ else
                             const startIndex = cells[0].style.display === 'none' ? 1 : 0;
                             
                             printHtml += '<tr>';
-                            for (let i = 0; i < 7 && (startIndex + i) < cells.length; i++) {
+                            for (let i = 0; i < 6 && (startIndex + i) < cells.length; i++) {
                                 const cell = cells[startIndex + i];
                                 const classes = cell.className;
                                 printHtml += `<td class="${classes}">${cell.textContent.trim()}</td>`;
@@ -996,8 +980,9 @@ else
                         /* Student highlights */
                         .hi-aa { background-color: #d1fae5 !important; }
                         .hi-el { background-color: #fbcfe8 !important; }
-                        .hi-swd { background-color: #fef3c7 !important; }
-                        
+                        .hi-swd { background-color: #Fdff00 !important; color: #000000 !important; }
+
+
                         /* Totals summary table page break */
                         .totals-summary-table {
                             page-break-after: always !important;

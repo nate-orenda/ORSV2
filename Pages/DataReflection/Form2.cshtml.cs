@@ -577,9 +577,8 @@ namespace ORSV2.Pages.DataReflection
             // Cell Highlights
             var hiAaBg = XLColor.FromArgb(239, 246, 255); // var(--quad-challenge-bg)
             var hiElBg = XLColor.FromArgb(251, 207, 232); // #fbcfe8
-            var hiSwdBg = XLColor.FromArgb(255, 251, 235); // var(--quad-strategic-bg)
-            var hiHispanicBg = XLColor.FromArgb(255, 179, 102); // #ffb366 --- NEW ---
-            var hiSedBg = XLColor.FromArgb(255, 179, 102); // #ffb366 --- NEW ---
+            var hiSwdBg = XLColor.FromArgb(253, 255, 0); // #Fdff00
+
             // Table Header
             var tableHeaderBg = XLColor.FromArgb(248, 249, 250); // #f8f9fa
             var tableBorder = XLColor.FromArgb(222, 226, 230); // #dee2e6
@@ -697,7 +696,7 @@ namespace ORSV2.Pages.DataReflection
 
             // --- 4. Add Table Headers ---
             int headerRow = row;
-            var headers = new[] { "Last Name", "First Name", "Race/Ethnicity", "Language Fluency", "SWD", "SED", "Total Passed" };
+            var headers = new[] { "Last Name", "First Name", "Race/Ethnicity", "Language Fluency", "SWD", "Total Passed" };
             for (int i = 0; i < headers.Length; i++)
             {
                 var cell = ws.Cell(headerRow, i + 1);
@@ -739,10 +738,10 @@ namespace ORSV2.Pages.DataReflection
                 int studentCount = quadrantStudentCounts.GetValueOrDefault(quadrantName, 0);
                 string standards = quadrantInfo[quadrantName];
                 string headerText = $"{quadrantName} ({studentCount} students) - {standards}";
-                
+
                 var headerCell = ws.Cell(row, 1);
                 headerCell.Value = headerText;
-                ws.Range(row, 1, row, 7).Merge(); // Changed 6 to 7
+                ws.Range(row, 1, row, 6).Merge();
                 headerCell.Style.Font.Bold = true;
                 headerCell.Style.Font.FontSize = 11;
 
@@ -762,7 +761,6 @@ namespace ORSV2.Pages.DataReflection
                     var raceCell = ws.Cell(row, 3);
                     raceCell.Value = student.RaceEthnicity;
                     if (student.IsAA) raceCell.Style.Fill.BackgroundColor = hiAaBg;
-                    if (student.IsHispanic) raceCell.Style.Fill.BackgroundColor = hiHispanicBg; // --- NEW ---
 
                     var elCell = ws.Cell(row, 4);
                     elCell.Value = student.LanguageFluencyDisplay; // --- UPDATED ---
@@ -772,14 +770,10 @@ namespace ORSV2.Pages.DataReflection
                     swdCell.Value = student.SWDDisplay;
                     if (student.IsSWD) swdCell.Style.Fill.BackgroundColor = hiSwdBg;
 
-                    var sedCell = ws.Cell(row, 6); // --- NEW ---
-                    sedCell.Value = student.SEDDisplay; // --- NEW ---
-                    if (student.IsSed) sedCell.Style.Fill.BackgroundColor = hiSedBg; // --- NEW ---
-
-                    ws.Cell(row, 7).Value = student.TotalPassed; // --- Column index changed from 6 to 7 ---
+                    ws.Cell(row, 6).Value = student.TotalPassed;
 
                     // Center student data
-                    ws.Range(row, 3, row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // --- Changed 6 to 7 ---
+                    ws.Range(row, 3, row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     row++;
                 }
 
@@ -788,7 +782,7 @@ namespace ORSV2.Pages.DataReflection
                 {
                     var footerCell = ws.Cell(row, 1);
                     footerCell.Value = $"Totals: {totalRowForQuad.TotalsSummary}";
-                    ws.Range(row, 1, row, 7).Merge(); // Changed 6 to 7
+                    ws.Range(row, 1, row, 6).Merge();
                     footerCell.Style.Font.Bold = true;
                     footerCell.Style.Font.Italic = true;
                     footerCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -809,8 +803,7 @@ namespace ORSV2.Pages.DataReflection
             ws.Column(3).Width = 20; // Race
             ws.Column(4).Width = 20; // Language
             ws.Column(5).Width = 10; // SWD
-            ws.Column(6).Width = 10; // SED --- NEW ---
-            ws.Column(7).Width = 14; // Total Passed
+            ws.Column(6).Width = 14; // Total Passed
             
             ws.Rows().AdjustToContents();
             ws.Row(headerRow).Height = 25;
