@@ -951,32 +951,56 @@
                                         <td class="col-core">@subjectGroup.SubjectTotalRow.RowLabel</td>
                                         
                                         <!-- === All Students (Total Row) === -->
-                                        <td class="data-all target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-all target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.AllTarget.HasValue ? subjectGroup.SubjectTotalRow.AllTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.AllTarget.HasValue ? subjectGroup.SubjectTotalRow.AllTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.All, "all")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.All, subjectGroup.SubjectTotalRow.AllTarget, "all")
 
                                         <!-- === EL (Total Row) === -->
-                                        <td class="data-el target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-el target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.ELTarget.HasValue ? subjectGroup.SubjectTotalRow.ELTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.ELTarget.HasValue ? subjectGroup.SubjectTotalRow.ELTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.EL, "el")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.EL, subjectGroup.SubjectTotalRow.ELTarget, "el")
                                         
                                         <!-- === SWD (Total Row) === -->
-                                        <td class="data-swd target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-swd target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.SWDTarget.HasValue ? subjectGroup.SubjectTotalRow.SWDTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.SWDTarget.HasValue ? subjectGroup.SubjectTotalRow.SWDTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.SWD, "swd")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.SWD, subjectGroup.SubjectTotalRow.SWDTarget, "swd")
 
                                         <!-- === AA (Total Row) === -->
-                                        <td class="data-aa target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-aa target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.AATarget.HasValue ? subjectGroup.SubjectTotalRow.AATarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.AATarget.HasValue ? subjectGroup.SubjectTotalRow.AATarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.AA, "aa")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.AA, subjectGroup.SubjectTotalRow.AATarget, "aa")
 
                                         <!-- === SED (Total Row) === -->
-                                        <td class="data-sed target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-sed target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.SEDTarget.HasValue ? subjectGroup.SubjectTotalRow.SEDTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.SEDTarget.HasValue ? subjectGroup.SubjectTotalRow.SEDTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.SED, "sed")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.SED, subjectGroup.SubjectTotalRow.SEDTarget, "sed")
 
                                         <!-- === HISP (Total Row) === -->
-                                        <td class="data-hisp target-cell" data-print-value="—"><input type="number" class="inline-target-input" placeholder="—" disabled /></td>
+                                        <td class="data-hisp target-cell" data-print-value="@(subjectGroup.SubjectTotalRow.HISPTarget.HasValue ? subjectGroup.SubjectTotalRow.HISPTarget.Value.ToString("0.#") + "%" : "—")">
+                                            <input type="number" class="inline-target-input" 
+                                                   value="@(subjectGroup.SubjectTotalRow.HISPTarget.HasValue ? subjectGroup.SubjectTotalRow.HISPTarget.Value.ToString("0.#") : "")"
+                                                   placeholder="—" disabled />
+                                        </td>
                                         @RenderProfCell(subjectGroup.SubjectTotalRow.HISP, "hisp")
                                         @RenderDiffCell(subjectGroup.SubjectTotalRow.HISP, subjectGroup.SubjectTotalRow.HISPTarget, "hisp")
 
@@ -1114,22 +1138,35 @@
             const row = inputElement.closest('tr');
             if (!row) return;
             
-            // Locate all total rows below this row
+            const table = row.closest('table');
+            if (!table) return;
+            
+            // Locate all total rows within tbody (K-2 Total, 3+ Total, etc.)
             let currentRow = row.nextElementSibling;
             while (currentRow) {
                 const totalLabel = currentRow.querySelector('.col-core')?.textContent.trim();
                 
-                // Stop if we hit a subject/unit header
-                if (!totalLabel || totalLabel.includes('Subject') || totalLabel.includes('Unit')) {
+                // Stop if we hit a non-total row or end of tbody
+                if (!totalLabel) break;
+                
+                // Process total rows (K-2 Total, 3+ Total)
+                if (totalLabel.includes('Total') && !totalLabel.includes('Subject')) {
+                    refreshTotalRowDiffs(currentRow);
+                } else if (!totalLabel.includes('Total')) {
+                    // Hit a non-total grade row, stop
                     break;
                 }
                 
-                // If it's a total row, refresh its diff cells
-                if (totalLabel?.includes('Total')) {
-                    refreshTotalRowDiffs(currentRow);
-                }
-                
                 currentRow = currentRow.nextElementSibling;
+            }
+            
+            // Also refresh the Subject Total row in tfoot
+            const tfoot = table.querySelector('tfoot');
+            if (tfoot) {
+                const subjectTotalRow = tfoot.querySelector('tr.grand-total-row');
+                if (subjectTotalRow) {
+                    refreshSubjectTotalRow(subjectTotalRow);
+                }
             }
         }
 
@@ -1160,8 +1197,9 @@
             
             diffCells.forEach((diffCell, demoIndex) => {
                 const profCell = profCells[demoIndex];
+                const targetCell = targetCells[demoIndex];
                 
-                if (!profCell) return;
+                if (!profCell || !targetCell) return;
                 
                 // 1. Get aggregated proficiency from this total row
                 const profBadge = profCell.querySelector('.proficiency-badge');
@@ -1184,6 +1222,20 @@
                     return !isNaN(targetVal) && targetVal !== null ? targetVal : null;
                 }).filter(t => t !== null);
                 
+                // === UPDATED: Update the target cell display with averaged value ===
+                const targetInput = targetCell.querySelector('input');
+                if (targetInput) {
+                    if (gradeTargets.length === 0) {
+                        targetInput.value = '';
+                        targetCell.setAttribute('data-print-value', '—');
+                    } else {
+                        const avgTarget = gradeTargets.reduce((a, b) => a + b, 0) / gradeTargets.length;
+                        const roundedAvg = Math.round(avgTarget * 10) / 10; // Round to 1 decimal
+                        targetInput.value = roundedAvg.toString();
+                        targetCell.setAttribute('data-print-value', `${roundedAvg}%`);
+                    }
+                }
+                
                 // === ADDED: Guard against no targets or NaN ===
                 if (gradeTargets.length === 0 || !gradeTargets.every(t => !isNaN(t))) {
                     diffCell.innerHTML = '—';
@@ -1194,6 +1246,101 @@
                 const avgTarget = gradeTargets.reduce((a, b) => a + b, 0) / gradeTargets.length;
                 
                 // === ADDED: Guard against NaN result ===
+                if (isNaN(avgTarget)) {
+                    diffCell.innerHTML = '—';
+                    diffCell.className = `${diffCell.classList[0]} diff-cell`;
+                    return;
+                }
+                
+                // 3. Calculate diff using averaged target vs aggregated proficiency
+                const pctDiff = avgTarget - pctProficient;
+                let nDiff = 0;
+                if (pctDiff > 0) {
+                    nDiff = Math.ceil((totalTested * pctDiff) / 100);
+                }
+                
+                let diffClass = 'diff-neutral';
+                if (pctDiff > 0) diffClass = 'diff-negative';
+                if (pctDiff < 0) diffClass = 'diff-positive';
+                
+                diffCell.className = `${diffCell.classList[0]} diff-cell ${diffClass}`;
+                diffCell.innerHTML = `${pctDiff.toFixed(1).replace('.0', '')}%<span class="combined-count">(${nDiff})</span>`;
+            });
+        }
+
+        // === ADDED: Refresh Subject Total row by getting ALL grade rows from tbody ===
+        function refreshSubjectTotalRow(subjectTotalRow) {
+            const table = subjectTotalRow.closest('table');
+            if (!table) return;
+            
+            // Get ALL grade rows from tbody (not total rows)
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            
+            const gradeRows = Array.from(tbody.querySelectorAll('tr')).filter(row => {
+                const label = row.querySelector('.col-core')?.textContent.trim();
+                // Only include rows that are actual grade rows (not total rows)
+                return label && label.startsWith('Grade') && !label.includes('Total');
+            });
+            
+            if (gradeRows.length === 0) return;
+            
+            // Recalculate each demographic's diff in the subject total row
+            const diffCells = subjectTotalRow.querySelectorAll('.diff-cell');
+            const profCells = subjectTotalRow.querySelectorAll('.prof-cell');
+            const targetCells = subjectTotalRow.querySelectorAll('.target-cell');
+            
+            diffCells.forEach((diffCell, demoIndex) => {
+                const profCell = profCells[demoIndex];
+                const targetCell = targetCells[demoIndex];
+                
+                if (!profCell || !targetCell) return;
+                
+                // 1. Get aggregated proficiency from this subject total row
+                const profBadge = profCell.querySelector('.proficiency-badge');
+                const pctProficient = profBadge ? parseFloat(profBadge.textContent.replace('%', '')) : 0;
+                
+                const countSpan = profCell.querySelector('.combined-count');
+                let totalTested = 0;
+                if (countSpan) {
+                    const parts = countSpan.textContent.replace(/[()]/g, '').split(' / ');
+                    totalTested = parseInt(parts[1], 10) || 0;
+                }
+                
+                // 2. Calculate averaged target from ALL grade rows in tbody
+                const gradeTargets = gradeRows.map(gradeRow => {
+                    const gradeTargetCell = gradeRow.querySelectorAll('.target-cell')[demoIndex];
+                    if (!gradeTargetCell) return null;
+                    
+                    const input = gradeTargetCell.querySelector('input');
+                    const targetVal = input ? parseFloat(input.value) : null;
+                    return !isNaN(targetVal) && targetVal !== null ? targetVal : null;
+                }).filter(t => t !== null);
+                
+                // === Update the target cell display with averaged value ===
+                const targetInput = targetCell.querySelector('input');
+                if (targetInput) {
+                    if (gradeTargets.length === 0) {
+                        targetInput.value = '';
+                        targetCell.setAttribute('data-print-value', '—');
+                    } else {
+                        const avgTarget = gradeTargets.reduce((a, b) => a + b, 0) / gradeTargets.length;
+                        const roundedAvg = Math.round(avgTarget * 10) / 10; // Round to 1 decimal
+                        targetInput.value = roundedAvg.toString();
+                        targetCell.setAttribute('data-print-value', `${roundedAvg}%`);
+                    }
+                }
+                
+                // === Guard against no targets or NaN ===
+                if (gradeTargets.length === 0 || !gradeTargets.every(t => !isNaN(t))) {
+                    diffCell.innerHTML = '—';
+                    diffCell.className = `${diffCell.classList[0]} diff-cell`;
+                    return;
+                }
+                
+                const avgTarget = gradeTargets.reduce((a, b) => a + b, 0) / gradeTargets.length;
+                
+                // === Guard against NaN result ===
                 if (isNaN(avgTarget)) {
                     diffCell.innerHTML = '—';
                     diffCell.className = `${diffCell.classList[0]} diff-cell`;

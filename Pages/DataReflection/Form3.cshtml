@@ -16,44 +16,124 @@
 <style>
     /* Custom styles for Form 3 */
     .form3-table {
-        font-size: 0.95rem; /* Increased from 0.8rem */
+        font-size: 1rem;
+        table-layout: fixed; /* Enable fixed column widths */
+    }
+    
+    /* Narrow columns for Teacher and Period */
+    .form3-table .teacher-col {
+        width: 10%;
+        min-width: 100px;
+    }
+    
+    .form3-table .period-col {
+        width: 5%;
+        min-width: 50px;
+    }
+    
+    /* Equal width for all standard data columns (Passed/Not Passed) */
+    .form3-table .standard-col {
+        width: auto; /* Will distribute remaining space equally */
+    }
+    
+    /* Standard group headers span 2 columns */
+    .form3-table .standard-group {
+        /* Width will be 2x standard-col since it has colspan="2" */
+    }
+    
+    /* Teacher name formatting with line breaks */
+    .teacher-name-cell {
+        white-space: normal !important;
+        word-wrap: break-word;
+        line-height: 1.3;
+        font-size: 0.9rem;
+    }
+    
+    /* Header text wrapping for narrow columns */
+    .teacher-col, .period-col {
+        white-space: normal !important;
+        word-wrap: break-word;
+        line-height: 1.2;
+    }
+    
+    /* Stacked passed/not passed styling */
+    .stacked-cell {
+        white-space: normal !important;
+        line-height: 1.3;
+        padding: 0.4rem 0.25rem !important;
+    }
+    
+    .passed-line {
+        font-size: 0.9rem;
+        line-height: 1.3;
+        padding-bottom: 0.2rem;
+    }
+    
+    .not-passed-line {
+        font-size: 0.9rem;
+        line-height: 1.3;
+        padding-top: 0.2rem;
+        border-top: 1px solid #f0f0f0; /* Barely visible divider */
+    }
+    
+    .sub-header-row .passed-line {
+        font-size: 0.75rem;
+        font-weight: normal;
+        padding-bottom: 0.15rem;
+    }
+    
+    .sub-header-row .not-passed-line {
+        font-size: 0.75rem;
+        font-weight: normal;
+        border-top: 1px solid #f0f0f0; /* Barely visible divider */
+        padding-top: 0.15rem;
+    }
+    
+    /* Prominent borders between teacher rows */
+    .teacher-row td {
+        border-bottom: 2px solid #000 !important;
+    }
+    
+    /* Darker border between headers and first teacher */
+    .form3-table tbody tr:first-child td {
+        border-top: 2px solid #000 !important;
     }
     
     .form3-table th {
-        font-size: 0.9rem; /* Increased from 0.75rem */
-        padding: 0.5rem 0.35rem;
+        font-size: 0.95rem;
+        padding: 0.6rem 0.4rem;
         vertical-align: middle;
     }
     
     .form3-table td {
-        font-size: 0.9rem; /* Increased from 0.75rem */
-        padding: 0.4rem 0.3rem;
+        font-size: 0.95rem;
+        padding: 0.5rem 0.35rem;
         vertical-align: middle;
     }
     
     .pass-not-pass-header {
-        line-height: 1.3;
-        margin-bottom: 0.15rem;
+        line-height: 1.4;
+        margin-bottom: 0.2rem;
     }
     
     .pass-not-pass-header .fw-semibold {
         display: block;
-        margin-bottom: 0.2rem;
-        font-size: 0.95rem; /* Increased from 0.8rem */
+        margin-bottom: 0.25rem;
+        font-size: 1rem;
         font-weight: bold;
     }
     
     .pass-not-pass-header .small {
         display: block;
-        font-size: 0.75rem; /* Increased from 0.6rem */
-        line-height: 1.2;
+        font-size: 0.8rem;
+        line-height: 1.3;
         font-weight: normal;
     }
     
     .sub-header-row th {
-        font-size: 0.8rem; /* Increased from 0.65rem */
-        padding: 0.3rem 0.25rem;
-        line-height: 1.2;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.3rem;
+        line-height: 1.3;
         border-top: 1px solid #dee2e6;
     }
     
@@ -62,13 +142,13 @@
     }
     
     .percentage-cell .text-muted {
-        font-size: 0.8rem; /* Increased from 0.7rem */
+        font-size: 0.85rem;
         margin-left: 0.15rem;
     }
     
     .compact-nowrap {
         white-space: nowrap;
-        font-size: 0.9rem; /* Increased from 0.75rem */
+        font-size: 0.95rem;
     }
     
     .table-compact {
@@ -76,7 +156,7 @@
     }
     
     .form3-footer-note {
-        font-size: 0.85rem; /* Increased from 0.7rem */
+        font-size: 0.9rem;
         margin-top: 0.75rem;
         padding: 0.5rem 0;
     }
@@ -156,25 +236,103 @@
         /* Table styling with top border */
         .form3-table {
             width: 100% !important;
-            font-size: 0.85rem !important;
+            font-size: 9pt !important;
             margin: 0 !important;
             border-collapse: collapse !important;
             position: relative !important;
             border-top: 2px solid #000 !important;
+            table-layout: fixed !important; /* Enable fixed column widths */
         }
         
-        /* Body cells - larger text, narrower padding */
+        /* Narrow columns for Teacher and Period */
+        .form3-table .teacher-col {
+            width: 10% !important;
+        }
+        
+        .form3-table .period-col {
+            width: 5% !important;
+        }
+        
+        /* Equal width for all standard data columns (Passed/Not Passed) */
+        .form3-table .standard-col {
+            width: auto !important; /* Will distribute remaining space equally */
+        }
+        
+        /* Standard group headers span 2 columns */
+        .form3-table .standard-group {
+            /* Width will be 2x standard-col since it has colspan="2" */
+        }
+        
+        /* Teacher name formatting with line breaks for print */
+        .teacher-name-cell {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            line-height: 1.3 !important;
+            font-size: 8.5pt !important;
+        }
+        
+        /* Header text wrapping for narrow columns in print */
+        .teacher-col, .period-col {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            line-height: 1.2 !important;
+        }
+        
+        /* Stacked passed/not passed styling for print */
+        .stacked-cell {
+            white-space: normal !important;
+            line-height: 1.3 !important;
+            padding: 0.3rem 0.15rem !important;
+        }
+        
+        .passed-line {
+            font-size: 8.5pt !important;
+            line-height: 1.3 !important;
+            padding-bottom: 0.15rem !important;
+        }
+        
+        .not-passed-line {
+            font-size: 8.5pt !important;
+            line-height: 1.3 !important;
+            padding-top: 0.15rem !important;
+            border-top: 1px solid #e8e8e8 !important; /* Barely visible divider for print */
+        }
+        
+        .sub-header-row .passed-line {
+            font-size: 7.5pt !important;
+            font-weight: normal !important;
+            padding-bottom: 0.1rem !important;
+        }
+        
+        .sub-header-row .not-passed-line {
+            font-size: 7.5pt !important;
+            font-weight: normal !important;
+            border-top: 1px solid #e8e8e8 !important; /* Barely visible divider for print */
+            padding-top: 0.1rem !important;
+        }
+        
+        /* Prominent borders between teacher rows in print */
+        .teacher-row td {
+            border-bottom: 2px solid #000 !important;
+        }
+        
+        /* Darker border between headers and first teacher in print */
+        .form3-table tbody tr:first-child td {
+            border-top: 2px solid #000 !important;
+        }
+        
+        /* Body cells - larger text matching PDF */
         .form3-table td {
-            font-size: 0.85rem !important;
-            padding: 0.25rem 0.1rem !important;
+            font-size: 9pt !important;
+            padding: 0.3rem 0.15rem !important;
             border: 1px solid #000 !important;
             line-height: 1.3 !important;
         }
         
         /* Header cells - taller with more padding for readability */
         .form3-table th {
-            font-size: 0.85rem !important;
-            padding: 0.35rem 0.15rem !important;
+            font-size: 9pt !important;
+            padding: 0.4rem 0.2rem !important;
             border: 1px solid #000 !important;
             line-height: 1.4 !important;
             vertical-align: middle !important;
@@ -182,31 +340,31 @@
         
         /* Standard code and description styling for print - taller headers */
         .pass-not-pass-header {
-            padding: 0.4rem 0.15rem !important;
+            padding: 0.45rem 0.2rem !important;
         }
         
         .pass-not-pass-header .fw-semibold {
-            font-size: 0.9rem !important;
+            font-size: 10pt !important;
             font-weight: bold !important;
             display: block !important;
-            margin-bottom: 0.2rem !important;
+            margin-bottom: 0.25rem !important;
         }
         
         .pass-not-pass-header .small {
-            font-size: 0.75rem !important;
+            font-size: 8pt !important;
             font-weight: normal !important;
             line-height: 1.3 !important;
         }
         
         /* Sub-header row styling */
         .sub-header-row th {
-            font-size: 0.8rem !important;
-            padding: 0.35rem 0.12rem !important;
+            font-size: 8.5pt !important;
+            padding: 0.4rem 0.15rem !important;
             line-height: 1.3 !important;
         }
         
         .percentage-cell .text-muted {
-            font-size: 0.75rem !important;
+            font-size: 8pt !important;
         }
         
         /* Force table to break across pages properly */
@@ -354,46 +512,47 @@
                     <table class="table form3-table table-compact align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th class="compact-nowrap text-center">Teacher Name</th>
-                                <th class="compact-nowrap text-center">Period</th>
+                                <th class="compact-nowrap text-center teacher-col" rowspan="2">Teacher</th>
+                                <th class="compact-nowrap text-center period-col" rowspan="2">Per</th>
 
-                                @* For each standard, show Code + short description, then 4 data cols *@
+                                @* For each standard, show Code + short description in single column *@
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
                                     var c = Model.Columns[i];
                                     var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
-                                    <th class="text-center pass-not-pass-header @groupClass" colspan="2">
+                                    <th class="text-center pass-not-pass-header standard-col @groupClass">
                                         <span class="fw-semibold">@c.Code</span>
                                         <span class="small text-muted">@c.ShortStatement</span>
                                     </th>
                                 }
 
-                                <th class="text-center pass-not-pass-header standard-group-odd" colspan="2">
+                                <th class="text-center pass-not-pass-header standard-col standard-group-odd">
                                     <span class="fw-semibold">Overall Proficiency</span>
                                     <span class="small text-muted">3+ standards passed</span>
                                 </th>
                             </tr>
                             <tr class="sub-header-row">
-                                <th class="text-center"></th>
-                                <th class="text-center"></th>
-
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
                                     var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
-                                    <th class="text-center @groupClass">% (#)<br/><small>Passed</small></th>
-                                    <th class="text-center @groupClass">% (#)<br/><small>Not Passed</small></th>
+                                    <th class="text-center standard-col @groupClass">
+                                        <div class="passed-line">% (#) Passed</div>
+                                        <div class="not-passed-line">% (#) Not Passed</div>
+                                    </th>
                                 }
 
-                                <th class="text-center standard-group-odd">% (#)<br/><small>Passed</small></th>
-                                <th class="text-center standard-group-odd">% (#)<br/><small>Not Passed</small></th>
+                                <th class="text-center standard-col standard-group-odd">
+                                    <div class="passed-line">% (#) Passed</div>
+                                    <div class="not-passed-line">% (#) Not Passed</div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                         @foreach (var g in Model.GroupSummaries)
                         {
-                            <tr>
-                                <td class="compact-nowrap text-center">@g.Key.TeacherName</td>
-                                <td class="compact-nowrap text-center">@g.Key.Period</td>
+                            <tr class="teacher-row">
+                                <td class="text-center teacher-name-cell teacher-col">@Html.Raw(g.Key.TeacherName.Replace(", ", ",<br/>"))</td>
+                                <td class="compact-nowrap text-center period-col">@g.Key.Period</td>
 
                                 @for (int i = 0; i < Model.Columns.Count; i++)
                                 {
@@ -402,13 +561,13 @@
                                     var notp = g.NotPassedPerStd[i];
                                     var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
-                                    <td class="text-center percentage-cell @groupClass">
-                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den)
-                                        <span class="text-muted">(@pass)</span>
-                                    </td>
-                                    <td class="text-center percentage-cell @groupClass">
-                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den)
-                                        <span class="text-muted">(@notp)</span>
+                                    <td class="text-center stacked-cell standard-col @groupClass">
+                                        <div class="passed-line">
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den) <span class="text-muted">(@pass)</span>
+                                        </div>
+                                        <div class="not-passed-line">
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den) <span class="text-muted">(@notp)</span>
+                                        </div>
                                     </td>
                                 }
 
@@ -417,13 +576,13 @@
                                     var totPass = g.PassedByTotal;
                                     var totNot = g.NotPassedByTotal;
                                 }
-                                <td class="text-center percentage-cell standard-group-odd">
-                                    @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen)
-                                    <span class="text-muted">(@totPass)</span>
-                                </td>
-                                <td class="text-center percentage-cell standard-group-odd">
-                                    @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen)
-                                    <span class="text-muted">(@totNot)</span>
+                                <td class="text-center stacked-cell standard-col standard-group-odd">
+                                    <div class="passed-line">
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen) <span class="text-muted">(@totPass)</span>
+                                    </div>
+                                    <div class="not-passed-line">
+                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen) <span class="text-muted">(@totNot)</span>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -432,8 +591,8 @@
                         {
                             <tfoot class="table-light">
                                 <tr>
-                                    <th class="compact-nowrap text-center">OVERALL</th>
-                                    <th class="compact-nowrap text-center">All Classes</th>
+                                    <th class="compact-nowrap text-center teacher-col">OVERALL</th>
+                                    <th class="compact-nowrap text-center period-col"></th>
 
                                     @for (int i = 0; i < Model.Columns.Count; i++)
                                     {
@@ -442,13 +601,13 @@
                                         var notp = Model.GrandTotals.NotPassedPerStd[i];
                                         var groupClass = i % 2 == 0 ? "standard-group-even" : "standard-group-odd";
 
-                                        <th class="text-center percentage-cell @groupClass">
-                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den)
-                                            <span class="text-muted">(@pass)</span>
-                                        </th>
-                                        <th class="text-center percentage-cell @groupClass">
-                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den)
-                                            <span class="text-muted">(@notp)</span>
+                                        <th class="text-center stacked-cell standard-col @groupClass">
+                                            <div class="passed-line">
+                                                @ORSV2.Pages.DataReflection.Form3Model.Pct(pass, den) <span class="text-muted">(@pass)</span>
+                                            </div>
+                                            <div class="not-passed-line">
+                                                @ORSV2.Pages.DataReflection.Form3Model.Pct(notp, den) <span class="text-muted">(@notp)</span>
+                                            </div>
                                         </th>
                                     }
 
@@ -457,13 +616,13 @@
                                         var totPass = Model.GrandTotals.PassedByTotal;
                                         var totNot  = Model.GrandTotals.NotPassedByTotal;
                                     }
-                                    <th class="text-center percentage-cell standard-group-odd">
-                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen)
-                                        <span class="text-muted">(@totPass)</span>
-                                    </th>
-                                    <th class="text-center percentage-cell standard-group-odd">
-                                        @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen)
-                                        <span class="text-muted">(@totNot)</span>
+                                    <th class="text-center stacked-cell standard-col standard-group-odd">
+                                        <div class="passed-line">
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(totPass, totDen) <span class="text-muted">(@totPass)</span>
+                                        </div>
+                                        <div class="not-passed-line">
+                                            @ORSV2.Pages.DataReflection.Form3Model.Pct(totNot, totDen) <span class="text-muted">(@totNot)</span>
+                                        </div>
                                     </th>
                                 </tr>
                             </tfoot>

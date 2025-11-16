@@ -394,7 +394,7 @@ namespace ORSV2.Pages.DataReflection
             var border = XLColor.FromArgb(222, 226, 230); // #dee2e6
 
             // --- 4. Add Main Title ---
-            int totalCols = 2 + (Columns.Count * 2) + 2; // Teacher, Period, (Standards * 2), (Overall * 2)
+            int totalCols = 2 + Columns.Count + 1; // Teacher, Per, Standards (1 each), Overall (1)
             var titleCell = ws.Cell(row, 1);
             titleCell.Value = dynamicTitle;
             titleCell.Style.Font.Bold = true;
@@ -409,37 +409,41 @@ namespace ORSV2.Pages.DataReflection
 
             // Merge Teacher Name and Period headers vertically
             ws.Range(headerRow1, 1, headerRow2, 1).Merge().Value = "Teacher Name";
-            ws.Range(headerRow1, 2, headerRow2, 2).Merge().Value = "Period";
+            ws.Range(headerRow1, 2, headerRow2, 2).Merge().Value = "Per";
 
-            // Loop for Standard Headers (Row 1) and Sub-Headers (Row 2)
+            // Loop for Standard Headers (single column each with stacked sub-headers)
             for (int i = 0; i < Columns.Count; i++)
             {
                 var c = Columns[i];
-                int col = 3 + (i * 2);
+                int col = 3 + i; // Single column per standard
                 var bg = i % 2 == 0 ? evenBg : oddBg;
 
                 // Row 1: Standard Code + Statement
                 var h1Cell = ws.Cell(headerRow1, col);
                 h1Cell.Value = $"{c.Code}\n{c.ShortStatement}";
                 h1Cell.Style.Alignment.WrapText = true;
-                ws.Range(headerRow1, col, headerRow1, col + 1).Merge();
-                ws.Range(headerRow1, col, headerRow2, col + 1).Style.Fill.BackgroundColor = bg; // Apply bg to both rows
+                h1Cell.Style.Fill.BackgroundColor = bg;
 
-                // Row 2: Passed / Not Passed
-                ws.Cell(headerRow2, col).Value = "% (#)\nPassed";
-                ws.Cell(headerRow2, col + 1).Value = "% (#)\nNot Passed";
+                // Row 2: Stacked Passed / Not Passed in same cell
+                var h2Cell = ws.Cell(headerRow2, col);
+                h2Cell.Value = "% (#) Passed\n% (#) Not Passed";
+                h2Cell.Style.Alignment.WrapText = true;
+                h2Cell.Style.Fill.BackgroundColor = bg;
+                h2Cell.Style.Font.FontSize = 9; // Smaller for sub-header
             }
 
-            // Add "Overall Proficiency" Header
-            int overallCol = 3 + (Columns.Count * 2);
+            // Add "Overall Proficiency" Header (single column)
+            int overallCol = 3 + Columns.Count;
             var h1Overall = ws.Cell(headerRow1, overallCol);
             h1Overall.Value = "Overall Proficiency\n3+ standards passed";
             h1Overall.Style.Alignment.WrapText = true;
-            ws.Range(headerRow1, overallCol, headerRow1, overallCol + 1).Merge();
-            ws.Range(headerRow1, overallCol, headerRow2, overallCol + 1).Style.Fill.BackgroundColor = oddBg;
+            h1Overall.Style.Fill.BackgroundColor = oddBg;
 
-            ws.Cell(headerRow2, overallCol).Value = "% (#)\nPassed";
-            ws.Cell(headerRow2, overallCol + 1).Value = "% (#)\nNot Passed";
+            var h2Overall = ws.Cell(headerRow2, overallCol);
+            h2Overall.Value = "% (#) Passed\n% (#) Not Passed";
+            h2Overall.Style.Alignment.WrapText = true;
+            h2Overall.Style.Fill.BackgroundColor = oddBg;
+            h2Overall.Style.Font.FontSize = 9;
 
             // Style all header rows
             var headerRange = ws.Range(headerRow1, 1, headerRow2, totalCols);
@@ -448,6 +452,10 @@ namespace ORSV2.Pages.DataReflection
             headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             headerRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.OutsideBorderColor = border;
             headerRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin).Border.InsideBorderColor = border;
+            
+            // Darker border between headers and data
+            ws.Range(headerRow2, 1, headerRow2, totalCols).Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+            ws.Range(headerRow2, 1, headerRow2, totalCols).Style.Border.BottomBorderColor = XLColor.Black;
 
             row = headerRow2 + 1; // Start data after the header
 
@@ -455,7 +463,9 @@ namespace ORSV2.Pages.DataReflection
             foreach (var g in GroupSummaries)
             {
                 int c = 1;
-                ws.Cell(row, c++).Value = g.Key.TeacherName;
+                // Format teacher name with line break after comma
+                var teacherName = g.Key.TeacherName.Replace(", ", ",\n");
+                ws.Cell(row, c++).Value = teacherName;
                 ws.Cell(row, c++).Value = g.Key.Period;
 
                 for (int i = 0; i < Columns.Count; i++)
@@ -465,27 +475,28 @@ namespace ORSV2.Pages.DataReflection
                     var notp = g.NotPassedPerStd[i];
                     var bg = i % 2 == 0 ? evenBg : oddBg;
                     
-                    var passCell = ws.Cell(row, c++);
-                    passCell.Value = $"{Pct(pass, den)} ({pass})";
-                    passCell.Style.Fill.BackgroundColor = bg;
-
-                    var notpCell = ws.Cell(row, c++);
-                    notpCell.Value = $"{Pct(notp, den)} ({notp})";
-                    notpCell.Style.Fill.BackgroundColor = bg;
+                    // Single cell with stacked values
+                    var cell = ws.Cell(row, c++);
+                    cell.Value = $"{Pct(pass, den)} ({pass})\n{Pct(notp, den)} ({notp})";
+                    cell.Style.Fill.BackgroundColor = bg;
+                    cell.Style.Alignment.WrapText = true;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 }
 
-                // Overall Totals for the group
+                // Overall Totals for the group (stacked)
                 var totDen = g.StudentCount;
                 var totPass = g.PassedByTotal;
                 var totNot = g.NotPassedByTotal;
                 
-                var totalPassCell = ws.Cell(row, c++);
-                totalPassCell.Value = $"{Pct(totPass, totDen)} ({totPass})";
-                totalPassCell.Style.Fill.BackgroundColor = oddBg;
-                
-                var totalNotpCell = ws.Cell(row, c++);
-                totalNotpCell.Value = $"{Pct(totNot, totDen)} ({totNot})";
-                totalNotpCell.Style.Fill.BackgroundColor = oddBg;
+                var totalCell = ws.Cell(row, c++);
+                totalCell.Value = $"{Pct(totPass, totDen)} ({totPass})\n{Pct(totNot, totDen)} ({totNot})";
+                totalCell.Style.Fill.BackgroundColor = oddBg;
+                totalCell.Style.Alignment.WrapText = true;
+                totalCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                // Prominent border between teacher rows
+                ws.Range(row, 1, row, totalCols).Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+                ws.Range(row, 1, row, totalCols).Style.Border.BottomBorderColor = XLColor.Black;
 
                 row++;
             }
@@ -498,9 +509,8 @@ namespace ORSV2.Pages.DataReflection
                 hCell1.Value = "OVERALL";
                 hCell1.Style.Font.Bold = true;
 
-                var hCell2 = ws.Cell(row, c++);
-                hCell2.Value = "All Classes";
-                hCell2.Style.Font.Bold = true;
+                // Empty cell for Per column
+                ws.Cell(row, c++).Value = "";
                 
                 for (int i = 0; i < Columns.Count; i++)
                 {
@@ -509,31 +519,26 @@ namespace ORSV2.Pages.DataReflection
                     var notp = GrandTotals.NotPassedPerStd[i];
                     var bg = i % 2 == 0 ? evenBg : oddBg;
 
-                    var passCell = ws.Cell(row, c++);
-                    passCell.Value = $"{Pct(pass, den)} ({pass})";
-                    passCell.Style.Fill.BackgroundColor = bg;
-                    passCell.Style.Font.Bold = true;
-
-                    var notpCell = ws.Cell(row, c++);
-                    notpCell.Value = $"{Pct(notp, den)} ({notp})";
-                    notpCell.Style.Fill.BackgroundColor = bg;
-                    notpCell.Style.Font.Bold = true;
+                    // Single cell with stacked values
+                    var cell = ws.Cell(row, c++);
+                    cell.Value = $"{Pct(pass, den)} ({pass})\n{Pct(notp, den)} ({notp})";
+                    cell.Style.Fill.BackgroundColor = bg;
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Alignment.WrapText = true;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 }
 
-                // Grand Overall Totals
+                // Grand Overall Totals (stacked)
                 var totDen = GrandTotals.StudentCount;
                 var totPass = GrandTotals.PassedByTotal;
                 var totNot = GrandTotals.NotPassedByTotal;
                 
-                var totalPassCell = ws.Cell(row, c++);
-                totalPassCell.Value = $"{Pct(totPass, totDen)} ({totPass})";
-                totalPassCell.Style.Fill.BackgroundColor = oddBg;
-                totalPassCell.Style.Font.Bold = true;
-                
-                var totalNotpCell = ws.Cell(row, c++);
-                totalNotpCell.Value = $"{Pct(totNot, totDen)} ({totNot})";
-                totalNotpCell.Style.Fill.BackgroundColor = oddBg;
-                totalNotpCell.Style.Font.Bold = true;
+                var totalCell = ws.Cell(row, c++);
+                totalCell.Value = $"{Pct(totPass, totDen)} ({totPass})\n{Pct(totNot, totDen)} ({totNot})";
+                totalCell.Style.Fill.BackgroundColor = oddBg;
+                totalCell.Style.Font.Bold = true;
+                totalCell.Style.Alignment.WrapText = true;
+                totalCell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
                 // Style the whole footer row
                 ws.Range(row, 1, row, totalCols).Style.Fill.BackgroundColor = headerBg;
