@@ -16,44 +16,44 @@
 <style>
     /* Custom styles for Form 3 */
     .form3-table {
-        font-size: 0.8rem; /* Reduced from default */
+        font-size: 0.95rem; /* Increased from 0.8rem */
     }
     
     .form3-table th {
-        font-size: 0.75rem;
-        padding: 0.4rem 0.3rem;
+        font-size: 0.9rem; /* Increased from 0.75rem */
+        padding: 0.5rem 0.35rem;
         vertical-align: middle;
     }
     
     .form3-table td {
-        font-size: 0.75rem;
-        padding: 0.3rem 0.25rem;
+        font-size: 0.9rem; /* Increased from 0.75rem */
+        padding: 0.4rem 0.3rem;
         vertical-align: middle;
     }
     
     .pass-not-pass-header {
-        line-height: 1.2;
-        margin-bottom: 0.1rem;
+        line-height: 1.3;
+        margin-bottom: 0.15rem;
     }
     
     .pass-not-pass-header .fw-semibold {
         display: block;
-        margin-bottom: 0.15rem;
-        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+        font-size: 0.95rem; /* Increased from 0.8rem */
         font-weight: bold;
     }
     
     .pass-not-pass-header .small {
         display: block;
-        font-size: 0.6rem;
-        line-height: 1.1;
+        font-size: 0.75rem; /* Increased from 0.6rem */
+        line-height: 1.2;
         font-weight: normal;
     }
     
     .sub-header-row th {
-        font-size: 0.65rem;
-        padding: 0.25rem 0.2rem;
-        line-height: 1.1;
+        font-size: 0.8rem; /* Increased from 0.65rem */
+        padding: 0.3rem 0.25rem;
+        line-height: 1.2;
         border-top: 1px solid #dee2e6;
     }
     
@@ -62,13 +62,13 @@
     }
     
     .percentage-cell .text-muted {
-        font-size: 0.7rem;
-        margin-left: 0.1rem;
+        font-size: 0.8rem; /* Increased from 0.7rem */
+        margin-left: 0.15rem;
     }
     
     .compact-nowrap {
         white-space: nowrap;
-        font-size: 0.75rem;
+        font-size: 0.9rem; /* Increased from 0.75rem */
     }
     
     .table-compact {
@@ -76,7 +76,7 @@
     }
     
     .form3-footer-note {
-        font-size: 0.7rem;
+        font-size: 0.85rem; /* Increased from 0.7rem */
         margin-top: 0.75rem;
         padding: 0.5rem 0;
     }
@@ -132,9 +132,9 @@
             left: 0 !important;
             width: 100% !important;
             text-align: center !important;
-            font-size: 12pt !important;
+            font-size: 14pt !important;
             font-weight: bold !important;
-            padding: 0.1in 0 !important;
+            padding: 0.15in 0 !important;
             background: white !important;
             z-index: 1000 !important;
             display: block !important;
@@ -144,45 +144,69 @@
         /* Position table container below title with more buffer */
         .table-responsive {
             position: fixed !important;
-            top: 0.6in !important;
+            top: 0.65in !important;
             left: 0 !important;
             width: 100% !important;
-            height: calc(100% - 0.6in) !important;
+            height: calc(100% - 0.65in) !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 0 0.15in !important;
             visibility: visible !important;
         }
         
         /* Table styling with top border */
         .form3-table {
             width: 100% !important;
-            font-size: 0.6rem !important;
+            font-size: 0.85rem !important;
             margin: 0 !important;
             border-collapse: collapse !important;
             position: relative !important;
             border-top: 2px solid #000 !important;
         }
         
-        .form3-table th,
+        /* Body cells - larger text, narrower padding */
         .form3-table td {
-            font-size: 0.55rem !important;
-            padding: 0.15rem 0.1rem !important;
+            font-size: 0.85rem !important;
+            padding: 0.25rem 0.1rem !important;
             border: 1px solid #000 !important;
+            line-height: 1.3 !important;
         }
         
-        /* Standard code and description styling for print */
+        /* Header cells - taller with more padding for readability */
+        .form3-table th {
+            font-size: 0.85rem !important;
+            padding: 0.35rem 0.15rem !important;
+            border: 1px solid #000 !important;
+            line-height: 1.4 !important;
+            vertical-align: middle !important;
+        }
+        
+        /* Standard code and description styling for print - taller headers */
+        .pass-not-pass-header {
+            padding: 0.4rem 0.15rem !important;
+        }
+        
         .pass-not-pass-header .fw-semibold {
-            font-size: 0.65rem !important;
+            font-size: 0.9rem !important;
             font-weight: bold !important;
+            display: block !important;
+            margin-bottom: 0.2rem !important;
         }
         
         .pass-not-pass-header .small {
-            font-size: 0.5rem !important;
+            font-size: 0.75rem !important;
             font-weight: normal !important;
+            line-height: 1.3 !important;
+        }
+        
+        /* Sub-header row styling */
+        .sub-header-row th {
+            font-size: 0.8rem !important;
+            padding: 0.35rem 0.12rem !important;
+            line-height: 1.3 !important;
         }
         
         .percentage-cell .text-muted {
-            font-size: 0.5rem !important;
+            font-size: 0.75rem !important;
         }
         
         /* Force table to break across pages properly */
