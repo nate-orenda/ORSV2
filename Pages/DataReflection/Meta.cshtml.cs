@@ -914,7 +914,7 @@ namespace ORSV2.Pages.DataReflection
         {
             UnitGroups = RawDataRows
                 .GroupBy(r => r.Unit)
-                .OrderBy(g => g.Key)
+                .OrderByDescending(g => g.Key)
                 .Select(unitGroup => new UnitDisplayGroup
                 {
                     UnitName = unitGroup.Key,
