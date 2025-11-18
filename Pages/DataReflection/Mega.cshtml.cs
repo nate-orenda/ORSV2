@@ -13,20 +13,13 @@ using System.IO;
 using System;
 using Microsoft.AspNetCore.Authorization;
 
-// Note: We are in a new namespace for the Mega page
 namespace ORSV2.Pages.DataReflection
 {
-
-    // ###############################################################
-    // NEW VIEW MODELS FOR MEGA PAGE
-    // ###############################################################
-
     public class MegaGradeRow
     {
         public string RowLabel { get; set; } = string.Empty;
         public RowType Type { get; set; } = RowType.Grade;
 
-        // Data is now a dictionary where the Key is the Unit Name (e.g., "Unit 1")
         public Dictionary<string, AggData> AllData { get; set; } = new Dictionary<string, AggData>();
         public Dictionary<string, AggData> ELData { get; set; } = new Dictionary<string, AggData>();
         public Dictionary<string, AggData> SWDData { get; set; } = new Dictionary<string, AggData>();
@@ -34,7 +27,6 @@ namespace ORSV2.Pages.DataReflection
         public Dictionary<string, AggData> SEDData { get; set; } = new Dictionary<string, AggData>();
         public Dictionary<string, AggData> HISPData { get; set; } = new Dictionary<string, AggData>();
 
-        // Targets are still at the grade level, not unit level
         public decimal? AllTarget { get; set; }
         public decimal? ELTarget { get; set; }
         public decimal? SWDTarget { get; set; }
@@ -46,7 +38,6 @@ namespace ORSV2.Pages.DataReflection
         {
             get
             {
-                // Check if all data dictionaries are empty or only contain empty AggData
                 Func<Dictionary<string, AggData>, bool> isDataEmpty = (data) =>
                     !data.Any() || data.Values.All(v => v.TotalTested == 0);
 
@@ -63,21 +54,16 @@ namespace ORSV2.Pages.DataReflection
     public class MegaSubjectGroup
     {
         public string SubjectName { get; set; } = string.Empty;
-        // This list will contain the dynamic units found for this subject (e.g., "Unit 1", "Unit 2")
         public List<string> ActiveUnits { get; set; } = new List<string>();
         public List<MegaGradeRow> BodyRows { get; set; } = new List<MegaGradeRow>();
         public MegaGradeRow SubjectTotalRow { get; set; } = new MegaGradeRow();
     }
 
-
-    // ###############################################################
-    // MEGA MODEL
-    // ###############################################################
     [Authorize(Roles = "OrendaAdmin,OrendaManager,DistrictAdmin")]
     public class MegaModel : SecureReportPageModel
     {
         private readonly IConfiguration _config;
-        private readonly ILogger<MegaModel> _logger; // Changed from MetaModel
+        private readonly ILogger<MegaModel> _logger;
 
         [BindProperty(SupportsGet = true)]
         public int? SchoolId { get; set; }
@@ -88,38 +74,26 @@ namespace ORSV2.Pages.DataReflection
         [BindProperty(SupportsGet = true)]
         public int? SchoolYear { get; set; }
 
-        //[BindProperty]
-        //public string? NewTargetGrade { get; set; }
-        //[BindProperty]
-        //public string? NewTargetDemographic { get; set; }
-        //[BindProperty]
-        //public decimal? NewTargetPercent { get; set; }
-
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableSchoolYears { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetGrades { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetDemographics { get; set; } = new SelectList(new List<SelectListItem>());
 
-        // This is the new top-level display property
         public List<MegaSubjectGroup> SubjectGroups { get; set; } = new List<MegaSubjectGroup>();
         
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new List<BreadcrumbItem>();
         public string DistrictName { get; set; } = string.Empty;
         public string SchoolName { get; set; } = string.Empty;
 
-        // Private properties for data handling
         private List<MetaDataRow> RawDataRows { get; set; } = new List<MetaDataRow>();
         private List<SchoolTarget> CurrentTargets { get; set; } = new List<SchoolTarget>();
 
-
-        // Constructor
-        public MegaModel(IConfiguration config, ILogger<MegaModel> logger) // Changed from MetaModel
+        public MegaModel(IConfiguration config, ILogger<MegaModel> logger)
         {
             _config = config;
             _logger = logger;
         }
 
-        // OnGetAsync
         public async Task<IActionResult> OnGetAsync()
         {
             InitializeUserDataScope();
@@ -158,7 +132,7 @@ namespace ORSV2.Pages.DataReflection
             {
                 await LoadSchoolTargetsAsync();
                 await LoadMetaDataAsync();
-                BuildDisplayGroups(); // This will call our new Mega-specific builder
+                BuildDisplayGroups();
 
                 if (SchoolId.Value == 0)
                 {
@@ -169,88 +143,12 @@ namespace ORSV2.Pages.DataReflection
                     var items = AvailableSchools.Items?.Cast<SelectListItem>() ?? new List<SelectListItem>();
                     SchoolName = items.FirstOrDefault(s => s.Value == SchoolId.ToString())?.Text ?? "Selected School";
                 }
-
-                //if (SubjectGroups.Any()) // Changed from UnitGroups
-                //{
-                //    LoadTargetUIData();
-                //}
             }
 
             BuildBreadcrumbs();
             return Page();
         }
 
-        // OnPostSetTargetAsync - This logic remains identical to MetaModel
-        /*public async Task<IActionResult> OnPostSetTargetAsync()
-        {
-            InitializeUserDataScope();
-
-            if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser) return Forbid();
-            if (UserDistrictId.HasValue) DistrictId = UserDistrictId.Value;
-
-            if (!SchoolId.HasValue || SchoolId.Value == 0)
-            {
-                _logger.LogWarning("Target save failed: 'All Schools' (0) is not a valid school ID for targets.");
-                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
-            }
-            if (!SchoolYear.HasValue || !NewTargetPercent.HasValue || string.IsNullOrEmpty(NewTargetGrade) || string.IsNullOrEmpty(NewTargetDemographic))
-            {
-                _logger.LogWarning("Target save failed: Missing required fields.");
-                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
-            }
-
-            if (IsSchoolAdmin && !UserSchoolIds.Contains(SchoolId.Value))
-            {
-                _logger.LogWarning("Target save FORBIDDEN: User tried to save target for unassigned school {SchoolId}", SchoolId.Value);
-                return Forbid();
-            }
-
-            if (!int.TryParse(NewTargetGrade, out var gradeInt))
-            {
-                _logger.LogWarning("Target save failed: Invalid grade '{Grade}'", NewTargetGrade);
-                return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
-            }
-
-            try
-            {
-                var sql = @"
-                    MERGE INTO [dbo].[SchoolTargets] AS T
-                    USING (VALUES (@SchoolId, @SchoolYear, @Grade, @DemographicGroup)) AS S (school_id, school_year, grade, demographic_group)
-                    ON T.school_id = S.school_id AND T.school_year = S.school_year AND T.grade = S.grade AND T.demographic_group = S.demographic_group
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            target_pct = @TargetPct,
-                            updated_at = GETUTCDATE()
-                    WHEN NOT MATCHED THEN
-                        INSERT (school_id, school_year, grade, demographic_group, target_pct, created_at, updated_at)
-                        VALUES (@SchoolId, @SchoolYear, @Grade, @DemographicGroup, @TargetPct, GETUTCDATE(), GETUTCDATE());";
-
-                using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
-                {
-                    await conn.OpenAsync();
-                    using (var cmd = new SqlCommand(sql, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@SchoolId", SchoolId.Value);
-                        cmd.Parameters.AddWithValue("@SchoolYear", SchoolYear.Value);
-                        cmd.Parameters.AddWithValue("@Grade", gradeInt);
-                        cmd.Parameters.AddWithValue("@DemographicGroup", NewTargetDemographic);
-                        cmd.Parameters.AddWithValue("@TargetPct", NewTargetPercent.Value);
-
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
-
-                _logger.LogInformation("School Target saved successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving school target.");
-            }
-
-            return RedirectToPage(new { DistrictId = DistrictId, SchoolId = SchoolId, SchoolYear = SchoolYear });
-        } */
-
-        // OnGetExcelAsync - This needs to be completely rewritten for the new format
         public async Task<IActionResult> OnGetExcelAsync()
         {
             InitializeUserDataScope();
@@ -261,12 +159,11 @@ namespace ORSV2.Pages.DataReflection
                 return RedirectToPage();
 
             await LoadDistrictInfoAsync();
-            await LoadFiltersAsync(); // Populates AvailableSchools
+            await LoadFiltersAsync();
             await LoadSchoolTargetsAsync();
             await LoadMetaDataAsync();
-            BuildDisplayGroups(); // Build the new MegaSubjectGroups
+            BuildDisplayGroups();
 
-            // SchoolName lookup (same as Meta)
             if (string.IsNullOrEmpty(SchoolName))
             {
                 if (SchoolId.Value == 0)
@@ -282,7 +179,6 @@ namespace ORSV2.Pages.DataReflection
                     }
                     else
                     {
-                        // Fallback
                         using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
                         {
                             await conn.OpenAsync();
@@ -304,11 +200,10 @@ namespace ORSV2.Pages.DataReflection
                 }
             }
 
-
             using (var workbook = new XLWorkbook())
             {
                 var ws = workbook.Worksheets.Add("Mega Data");
-                ws.Column(1).Width = 20; // Grade column
+                ws.Column(1).Width = 20;
 
                 var headerBgColors = new Dictionary<string, XLColor>
                 {
@@ -325,7 +220,6 @@ namespace ORSV2.Pages.DataReflection
                 var demoKeys = new[] { "All", "EL", "SWD", "AA", "SED", "HISP" };
                 var demoNames = new[] { "All Students", "EL", "SWD", "AA", "SED", "Hispanic" };
 
-
                 int row = 1;
                 int firstHeaderRow = 0;
 
@@ -333,17 +227,16 @@ namespace ORSV2.Pages.DataReflection
                 headerCell.Value = $"{DistrictName} - {SchoolName} (SY {SchoolYear - 1}-{SchoolYear})";
                 headerCell.Style.Font.Bold = true;
                 headerCell.Style.Font.FontSize = 14;
-                // Merge will be set later
                 row += 2;
 
                 foreach (var subjectGroup in SubjectGroups)
                 {
                     var activeUnits = subjectGroup.ActiveUnits;
-                    if (!activeUnits.Any()) activeUnits.Add("N/A"); // Handle case with no units
+                    if (!activeUnits.Any()) activeUnits.Add("N/A");
                     int unitColCount = activeUnits.Count;
                     int totalCols = 1 + (demoKeys.Length * unitColCount);
                     
-                    if (row == 3) // First time, merge the main header
+                    if (row == 3)
                     {
                          ws.Range(1, 1, 1, totalCols).Merge();
                     }
@@ -362,7 +255,6 @@ namespace ORSV2.Pages.DataReflection
                     int headerRow2 = row + 1;
                     int headerRow3 = row + 2;
 
-                    // Grade Header (Row 1)
                     var gradeHeaderCell = ws.Cell(headerRow1, 1);
                     gradeHeaderCell.Value = "Grade";
                     gradeHeaderCell.Style.Fill.BackgroundColor = headerBgColors["Grade"];
@@ -374,7 +266,6 @@ namespace ORSV2.Pages.DataReflection
                     SetAllBorders(gradeHeaderCell, XLColor.FromArgb(52, 73, 94));
 
                     int currentCol = 2;
-                    // Demographic Headers (Row 1)
                     for(int i = 0; i < demoKeys.Length; i++)
                     {
                         var key = demoKeys[i];
@@ -387,7 +278,6 @@ namespace ORSV2.Pages.DataReflection
                         ws.Range(headerRow1, currentCol, headerRow1, currentCol + unitColCount - 1).Merge();
                         SetAllBorders(cell, XLColor.FromArgb(52, 73, 94));
                         
-                        // Unit Headers (Row 2)
                         for (int j = 0; j < unitColCount; j++)
                         {
                             var unitCell = ws.Cell(headerRow2, currentCol + j);
@@ -399,7 +289,6 @@ namespace ORSV2.Pages.DataReflection
                             SetAllBorders(unitCell, XLColor.FromArgb(52, 73, 94));
                             ws.Column(currentCol + j).Width = 22;
 
-                            // % Proficient Headers (Row 3)
                             var subCell = ws.Cell(headerRow3, currentCol + j);
                             subCell.Value = "% Proficient (Proficient/Tested)";
                             subCell.Style.Fill.BackgroundColor = dataBgColors[key];
@@ -415,7 +304,6 @@ namespace ORSV2.Pages.DataReflection
                     ws.Row(headerRow3).Height = 30;
                     row += 3;
 
-                    // Data Rows
                     foreach (var bodyRow in subjectGroup.BodyRows)
                     {
                         var gradeCell = ws.Cell(row, 1);
@@ -450,7 +338,6 @@ namespace ORSV2.Pages.DataReflection
                         row++;
                     }
 
-                    // Total Row
                     if (!subjectGroup.SubjectTotalRow.IsEmpty)
                     {
                         var totalRow = subjectGroup.SubjectTotalRow;
@@ -481,12 +368,12 @@ namespace ORSV2.Pages.DataReflection
                         totalRowStyle.Border.SetTopBorderColor(XLColor.FromArgb(52, 73, 94));
                         row++;
                     }
-                    row++; // Space between subjects
+                    row++;
                 }
                 
                 if (firstHeaderRow > 0)
                 {
-                    ws.SheetView.FreezeRows(firstHeaderRow + 2); // Freeze all 3 header rows
+                    ws.SheetView.FreezeRows(firstHeaderRow + 2);
                 }
 
                 var filename = $"Mega_Data_{SchoolName.Replace(" ", "_")}_SY{SchoolYear}_{DateTime.Now:yyyyMMdd}.xlsx";
@@ -512,8 +399,6 @@ namespace ORSV2.Pages.DataReflection
             cell.Style.Border.SetRightBorderColor(color);
         }
 
-
-        // Helper for Excel Data Row
         private void RenderExcelDataRow(IXLWorksheet ws, int row, int startCol, Dictionary<string, AggData> data, string key, List<string> activeUnits, Dictionary<string, XLColor> bgColors, Dictionary<string, XLColor> fontColors)
         {
             foreach (var unit in activeUnits)
@@ -524,13 +409,12 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // RenderExcelDataCell - Reused from MetaModel
         private void RenderExcelDataCell(IXLWorksheet ws, int row, int col, AggData? data, XLColor baseDataColor)
         {
             var cell = ws.Cell(row, col);
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-            SetAllBorders(cell, XLColor.Gainsboro); // Add borders to data cells too
+            SetAllBorders(cell, XLColor.Gainsboro);
 
             if (data != null && data.TotalTested > 0)
             {
@@ -545,8 +429,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-
-        // LoadDistrictInfoAsync - Reused from MetaModel
         private async Task LoadDistrictInfoAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -565,7 +447,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadFiltersAsync - Reused from MetaModel
         private async Task LoadFiltersAsync()
         {
             var schools = new List<SelectListItem> { new SelectListItem { Text = "-- Select School --", Value = "" } };
@@ -594,8 +475,7 @@ namespace ORSV2.Pages.DataReflection
                     var schoolParams = new List<string>();
                     for (int i = 0; i < UserSchoolIds.Count; i++)
                     {
-                        var paramName = $"@SchoolId{i}";
-                        schoolParams.Add(paramName);
+                        schoolParams.Add($"@SchoolId{i}");
                     }
                     sql += $" AND s.Id IN ({string.Join(",", schoolParams)})";
                 }
@@ -624,6 +504,7 @@ namespace ORSV2.Pages.DataReflection
                     }
                 }
                 AvailableSchools = new SelectList(schools, "Value", "Text", SchoolId?.ToString());
+                
                 var yearSql = @"
                     SELECT DISTINCT ma.school_year
                     FROM [dbo].[MetaAggregation] ma
@@ -656,7 +537,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadSchoolTargetsAsync - Reused from MetaModel
         private async Task LoadSchoolTargetsAsync()
         {
             if (!SchoolId.HasValue || !SchoolYear.HasValue || SchoolId.Value == 0)
@@ -667,7 +547,7 @@ namespace ORSV2.Pages.DataReflection
 
             CurrentTargets = new List<SchoolTarget>();
             var sql = @"
-                SELECT grade, demographic_group, target_pct
+                SELECT grade, demographic_group, subject, target_pct
                 FROM [dbo].[SchoolTargets]
                 WHERE school_id = @SchoolId AND school_year = @SchoolYear";
 
@@ -685,8 +565,9 @@ namespace ORSV2.Pages.DataReflection
                         {
                             CurrentTargets.Add(new SchoolTarget
                             {
-                                Grade = (int)reader["grade"],
+                                Grade = reader["grade"].ToString() ?? string.Empty,
                                 DemographicGroup = reader["demographic_group"].ToString() ?? string.Empty,
+                                Subject = reader["subject"].ToString() ?? "All",
                                 TargetPct = (decimal)reader["target_pct"]
                             });
                         }
@@ -695,8 +576,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-
-        // LoadMetaDataAsync - Reused from MetaModel (it gets all the data we need)
         private async Task LoadMetaDataAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -708,9 +587,8 @@ namespace ORSV2.Pages.DataReflection
                         ma.subject_norm AS Subject,
                         ma.grade AS Grade,
                         CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
+                            WHEN ma.grade IN ('0', '1', '2') THEN 'K-2'
+                            ELSE '3+'
                         END AS GradeGroup,
                         ma.demographic_group AS DemographicGroup,
                         SUM(ma.total_enrolled) AS total_enrolled,
@@ -720,23 +598,16 @@ namespace ORSV2.Pages.DataReflection
                     WHERE ma.district_id = @DistrictId
                       AND ma.school_year = @SchoolYear 
                       AND (@SchoolId = 0 OR ma.school_id = @SchoolId)
-                      AND ma.grade >= 0
+                      AND ma.grade IS NOT NULL
                     GROUP BY
                         ma.unit,
                         ma.subject_norm,
                         ma.grade,
                         CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
+                            WHEN ma.grade IN ('0', '1', '2') THEN 'K-2'
+                            ELSE '3+'
                         END,
                         ma.demographic_group
-                    HAVING 
-                        CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
-                        END != 'Other'
                     ORDER BY
                         Subject,
                         Unit,
@@ -755,7 +626,7 @@ namespace ORSV2.Pages.DataReflection
                             {
                                 Unit = reader["Unit"]?.ToString() ?? string.Empty,
                                 Subject = reader["Subject"]?.ToString() ?? string.Empty,
-                                Grade = (int)reader["Grade"],
+                                Grade = reader["Grade"].ToString() ?? string.Empty,
                                 GradeGroup = reader["GradeGroup"]?.ToString() ?? string.Empty,
                                 DemographicGroup = reader["DemographicGroup"]?.ToString() ?? string.Empty,
                                 TotalEnrolled = (int)reader["total_enrolled"],
@@ -768,7 +639,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadTargetUIData - Reused from MetaModel
         private void LoadTargetUIData()
         {
             if (!RawDataRows.Any())
@@ -780,8 +650,8 @@ namespace ORSV2.Pages.DataReflection
                 .OrderBy(g => g)
                 .Select(g => new SelectListItem
                 {
-                    Text = (g == 0 ? "K" : $"Grade {g}"),
-                    Value = g.ToString()
+                    Text = (g == "0" ? "K" : int.TryParse(g, out _) ? $"Grade {g}" : g),
+                    Value = g
                 })
                 .ToList();
 
@@ -801,8 +671,6 @@ namespace ORSV2.Pages.DataReflection
             AvailableTargetDemographics = new SelectList(demos, "Value", "Text");
         }
 
-
-        // BuildDisplayGroups - This is the NEW logic for the Mega view
         private void BuildDisplayGroups()
         {
             SubjectGroups = RawDataRows
@@ -812,12 +680,11 @@ namespace ORSV2.Pages.DataReflection
                 {
                     var megaSubjectGroup = new MegaSubjectGroup { SubjectName = subjectGroup.Key };
                     
-                    // Find all unique, non-empty units for this subject to build columns
                     var activeUnits = subjectGroup
                         .Select(r => r.Unit)
                         .Where(u => !string.IsNullOrEmpty(u))
                         .Distinct()
-                        .OrderBy(u => u) // You might want custom sorting here later
+                        .OrderBy(u => u)
                         .ToList();
                     
                     megaSubjectGroup.ActiveUnits = activeUnits;
@@ -825,14 +692,13 @@ namespace ORSV2.Pages.DataReflection
                     var bodyRows = new List<MegaGradeRow>();
                     var allSubjectData = subjectGroup.ToList();
 
-                    // K-2 Grades
                     var k2_data = allSubjectData.Where(s => s.GradeGroup == "K-2").ToList();
                     var k2_GradeRows = k2_data
                         .GroupBy(g => g.Grade)
                         .OrderBy(g => g.Key)
                         .Select(gradeData =>
                         {
-                            var label = gradeData.Key == 0 ? "K" : $"Grade {gradeData.Key}";
+                            var label = gradeData.Key == "0" ? "K" : $"Grade {gradeData.Key}";
                             var row = PivotUnitsAndDemographics(gradeData, label, gradeData.Key, activeUnits);
                             row.Type = RowType.Grade;
                             return row;
@@ -840,7 +706,6 @@ namespace ORSV2.Pages.DataReflection
                         .ToList();
                     bodyRows.AddRange(k2_GradeRows);
 
-                    // K-2 Total
                     var k2_TotalRow = PivotUnitsAndDemographics(k2_data, "K-2 Total", null, activeUnits);
                     k2_TotalRow.Type = RowType.K2Total;
                     if (!k2_TotalRow.IsEmpty)
@@ -848,14 +713,13 @@ namespace ORSV2.Pages.DataReflection
                         bodyRows.Add(k2_TotalRow);
                     }
 
-                    // 3+ Grades
                     var g3Plus_data = allSubjectData.Where(s => s.GradeGroup == "3+").ToList();
                     var g3Plus_GradeRows = g3Plus_data
                         .GroupBy(g => g.Grade)
                         .OrderBy(g => g.Key)
                         .Select(gradeData =>
                         {
-                            var label = $"Grade {gradeData.Key}";
+                            var label = int.TryParse(gradeData.Key, out _) ? $"Grade {gradeData.Key}" : gradeData.Key;
                             var row = PivotUnitsAndDemographics(gradeData, label, gradeData.Key, activeUnits);
                             row.Type = RowType.Grade;
                             return row;
@@ -863,7 +727,6 @@ namespace ORSV2.Pages.DataReflection
                         .ToList();
                     bodyRows.AddRange(g3Plus_GradeRows);
 
-                    // 3+ Total
                     var g3Plus_TotalRow = PivotUnitsAndDemographics(g3Plus_data, "3+ Total", null, activeUnits);
                     g3Plus_TotalRow.Type = RowType.G3PlusTotal;
                     if (!g3Plus_TotalRow.IsEmpty)
@@ -873,7 +736,6 @@ namespace ORSV2.Pages.DataReflection
 
                     megaSubjectGroup.BodyRows = bodyRows;
                     
-                    // Subject Total
                     megaSubjectGroup.SubjectTotalRow = PivotUnitsAndDemographics(allSubjectData, "Subject Total", null, activeUnits);
                     megaSubjectGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
 
@@ -882,12 +744,10 @@ namespace ORSV2.Pages.DataReflection
                 }).ToList();
         }
 
-        // PivotUnitsAndDemographics - This is the NEW pivoting logic
-        private MegaGradeRow PivotUnitsAndDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade, List<string> activeUnits)
+        private MegaGradeRow PivotUnitsAndDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, string? grade, List<string> activeUnits)
         {
             var row = new MegaGradeRow { RowLabel = rowLabel };
 
-            // Helper function to pivot the data for a specific demographic group
             Func<string, Dictionary<string, AggData>> getUnitData = (demoGroupKey) =>
             {
                 return rows
@@ -897,6 +757,7 @@ namespace ORSV2.Pages.DataReflection
                         g => g.Key,
                         g => new AggData
                         {
+                            TotalEnrolled = g.Sum(x => x.TotalEnrolled),
                             TotalTested = g.Sum(x => x.TotalTested),
                             TotalProficient = g.Sum(x => x.TotalProficient)
                         }
@@ -910,21 +771,19 @@ namespace ORSV2.Pages.DataReflection
             row.SEDData = getUnitData("SED");
             row.HISPData = getUnitData("HISP");
 
-            // Assign targets if this is a specific grade row
-            if (grade.HasValue)
+            if (!string.IsNullOrEmpty(grade))
             {
-                row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "All")?.TargetPct;
-                row.ELTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "EL")?.TargetPct;
-                row.SWDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "SWD")?.TargetPct;
-                row.AATarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "AA")?.TargetPct;
-                row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "SED")?.TargetPct;
-                row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.DemographicGroup == "HISP")?.TargetPct;
+                row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "All")?.TargetPct;
+                row.ELTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "EL")?.TargetPct;
+                row.SWDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "SWD")?.TargetPct;
+                row.AATarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "AA")?.TargetPct;
+                row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "SED")?.TargetPct;
+                row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.DemographicGroup == "HISP")?.TargetPct;
             }
 
             return row;
         }
 
-        // BuildBreadcrumbs - Changed "Meta Data" to "Mega Data"
         private void BuildBreadcrumbs()
         {
             Breadcrumbs = new List<BreadcrumbItem>
@@ -932,9 +791,8 @@ namespace ORSV2.Pages.DataReflection
                 new BreadcrumbItem { Title = "Data Reflection", Url = "/DataReflection/Index" },
                 new BreadcrumbItem { Title = DistrictName,
                 Url = DistrictId.HasValue ? Url.Page("/DataReflection/Forms", new { districtId = DistrictId }) : null },
-                new BreadcrumbItem { Title = "Mega Data", Url = null } // Changed
+                new BreadcrumbItem { Title = "Mega Data", Url = null }
             };
         }
     }
 }
-

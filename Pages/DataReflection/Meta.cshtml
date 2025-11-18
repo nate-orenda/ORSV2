@@ -839,7 +839,7 @@
                                     // === ADDED: Logic for inline editing ===
                                     var isDataRow = row.Type == ORSV2.Pages.DataReflection.RowType.Grade;
                                     var isDisabled = !isDataRow;
-                                    var gradeInt = isDataRow ? row.Grade : 0; // Use 0 for non-grade rows
+                                    var gradeStr = isDataRow ? row.Grade : "0";
                                     
                                     <tr class="@rowClass">
                                         <td class="col-core">@row.RowLabel</td>
@@ -851,7 +851,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="All" />
                                         </td>
@@ -865,7 +865,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="EL" />
                                         </td>
@@ -879,7 +879,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="SWD" />
                                         </td>
@@ -893,7 +893,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="AA" />
                                         </td>
@@ -907,7 +907,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="SED" />
                                         </td>
@@ -921,7 +921,7 @@
                                                    placeholder="—"
                                                    step="0.1" min="0" max="100"
                                                    @(isDisabled ? "disabled" : "")
-                                                   data-grade="@gradeInt"
+                                                   grade: row.Grade,
                                                    data-subject="@subjectGroup.SubjectName"
                                                    data-demo="HISP" />
                                         </td>

@@ -17,9 +17,9 @@ namespace ORSV2.Pages.DataReflection
 {
     public class SchoolTarget
     {
-        public int Grade { get; set; }
+        public string Grade { get; set; } = string.Empty;
         public string DemographicGroup { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty; // ADDED
+        public string Subject { get; set; } = string.Empty;
         public decimal TargetPct { get; set; }
     }
     
@@ -31,19 +31,17 @@ namespace ORSV2.Pages.DataReflection
         [BindProperty(SupportsGet = true)]
         public int? SchoolId { get; set; }
 
-        [BindProperty(SupportsGet =true)]
+        [BindProperty(SupportsGet = true)]
         public int? DistrictId { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public int? SchoolYear { get; set; }
-
-        // === REMOVED BindProperties for old form ===
         
         public SelectList AvailableSchools { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableSchoolYears { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetGrades { get; set; } = new SelectList(new List<SelectListItem>());
         public SelectList AvailableTargetDemographics { get; set; } = new SelectList(new List<SelectListItem>());
-        public SelectList AvailableTargetSubjects { get; set; } = new SelectList(new List<SelectListItem>()); // ADDED
+        public SelectList AvailableTargetSubjects { get; set; } = new SelectList(new List<SelectListItem>());
 
         public List<UnitDisplayGroup> UnitGroups { get; set; } = new List<UnitDisplayGroup>();
         public List<BreadcrumbItem> Breadcrumbs { get; set; } = new List<BreadcrumbItem>();
@@ -53,14 +51,12 @@ namespace ORSV2.Pages.DataReflection
         private List<MetaDataRow> RawDataRows { get; set; } = new List<MetaDataRow>();
         private List<SchoolTarget> CurrentTargets { get; set; } = new List<SchoolTarget>();
 
-        // Constructor
         public MetaModel(IConfiguration config, ILogger<MetaModel> logger)
         {
             _config = config;
             _logger = logger;
         }
 
-        // OnGetAsync
         public async Task<IActionResult> OnGetAsync()
         {
             InitializeUserDataScope();
@@ -121,9 +117,6 @@ namespace ORSV2.Pages.DataReflection
             return Page();
         }
 
-        // === REPLACED: OnPostSetTargetAsync is removed ===
-        
-        // === ADDED: New Handler for Inline AJAX/Fetch Updates ===
         public async Task<IActionResult> OnPostUpdateTargetInlineAsync()
         {
             try
@@ -132,7 +125,6 @@ namespace ORSV2.Pages.DataReflection
                 if (!IsSchoolAdmin && !IsDistrictAdmin && !IsOrendaUser) 
                     return new JsonResult(new { success = false, message = "Forbidden" }) { StatusCode = 403 };
 
-                // === MODIFIED: Read from Form, not BindProperty ===
                 if (!int.TryParse(Request.Form["schoolId"], out var schoolId) ||
                     !int.TryParse(Request.Form["schoolYear"], out var schoolYear))
                 {
@@ -145,7 +137,6 @@ namespace ORSV2.Pages.DataReflection
                 var demo = Request.Form["demo"].ToString();
                 var targetPercentStr = Request.Form["targetPercent"].ToString();
 
-                // Check user permissions
                 if (UserDistrictId.HasValue && DistrictId.HasValue && DistrictId.Value != UserDistrictId.Value)
                 {
                     return new JsonResult(new { success = false, message = "Forbidden" }) { StatusCode = 403 };
@@ -156,22 +147,15 @@ namespace ORSV2.Pages.DataReflection
                     return new JsonResult(new { success = false, message = "Forbidden" }) { StatusCode = 403 };
                 }
 
-                if (!int.TryParse(gradeStr, out var gradeInt))
+                if (string.IsNullOrEmpty(gradeStr) || string.IsNullOrEmpty(subject) || string.IsNullOrEmpty(demo))
                 {
-                    _logger.LogWarning("Inline Target save failed: Invalid grade '{Grade}'", gradeStr);
-                    return new JsonResult(new { success = false, message = "Invalid Grade." });
-                }
-                
-                if (string.IsNullOrEmpty(subject) || string.IsNullOrEmpty(demo))
-                {
-                    _logger.LogWarning("Inline Target save failed: Missing subject or demographic.");
-                    return new JsonResult(new { success = false, message = "Missing subject or demo." });
+                    _logger.LogWarning("Inline Target save failed: Missing grade, subject or demographic.");
+                    return new JsonResult(new { success = false, message = "Missing required fields." });
                 }
 
-                // Handle 'empty' input - this means delete the target
+                // Handle 'empty' input - delete the target
                 if (string.IsNullOrEmpty(targetPercentStr))
                 {
-                    // === DELETE Logic ===
                     var deleteSql = @"
                         DELETE FROM [dbo].[SchoolTargets]
                         WHERE school_id = @SchoolId 
@@ -187,7 +171,7 @@ namespace ORSV2.Pages.DataReflection
                         {
                             cmd.Parameters.AddWithValue("@SchoolId", schoolId);
                             cmd.Parameters.AddWithValue("@SchoolYear", schoolYear);
-                            cmd.Parameters.AddWithValue("@Grade", gradeInt);
+                            cmd.Parameters.AddWithValue("@Grade", gradeStr);
                             cmd.Parameters.AddWithValue("@DemographicGroup", demo);
                             cmd.Parameters.AddWithValue("@Subject", subject);
                             await cmd.ExecuteNonQueryAsync();
@@ -197,7 +181,7 @@ namespace ORSV2.Pages.DataReflection
                     return new JsonResult(new { success = true });
                 }
 
-                // === UPSERT Logic ===
+                // UPSERT Logic
                 if (!decimal.TryParse(targetPercentStr, out var targetDecimal))
                 {
                     _logger.LogWarning("Inline Target save failed: Invalid percent '{TargetPercent}'", targetPercentStr);
@@ -227,7 +211,7 @@ namespace ORSV2.Pages.DataReflection
                     {
                         cmd.Parameters.AddWithValue("@SchoolId", schoolId);
                         cmd.Parameters.AddWithValue("@SchoolYear", schoolYear);
-                        cmd.Parameters.AddWithValue("@Grade", gradeInt);
+                        cmd.Parameters.AddWithValue("@Grade", gradeStr);
                         cmd.Parameters.AddWithValue("@DemographicGroup", demo);
                         cmd.Parameters.AddWithValue("@Subject", subject);
                         cmd.Parameters.AddWithValue("@TargetPct", targetDecimal);
@@ -246,7 +230,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
         
-        // OnGetExcelAsync
         public async Task<IActionResult> OnGetExcelAsync()
         {
             InitializeUserDataScope();
@@ -258,7 +241,7 @@ namespace ORSV2.Pages.DataReflection
 
             await LoadDistrictInfoAsync();
             await LoadFiltersAsync(); 
-            await LoadSchoolTargetsAsync(); // ADDED: Load targets for Excel
+            await LoadSchoolTargetsAsync();
             await LoadMetaDataAsync();
             BuildDisplayGroups();
 
@@ -277,7 +260,6 @@ namespace ORSV2.Pages.DataReflection
                     }
                     else
                     {
-                        var schoolsList = new List<SelectListItem>();
                         using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
                         {
                             await conn.OpenAsync();
@@ -299,29 +281,24 @@ namespace ORSV2.Pages.DataReflection
                 }
             }
 
-
             using (var workbook = new XLWorkbook())
             {
                 var ws = workbook.Worksheets.Add("Meta Data");
                 
-                // === MODIFIED: Updated column widths for new layout ===
-                ws.Column(1).Width = 20; // Grade
+                ws.Column(1).Width = 20;
                 int dataColStart = 2;
-                int demoGroupCols = 3; // Target, Prof, Diff
+                int demoGroupCols = 3;
                 int numDemoGroups = 6;
                 
-                // Set widths for demo groups
                 for (int g = 0; g < numDemoGroups; g++)
                 {
                     int baseCol = dataColStart + (g * demoGroupCols);
-                    ws.Column(baseCol).Width = 10;     // Target %
-                    ws.Column(baseCol + 1).Width = 20; // % Prof (Prof/Tested)
-                    ws.Column(baseCol + 2).Width = 10; // %/# Diff
+                    ws.Column(baseCol).Width = 10;
+                    ws.Column(baseCol + 1).Width = 20;
+                    ws.Column(baseCol + 2).Width = 10;
                 }
-                // Set width for Participation
-                ws.Column(dataColStart + (numDemoGroups * demoGroupCols)).Width = 20; // Participation
+                ws.Column(dataColStart + (numDemoGroups * demoGroupCols)).Width = 20;
                 
-                // Header colors
                 var headerBgColors = new Dictionary<string, XLColor>
                 {
                     { "Grade", XLColor.FromArgb(44, 62, 80) }, 
@@ -330,8 +307,7 @@ namespace ORSV2.Pages.DataReflection
                     { "SWD", XLColor.FromArgb(255, 255, 179) }, 
                     { "AA", XLColor.FromArgb(179, 255, 179) }, 
                     { "SED", XLColor.FromArgb(255, 179, 102) }, 
-                    { "HISP", XLColor.FromArgb(255, 230, 179) },
-                    { "Participation", XLColor.FromArgb(63, 127, 191) } // Blue
+                    { "HISP", XLColor.FromArgb(255, 230, 179) }
                 };
                 var headerFontColors = new Dictionary<string, XLColor>
                 {
@@ -341,8 +317,7 @@ namespace ORSV2.Pages.DataReflection
                     { "SWD", XLColor.FromArgb(153, 102, 0) }, 
                     { "AA", XLColor.FromArgb(0, 77, 0) }, 
                     { "SED", XLColor.FromArgb(102, 68, 0) }, 
-                    { "HISP", XLColor.FromArgb(102, 77, 0) },
-                    { "Participation", XLColor.White }
+                    { "HISP", XLColor.FromArgb(102, 77, 0) }
                 };
                 var dataBgColors = new Dictionary<string, XLColor>
                 {
@@ -351,13 +326,12 @@ namespace ORSV2.Pages.DataReflection
                     { "SWD", XLColor.FromArgb(250, 250, 230) }, 
                     { "AA", XLColor.FromArgb(230, 250, 230) }, 
                     { "SED", XLColor.FromArgb(250, 230, 215) }, 
-                    { "HISP", XLColor.FromArgb(250, 244, 230) },
-                    { "Participation", XLColor.FromArgb(232, 239, 245) } // Light blue
+                    { "HISP", XLColor.FromArgb(250, 244, 230) }
                 };
 
                 int row = 1;
                 int firstHeaderRow = 0; 
-                int totalCols = 1 + (demoGroupCols * numDemoGroups) + 1; // Grade + (3*6) + Participation = 20
+                int totalCols = 1 + (demoGroupCols * numDemoGroups) + 1;
 
                 var headerCell = ws.Cell(row, 1);
                 headerCell.Value = $"{DistrictName} - {SchoolName} (SY {SchoolYear - 1}-{SchoolYear})";
@@ -378,7 +352,6 @@ namespace ORSV2.Pages.DataReflection
 
                     foreach (var subjectGroup in unitGroup.SubjectGroups)
                     {
-                        // === ADDED: Skip subject if no one tested ===
                         if (subjectGroup.SubjectTotalRow.All.TotalTested == 0) continue;
                         
                         var subjectCell = ws.Cell(row, 1);
@@ -417,7 +390,6 @@ namespace ORSV2.Pages.DataReflection
                             cell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
                             ws.Range(headerRow1, startCol, headerRow1, startCol + 2).Merge();
 
-                            // Sub-headers
                             var thTarget = ws.Cell(headerRow2, startCol);
                             thTarget.Value = "% Target";
                             thTarget.Style.Fill.BackgroundColor = dataBgColors[key];
@@ -451,24 +423,20 @@ namespace ORSV2.Pages.DataReflection
                         setHeaderGroup(14, "SED", "SED");
                         setHeaderGroup(17, "HISP", "Hispanic");
                         
-                        // Participation Header
-                        // === MODIFIED: Participation Header (Row 1) - styled like 'All Students' ===
                         var partHeaderCell = ws.Cell(headerRow1, totalCols);
                         partHeaderCell.Value = "Participation";
-                        partHeaderCell.Style.Fill.BackgroundColor = headerBgColors["All"]; // Use "All" style
-                        partHeaderCell.Style.Font.FontColor = headerFontColors["All"]; // Use "All" style
+                        partHeaderCell.Style.Fill.BackgroundColor = headerBgColors["All"];
+                        partHeaderCell.Style.Font.FontColor = headerFontColors["All"];
                         partHeaderCell.Style.Font.Bold = true;
                         partHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         partHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                         partHeaderCell.Style.Border.SetOutsideBorderColor(XLColor.FromArgb(52, 73, 94));
-                        // No merge
 
-                        // === MODIFIED: Participation Sub-Header (Row 2) - styled like 'data-all' ===
                         var partSubHeaderCell = ws.Cell(headerRow2, totalCols);
                         partSubHeaderCell.Value = "% Participation (Tested/Enrolled)";
-                        partSubHeaderCell.Style.Fill.BackgroundColor = dataBgColors["All"]; // Use "data-all" style
+                        partSubHeaderCell.Style.Fill.BackgroundColor = dataBgColors["All"];
                         partSubHeaderCell.Style.Font.Bold = true;
-                        partSubHeaderCell.Style.Font.FontColor = headerFontColors["All"]; // Use "All" font style
+                        partSubHeaderCell.Style.Font.FontColor = headerFontColors["All"];
                         partSubHeaderCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         partSubHeaderCell.Style.Alignment.WrapText = true;
                         partSubHeaderCell.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
@@ -490,7 +458,6 @@ namespace ORSV2.Pages.DataReflection
                             RenderExcelDemoGroup(ws, row, 14, bodyRow.SED, bodyRow.SEDTarget, dataBgColors["SED"]);
                             RenderExcelDemoGroup(ws, row, 17, bodyRow.HISP, bodyRow.HISPTarget, dataBgColors["HISP"]);
 
-                            // Participation Cell
                             var partCell = ws.Cell(row, totalCols);
                             if (bodyRow.All.TotalEnrolled > 0)
                             {
@@ -533,7 +500,6 @@ namespace ORSV2.Pages.DataReflection
                             RenderExcelDemoGroup(ws, row, 14, subjectGroup.SubjectTotalRow.SED, subjectGroup.SubjectTotalRow.SEDTarget, dataBgColors["SED"]);
                             RenderExcelDemoGroup(ws, row, 17, subjectGroup.SubjectTotalRow.HISP, subjectGroup.SubjectTotalRow.HISPTarget, dataBgColors["HISP"]);
 
-                            // Participation Total Cell
                             var partTotalCell = ws.Cell(row, totalCols);
                             if (subjectGroup.SubjectTotalRow.All.TotalEnrolled > 0)
                             {
@@ -572,14 +538,12 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // === ADDED: New helper for Excel Demo Group ===
         private void RenderExcelDemoGroup(IXLWorksheet ws, int row, int startCol, AggData data, decimal? target, XLColor baseDataColor)
         {
             var cellTarget = ws.Cell(row, startCol);
             var cellProf = ws.Cell(row, startCol + 1);
             var cellDiff = ws.Cell(row, startCol + 2);
 
-            // Base styles
             cellTarget.Style.Fill.BackgroundColor = baseDataColor;
             cellTarget.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             cellProf.Style.Fill.BackgroundColor = baseDataColor;
@@ -587,7 +551,6 @@ namespace ORSV2.Pages.DataReflection
             cellDiff.Style.Fill.BackgroundColor = baseDataColor;
             cellDiff.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
-            // Target Cell
             if (target.HasValue)
             {
                 cellTarget.Value = $"{target.Value.ToString("0.#")}%";
@@ -599,7 +562,6 @@ namespace ORSV2.Pages.DataReflection
                 cellTarget.Value = "—";
             }
 
-            // Prof Cell
             if (data.TotalTested > 0)
             {
                 cellProf.Value = $"{data.PctProficient}%\n({data.TotalProficient}/{data.TotalTested})";
@@ -610,7 +572,6 @@ namespace ORSV2.Pages.DataReflection
                 cellProf.Value = "—";
             }
             
-            // Diff Cell
             if (target.HasValue && data.TotalTested > 0)
             {
                 var pctDiff = target.Value - data.PctProficient;
@@ -626,12 +587,12 @@ namespace ORSV2.Pages.DataReflection
 
                 if (pctDiff > 0)
                 {
-                    cellDiff.Style.Fill.BackgroundColor = XLColor.FromArgb(248, 215, 218); // Light Red
+                    cellDiff.Style.Fill.BackgroundColor = XLColor.FromArgb(248, 215, 218);
                     cellDiff.Style.Font.FontColor = XLColor.FromArgb(114, 28, 36);
                 }
                 else
                 {
-                    cellDiff.Style.Fill.BackgroundColor = XLColor.FromArgb(212, 237, 218); // Light Green
+                    cellDiff.Style.Fill.BackgroundColor = XLColor.FromArgb(212, 237, 218);
                     cellDiff.Style.Font.FontColor = XLColor.FromArgb(21, 87, 36);
                 }
             }
@@ -641,7 +602,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadDistrictInfoAsync
         private async Task LoadDistrictInfoAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -660,7 +620,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadFiltersAsync
         private async Task LoadFiltersAsync()
         {
             var schools = new List<SelectListItem> { new SelectListItem { Text = "-- Select School --", Value = "" } };
@@ -689,8 +648,7 @@ namespace ORSV2.Pages.DataReflection
                     var schoolParams = new List<string>();
                     for (int i = 0; i < UserSchoolIds.Count; i++)
                     {
-                        var paramName = $"@SchoolId{i}";
-                        schoolParams.Add(paramName);
+                        schoolParams.Add($"@SchoolId{i}");
                     }
                     sql += $" AND s.Id IN ({string.Join(",", schoolParams)})";
                 }
@@ -719,6 +677,7 @@ namespace ORSV2.Pages.DataReflection
                     }
                 }
                 AvailableSchools = new SelectList(schools, "Value", "Text", SchoolId?.ToString());
+                
                 var yearSql = @"
                     SELECT DISTINCT ma.school_year
                     FROM [dbo].[MetaAggregation] ma
@@ -751,7 +710,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadSchoolTargetsAsync
         private async Task LoadSchoolTargetsAsync()
         {
             if (!SchoolId.HasValue || !SchoolYear.HasValue || SchoolId.Value == 0)
@@ -780,9 +738,9 @@ namespace ORSV2.Pages.DataReflection
                         {
                             CurrentTargets.Add(new SchoolTarget
                             {
-                                Grade = (int)reader["grade"],
+                                Grade = reader["grade"].ToString() ?? string.Empty,
                                 DemographicGroup = reader["demographic_group"].ToString() ?? string.Empty,
-                                Subject = reader["subject"].ToString() ?? "All", // ADDED
+                                Subject = reader["subject"].ToString() ?? "All",
                                 TargetPct = (decimal)reader["target_pct"]
                             });
                         }
@@ -791,8 +749,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-
-        // LoadMetaDataAsync
         private async Task LoadMetaDataAsync()
         {
             using (var conn = new SqlConnection(_config.GetConnectionString("DefaultConnection")))
@@ -804,9 +760,8 @@ namespace ORSV2.Pages.DataReflection
                         ma.subject_norm AS Subject,
                         ma.grade AS Grade,
                         CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
+                            WHEN ma.grade IN ('0', '1', '2') THEN 'K-2'
+                            ELSE '3+'
                         END AS GradeGroup,
                         ma.demographic_group AS DemographicGroup,
                         SUM(ma.total_enrolled) AS total_enrolled,
@@ -816,23 +771,16 @@ namespace ORSV2.Pages.DataReflection
                     WHERE ma.district_id = @DistrictId
                       AND ma.school_year = @SchoolYear 
                       AND (@SchoolId = 0 OR ma.school_id = @SchoolId)
-                      AND ma.grade >= 0
+                      AND ma.grade IS NOT NULL
                     GROUP BY
                         ma.unit,
                         ma.subject_norm,
                         ma.grade,
                         CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
+                            WHEN ma.grade IN ('0', '1', '2') THEN 'K-2'
+                            ELSE '3+'
                         END,
                         ma.demographic_group
-                    HAVING 
-                        CASE
-                            WHEN ma.grade IN (0, 1, 2) THEN 'K-2'
-                            WHEN ma.grade > 2 THEN '3+'
-                            ELSE 'Other'
-                        END != 'Other'
                     ORDER BY
                         Unit DESC,
                         Subject,
@@ -851,7 +799,7 @@ namespace ORSV2.Pages.DataReflection
                             {
                                 Unit = reader["Unit"]?.ToString() ?? string.Empty,
                                 Subject = reader["Subject"]?.ToString() ?? string.Empty,
-                                Grade = (int)reader["Grade"],
+                                Grade = reader["Grade"].ToString() ?? string.Empty,
                                 GradeGroup = reader["GradeGroup"]?.ToString() ?? string.Empty,
                                 DemographicGroup = reader["DemographicGroup"]?.ToString() ?? string.Empty,
                                 TotalEnrolled = (int)reader["total_enrolled"],
@@ -864,7 +812,6 @@ namespace ORSV2.Pages.DataReflection
             }
         }
 
-        // LoadTargetUIData
         private void LoadTargetUIData()
         {
             if (!RawDataRows.Any())
@@ -875,8 +822,8 @@ namespace ORSV2.Pages.DataReflection
                 .Distinct()
                 .OrderBy(g => g)
                 .Select(g => new SelectListItem {
-                    Text = (g == 0 ? "K" : $"Grade {g}"),
-                    Value = g.ToString()
+                    Text = (g == "0" ? "K" : int.TryParse(g, out _) ? $"Grade {g}" : g),
+                    Value = g
                 })
                 .ToList();
             
@@ -894,7 +841,6 @@ namespace ORSV2.Pages.DataReflection
             
             AvailableTargetDemographics = new SelectList(demos, "Value", "Text");
             
-            // === ADDED: Populate Subjects Dropdown ===
             var subjects = RawDataRows
                 .Select(r => r.Subject)
                 .Distinct()
@@ -908,8 +854,6 @@ namespace ORSV2.Pages.DataReflection
             AvailableTargetSubjects = new SelectList(subjects, "Value", "Text");
         }
 
-
-        // BuildDisplayGroups
         private void BuildDisplayGroups()
         {
             UnitGroups = RawDataRows
@@ -933,10 +877,10 @@ namespace ORSV2.Pages.DataReflection
                                 .OrderBy(g => g.Key)
                                 .Select(gradeData =>
                                 {
-                                    var label = gradeData.Key == 0 ? "K" : $"Grade {gradeData.Key}";
-                                    var row = PivotDemographics(gradeData, label, gradeData.Key, subjectGroup.Key); // Pass subject
+                                    var label = gradeData.Key == "0" ? "K" : $"Grade {gradeData.Key}";
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key, subjectGroup.Key);
                                     row.Type = RowType.Grade;
-                                    row.Grade = gradeData.Key; // Store grade
+                                    row.Grade = gradeData.Key;
                                     return row;
                                 })
                                 .ToList();
@@ -944,7 +888,7 @@ namespace ORSV2.Pages.DataReflection
                             bodyRows.AddRange(k2_GradeRows);
 
                             var k2_TotalRow = PivotDemographics(k2_data, "K-2 Total", null, subjectGroup.Key, 
-                                isGroupTotal: true, childRows: k2_GradeRows); // ADDED: isGroupTotal and childRows for averaging
+                                isGroupTotal: true, childRows: k2_GradeRows);
                             k2_TotalRow.Type = RowType.K2Total;
                             if (!k2_TotalRow.IsEmpty)
                             {
@@ -957,10 +901,10 @@ namespace ORSV2.Pages.DataReflection
                                 .OrderBy(g => g.Key)
                                 .Select(gradeData =>
                                 {
-                                    var label = $"Grade {gradeData.Key}";
-                                    var row = PivotDemographics(gradeData, label, gradeData.Key, subjectGroup.Key); // Pass subject
+                                    var label = int.TryParse(gradeData.Key, out _) ? $"Grade {gradeData.Key}" : gradeData.Key;
+                                    var row = PivotDemographics(gradeData, label, gradeData.Key, subjectGroup.Key);
                                     row.Type = RowType.Grade;
-                                    row.Grade = gradeData.Key; // Store grade
+                                    row.Grade = gradeData.Key;
                                     return row;
                                 })
                                 .ToList();
@@ -968,7 +912,7 @@ namespace ORSV2.Pages.DataReflection
                             bodyRows.AddRange(g3Plus_GradeRows);
 
                             var g3Plus_TotalRow = PivotDemographics(g3Plus_data, "3+ Total", null, subjectGroup.Key,
-                                isGroupTotal: true, childRows: g3Plus_GradeRows); // ADDED: isGroupTotal and childRows for averaging
+                                isGroupTotal: true, childRows: g3Plus_GradeRows);
                             g3Plus_TotalRow.Type = RowType.G3PlusTotal;
                             if (!g3Plus_TotalRow.IsEmpty)
                             {
@@ -977,7 +921,7 @@ namespace ORSV2.Pages.DataReflection
 
                             subjectDisplayGroup.BodyRows = bodyRows;
                             subjectDisplayGroup.SubjectTotalRow = PivotDemographics(allSubjectData, "Subject Total", null, subjectGroup.Key,
-                                isGroupTotal: true, childRows: bodyRows.Where(r => r.Type == RowType.Grade).ToList()); // ADDED: isGroupTotal and childRows for averaging
+                                isGroupTotal: true, childRows: bodyRows.Where(r => r.Type == RowType.Grade).ToList());
                             subjectDisplayGroup.SubjectTotalRow.Type = RowType.SubjectTotal;
 
                             return subjectDisplayGroup;
@@ -985,8 +929,7 @@ namespace ORSV2.Pages.DataReflection
                 }).ToList();
         }
 
-        // PivotDemographics
-        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, int? grade, string subject, 
+        private MetaDisplayRow PivotDemographics(IEnumerable<MetaDataRow> rows, string rowLabel, string? grade, string subject, 
             bool isGroupTotal = false, List<MetaDisplayRow>? childRows = null)
         {
             var row = new MetaDisplayRow { RowLabel = rowLabel };
@@ -994,7 +937,7 @@ namespace ORSV2.Pages.DataReflection
                 .GroupBy(r => r.DemographicGroup)
                 .ToDictionary(g => g.Key, g => new AggData
                 {
-                    TotalEnrolled = g.Sum(x => x.TotalEnrolled), // ADDED
+                    TotalEnrolled = g.Sum(x => x.TotalEnrolled),
                     TotalTested = g.Sum(x => x.TotalTested),
                     TotalProficient = g.Sum(x => x.TotalProficient)
                 });
@@ -1006,19 +949,17 @@ namespace ORSV2.Pages.DataReflection
             row.SED = groups.GetValueOrDefault("SED", new AggData());
             row.HISP = groups.GetValueOrDefault("HISP", new AggData());
 
-            if (grade.HasValue)
+            if (!string.IsNullOrEmpty(grade))
             {
-                // === MODIFIED: Find target matching subject AND grade AND demo ===
-                row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "All")?.TargetPct;
-                row.ELTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "EL")?.TargetPct;
-                row.SWDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "SWD")?.TargetPct;
-                row.AATarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "AA")?.TargetPct;
-                row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "SED")?.TargetPct;
-                row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade.Value && t.Subject == subject && t.DemographicGroup == "HISP")?.TargetPct;
+                row.AllTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "All")?.TargetPct;
+                row.ELTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "EL")?.TargetPct;
+                row.SWDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "SWD")?.TargetPct;
+                row.AATarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "AA")?.TargetPct;
+                row.SEDTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "SED")?.TargetPct;
+                row.HISPTarget = CurrentTargets.FirstOrDefault(t => t.Grade == grade && t.Subject == subject && t.DemographicGroup == "HISP")?.TargetPct;
             }
             else if (isGroupTotal && childRows != null && childRows.Any())
             {
-                // === ADDED: Total rows: average targets from child rows ===
                 row.AllTarget = AverageTargets(childRows.Select(r => r.AllTarget));
                 row.ELTarget = AverageTargets(childRows.Select(r => r.ELTarget));
                 row.SWDTarget = AverageTargets(childRows.Select(r => r.SWDTarget));
@@ -1030,14 +971,12 @@ namespace ORSV2.Pages.DataReflection
             return row;
         }
 
-        // === ADDED: Helper to average target percentages (ignoring nulls) ===
         private decimal? AverageTargets(IEnumerable<decimal?> targets)
         {
             var nonNullTargets = targets.Where(t => t.HasValue).Select(t => t!.Value).ToList();
             return nonNullTargets.Any() ? Math.Round(nonNullTargets.Average(), 2) : null;
         }
 
-        // BuildBreadcrumbs
         private void BuildBreadcrumbs()
         {
             Breadcrumbs = new List<BreadcrumbItem>
@@ -1050,17 +989,13 @@ namespace ORSV2.Pages.DataReflection
         }
     }
 
-    // ###############################################################
-    // VIEW MODELS
-    // ###############################################################
-    
     public enum RowType { Grade, K2Total, G3PlusTotal, SubjectTotal }
 
     public class MetaDataRow
     {
         public string Unit { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
-        public int Grade { get; set; }
+        public string Grade { get; set; } = string.Empty;
         public string GradeGroup { get; set; } = string.Empty;
         public string DemographicGroup { get; set; } = string.Empty;
         public int TotalEnrolled { get; set; }
@@ -1071,7 +1006,7 @@ namespace ORSV2.Pages.DataReflection
     public class MetaDisplayRow
     {
         public string RowLabel { get; set; } = string.Empty;
-        public int Grade { get; set; } // ADDED: To store grade for inline edit
+        public string Grade { get; set; } = string.Empty;
         public AggData All { get; set; } = new AggData();
         public AggData EL { get; set; } = new AggData();
         public AggData SWD { get; set; } = new AggData();
@@ -1088,7 +1023,7 @@ namespace ORSV2.Pages.DataReflection
         public decimal? HISPTarget { get; set; }
 
         public bool IsEmpty =>
-            All.TotalEnrolled == 0 && // MODIFIED: Check Enrolled
+            All.TotalEnrolled == 0 &&
             EL.TotalEnrolled == 0 &&
             SWD.TotalEnrolled == 0 &&
             AA.TotalEnrolled == 0 &&
@@ -1098,14 +1033,13 @@ namespace ORSV2.Pages.DataReflection
 
     public class AggData
     {
-        public int TotalEnrolled { get; set; } // ADDED
+        public int TotalEnrolled { get; set; }
         public int TotalTested { get; set; }
         public int TotalProficient { get; set; }
         public decimal PctProficient => TotalTested > 0
             ? Math.Round(100m * TotalProficient / TotalTested, 2)
             : 0m;
         
-        // ADDED
         public decimal PctParticipation => TotalEnrolled > 0
             ? Math.Round(100m * TotalTested / TotalEnrolled, 2)
             : 0m;
