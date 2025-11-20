@@ -50,8 +50,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         private readonly IConfiguration _config;
         public FormativeModel(IConfiguration config) => _config = config;
 
-        private record FormativeRecord(int LocalStudentId, string HumanCodingScheme, decimal Points, decimal MaxPoints, DateTime Timestamp);
-        
+        private record FormativeRecord(int LocalStudentId, string HumanCodingScheme, decimal Points, decimal MaxPoints, DateTime Timestamp, DateTime TestedDate);        
         // Enhanced preview record with description
         public record StandardPreview(string StandardCode, string Description, bool ExistsInDb, int StudentCount);
 
@@ -373,7 +372,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                             standardsToInsert[convertedCode] = standardDescription ?? "";
                         }
                         
-                        var record = new FormativeRecord(localId, convertedCode, score, maxPoints, timestamp);
+                        var record = new FormativeRecord(localId, convertedCode, score, maxPoints, timestamp, timestamp);
                         var key = (localId, convertedCode);
 
                         if (!latestRecords.TryGetValue(key, out var existing) || record.Timestamp > existing.Timestamp)
@@ -414,7 +413,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 {
                     mappedScheme = mappedScheme.Replace(".2", ".3");
                 }
-                return new { r.LocalStudentId, MappedScheme = mappedScheme, r.Points, r.MaxPoints };
+                return new { r.LocalStudentId, MappedScheme = mappedScheme, r.Points, r.MaxPoints, r.Timestamp, r.TestedDate };
             }).ToList();
 
             // Step 5: Get GUIDs for all schemes (including newly inserted ones)
@@ -428,6 +427,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             dt.Columns.Add("points", typeof(decimal));
             dt.Columns.Add("max_points", typeof(decimal));
             dt.Columns.Add("standard_id", typeof(string));
+            dt.Columns.Add("tested_date", typeof(DateTime));
 
             foreach (var record in mappedRecords)
             {
@@ -438,7 +438,8 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                         record.MappedScheme,
                         record.Points,
                         record.MaxPoints,
-                        standardId.ToString("D")
+                        standardId.ToString("D"),
+                        record.TestedDate
                     );
                 }
             }
@@ -464,7 +465,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 using var cmd = new SqlCommand("dbo.ImportAssessmentResults", conn, transaction)
                 {
                     CommandType = CommandType.StoredProcedure,
-                    CommandTimeout = 120
+                    CommandTimeout = 300
                 };
                 
                 cmd.Parameters.AddWithValue("@DistrictId", DistrictId);
