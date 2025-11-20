@@ -237,6 +237,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             }
 
             var standardsData = new Dictionary<string, (string description, HashSet<int> studentIds)>();
+            string? detectedFormativeTitle = null;  // ← MOVE HERE (outside the loop)
 
             using (var reader = new StreamReader(TempPath))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
@@ -251,9 +252,12 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     string? identifier = csv.GetField(IdentifierCol);
                     string? studentIdStr = identifier?.Split('_').LastOrDefault();
 
+                    // Capture on first iteration only
+                    if (detectedFormativeTitle == null)
+                        detectedFormativeTitle = csv.GetField(TestNameCol)?.Trim();
+
                     if (!string.IsNullOrWhiteSpace(originalStandardCode) && int.TryParse(studentIdStr, out var studentId))
                     {
-                        // Convert to full format
                         var convertedCode = ConvertStandardCodeToFullFormat(originalStandardCode);
                         
                         if (!standardsData.ContainsKey(convertedCode))
@@ -264,6 +268,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     }
                 }
             }
+
+            // Auto-populate TestId
+            if (!string.IsNullOrWhiteSpace(detectedFormativeTitle) && string.IsNullOrWhiteSpace(TestId))
+                TestId = detectedFormativeTitle;
 
             // Check which standards exist
             var existingStandards = await GetExistingStandards(standardsData.Keys);
@@ -494,18 +502,14 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
                 transaction.Commit();
 
-                var successMessage = $"Import complete! Batch ID: {batchGuid}. " +
-                    $"Processed {dt.Rows.Count} student-standard result rows.";
-                
-                if (insertedStandardsCount > 0)
-                {
-                    successMessage += $" Inserted {insertedStandardsCount} new standards.";
-                }
-                
-                if (sqlMessages.Count > 0)
-                {
-                    successMessage += $" Messages: {string.Join(" | ", sqlMessages)}";
-                }
+                var successMessage = $"✅ Import successful!\n" +
+                    $"Batch ID: {batchGuid}\n" +
+                    $"Records Inserted: {dt.Rows.Count}\n" +
+                    $"New Standards Created: {insertedStandardsCount}\n" +
+                    $"Test: {TestId}\n" +
+                    $"Subject: {Subject}\n" +
+                    $"Unit Cycle: {UnitCycle}\n" +
+                    $"Import Time: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
 
                 TempData["ImportSuccessMessage"] = successMessage;
                 TempData["ImportBatchId"] = batchGuid.ToString();

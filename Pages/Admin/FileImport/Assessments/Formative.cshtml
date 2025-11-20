@@ -3,6 +3,20 @@
 @{
     ViewData["Title"] = "Formative Import";
 }
+@if (TempData["ImportSuccessMessage"] is string successMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <h4 class="alert-heading">
+            <i class="fas fa-check-circle me-2"></i>Import Completed Successfully!
+        </h4>
+        <pre style="white-space: pre-wrap; background: #f8f9fa; padding: 10px;">@successMsg</pre>
+        @if (TempData["ImportBatchId"] is string batchId)
+        {
+            <p class="mb-0"><small>Batch ID: <code>@batchId</code></small></p>
+        }
+    </div>
+}
 
 <style>
     .auto-filled {
@@ -111,6 +125,9 @@
                     <div class="col-md-4">
                         <label asp-for="TestId" class="form-label">Test ID</label>
                         <input asp-for="TestId" class="form-control" id="testIdInput" />
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Auto-populated from "Formative Title" during preview
+                        </small>
                     </div>
 
                     <div class="col-12">
