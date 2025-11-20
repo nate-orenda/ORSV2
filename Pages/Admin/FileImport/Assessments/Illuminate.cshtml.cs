@@ -17,33 +17,33 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
         public record PreviewItem(string Header, string Code, bool ExistsInStandards);
 
         [BindProperty, Required] public int DistrictId { get; set; }
-        [BindProperty] public string TestId { get; set; } = "";               // optional now
+        [BindProperty] public string TestId { get; set; } = "";
         [BindProperty] public string Delimiter { get; set; } = "tab";
         [BindProperty] public IFormFile? Upload { get; set; }
         [BindProperty] public string? TempPath { get; set; }
         [BindProperty, Required] public string Subject { get; set; } = "";
         [BindProperty, Range(1, 5)] public int UnitCycle { get; set; } = 1;
+        [BindProperty] public decimal DefaultMaxPoints { get; set; } = 5.0m;
 
         public bool HasPreview => PreviewRows.Count > 0;
         public List<PreviewItem> PreviewRows { get; private set; } = new();
         public HashSet<string> MissingCodes { get; private set; } = new();
         public string? ImportBatchId { get; private set; }
         public List<SelectListItem> DistrictOptions { get; private set; } = new();
+        public string DetectedFormat { get; private set; } = "Unknown";
 
         private readonly IConfiguration _config;
         public IlluminateModel(IConfiguration config) => _config = config;
 
-        // Debug: full header scan
         public record HeaderDebug(string Header, bool Matched, string? Code);
         public List<HeaderDebug> DebugHeaders { get; private set; } = new();
         public int TotalHeaders { get; private set; }
         public int MatchedHeaders { get; private set; }
 
-        // Group 1 = Test Name (everything before the code)
-        // Group 2 = Standard code (dot-separated), then "Points"
-        private static readonly Regex StandardLineRe = new(
-            @"^(.*?)\s+([A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*)\s+Points\s*$",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        // Universal pattern: tries to extract standard code from any format
+        private static readonly Regex UniversalStandardRe = new(
+            @"([A-Za-z0-9]+(?:\.[A-Za-z0-9\-]+)+)",
+            RegexOptions.Compiled);
 
         private static readonly string[] ClusterLetters = { "A", "B", "C", "D", "E", "F" };
 
@@ -67,7 +67,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             ViewData["PreviewRan"] = true;
 
-            // Persist the upload to a temp file for Import
             var temp = Path.Combine(Path.GetTempPath(), $"assess_{Guid.NewGuid():N}.txt");
             using (var fs = System.IO.File.Create(temp))
                 await Upload.CopyToAsync(fs);
@@ -85,27 +84,26 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
 
-            // Extract (TestName, RawCode) from headers that match "... <code> Points"
-            var headerMap = headers
-                .Select(h => new { Header = h, M = StandardLineRe.Match(h) })
-                .Where(x => x.M.Success)
-                .Select(x => new
-                {
-                    x.Header,
-                    TestName = x.M.Groups[1].Value.Trim(),
-                    CodeRaw = StripElaPrefix(x.M.Groups[2].Value.Trim())   // strip ELA prefix here
-                })
-                .ToList();
+            // Parse headers to extract standard codes and metadata
+            var headerMap = ParseHeaders(headers);
+            DetectedFormat = DetermineFormat(headers, headerMap);
 
             // Auto-fill TestId if blank
-            if (string.IsNullOrWhiteSpace(TestId) && headerMap.Count > 0)
+            if (string.IsNullOrWhiteSpace(TestId))
             {
-                TestId = headerMap[0].TestName;
-                ModelState.Remove(nameof(TestId));              // let the input show the new value
-                ViewData["AutoTestId"] = true;                 // optional UI hint
+                if (headerMap.Any() && !string.IsNullOrWhiteSpace(headerMap[0].TestName))
+                {
+                    TestId = headerMap[0].TestName;
+                }
+                else
+                {
+                    TestId = $"{Subject} Cycle {UnitCycle}";
+                }
+                ModelState.Remove(nameof(TestId));
+                ViewData["AutoTestId"] = true;
             }
 
-            // Build a candidate set: raw codes + math cluster candidates (A..F)
+            // Build candidate set
             var codesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var m in headerMap)
             {
@@ -113,37 +111,21 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 AddClusterCandidates(m.CodeRaw, codesToCheck);
             }
 
-            // Fetch existing codes in one roundtrip
             var existing = await LoadExistingStandards(codesToCheck);
 
-            // Debug table: show transformation chain original -> stripped -> normalized
+            // Debug table
             DebugHeaders = headers.Select(h =>
             {
-                var m = StandardLineRe.Match(h);
-                if (!m.Success) return new HeaderDebug(h, false, null);
+                var match = UniversalStandardRe.Match(h);
+                if (!match.Success) return new HeaderDebug(h, false, null);
 
-                var original = m.Groups[2].Value.Trim();
+                var original = match.Groups[1].Value.Trim();
                 var stripped = StripElaPrefix(original);
                 var normalized = NormalizeCode(stripped, existing);
 
-                string display;
-                if (!original.Equals(stripped, StringComparison.OrdinalIgnoreCase) &&
-                    !stripped.Equals(normalized, StringComparison.OrdinalIgnoreCase))
-                {
-                    display = $"{original} → {stripped} → {normalized}";
-                }
-                else if (!original.Equals(stripped, StringComparison.OrdinalIgnoreCase))
-                {
-                    display = $"{original} → {stripped}";
-                }
-                else if (!stripped.Equals(normalized, StringComparison.OrdinalIgnoreCase))
-                {
-                    display = $"{stripped} → {normalized}";
-                }
-                else
-                {
-                    display = stripped;
-                }
+                string display = original.Equals(stripped) && stripped.Equals(normalized)
+                    ? stripped
+                    : $"{original} → {normalized}";
 
                 return new HeaderDebug(h, true, display);
             }).ToList();
@@ -151,7 +133,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             TotalHeaders = DebugHeaders.Count;
             MatchedHeaders = DebugHeaders.Count(h => h.Matched);
 
-            // Preview table: normalized codes + existence flag
             PreviewRows = headerMap
                 .Select(m =>
                 {
@@ -166,15 +147,14 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             if (MatchedHeaders == 0)
             {
-                ModelState.AddModelError("",
-                    "No standards were detected in the headers. Check the delimiter (TSV vs CSV) and that standard columns end with 'Points'.");
+                ModelState.AddModelError("", "No standards were detected in the headers. Please check the file format.");
             }
             if (string.IsNullOrWhiteSpace(TestId))
             {
-                ModelState.AddModelError("", "Couldn’t infer Test ID from headers. Please enter a Test ID.");
+                ModelState.AddModelError("", "Couldn't determine Test ID. Please enter a Test ID.");
             }
 
-            // Optional: quick student-localID validation on the first ~2000 rows
+            // Validate student IDs
             var localIds = new HashSet<int>();
             string? line;
             int scanned = 0;
@@ -186,12 +166,16 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     localIds.Add(lid);
                 scanned++;
             }
+
             if (localIds.Count > 0)
             {
-                var (found, sampleMissing) = await ValidateLocalStudents(DistrictId, localIds);
-                ViewData["StudentValidationSummary"] =
-                    $"{found}/{localIds.Count} local IDs match students in district {DistrictId}" +
-                    (sampleMissing.Count > 0 ? $". Missing sample: {string.Join(", ", sampleMissing)}" : "");
+                var (foundCount, missingSample) = await ValidateLocalStudents(DistrictId, localIds);
+                if (missingSample.Count > 0)
+                {
+                    var sampleStr = string.Join(", ", missingSample.Take(10));
+                    ModelState.AddModelError("",
+                        $"Some student IDs not found. Found {foundCount}/{localIds.Count}. Missing (sample): {sampleStr}");
+                }
             }
 
             return Page();
@@ -209,40 +193,44 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
             var delimiterChar = Delimiter?.Equals("comma", StringComparison.OrdinalIgnoreCase) == true ? ',' : '\t';
 
-            // Build TVP rows from the file **inside** a using block so we release the handle
             var tvp = new DataTable();
-            tvp.Columns.Add("local_student_id", typeof(int));
-            tvp.Columns.Add("test_id", typeof(string));
+            tvp.Columns.Add("local_student_id", typeof(string));
             tvp.Columns.Add("human_coding_scheme", typeof(string));
             tvp.Columns.Add("points", typeof(decimal));
             tvp.Columns.Add("max_points", typeof(decimal));
+            tvp.Columns.Add("standard_id", typeof(string));
+            tvp.Columns.Add("tested_date", typeof(DateTime));
 
-            // Read and parse file (header + rows)
-            using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+            using (var sr = new StreamReader(System.IO.File.Open(TempPath, FileMode.Open, FileAccess.Read, FileShare.Read), 
+                Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
             {
                 var header = await sr.ReadLineAsync() ?? "";
                 var headers = header.Split(delimiterChar).Select(h => h.Trim()).ToArray();
 
-                var standardColsRaw = headers
-                    .Select((h, i) => new { Header = h, Index = i, M = StandardLineRe.Match(h) })
-                    .Where(x => x.M.Success)
-                    .Select(x => new
-                    {
-                        x.Header,
-                        x.Index,
-                        TestName = x.M.Groups[1].Value.Trim(),
-                        CodeRaw = StripElaPrefix(x.M.Groups[2].Value.Trim())  // strip ELA prefix here
-                    })
-                    .ToList();
+                // Parse headers
+                var standardColsRaw = ParseHeaders(headers).Select((h, i) => new
+                {
+                    Header = h.Header,
+                    Index = h.Index,
+                    CodeRaw = h.CodeRaw,
+                    TestName = h.TestName
+                }).ToList();
 
                 // Auto-fill TestId if still blank
-                if (string.IsNullOrWhiteSpace(TestId) && standardColsRaw.Count > 0)
+                if (string.IsNullOrWhiteSpace(TestId))
                 {
-                    TestId = standardColsRaw[0].TestName;
-                    ModelState.Remove(nameof(TestId));              // keep model + view in sync
+                    if (standardColsRaw.Any() && !string.IsNullOrWhiteSpace(standardColsRaw[0].TestName))
+                    {
+                        TestId = standardColsRaw[0].TestName;
+                    }
+                    else
+                    {
+                        TestId = $"{Subject} Cycle {UnitCycle}";
+                    }
+                    ModelState.Remove(nameof(TestId));
                 }
 
-                // Build candidate set and fetch existing once
+                // Build candidate set and fetch existing
                 var codesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var s in standardColsRaw)
                 {
@@ -251,7 +239,7 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 }
                 var existingImport = await LoadExistingStandards(codesToCheck);
 
-                // Final list used for rows: with normalized codes
+                // Final list with normalized codes
                 var standardCols = standardColsRaw.Select(s => new
                 {
                     s.Header,
@@ -261,9 +249,17 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
                 if (string.IsNullOrWhiteSpace(TestId))
                 {
-                    ModelState.AddModelError("", "Couldn’t infer Test ID from headers. Please enter a Test ID and re-run Preview.");
+                    ModelState.AddModelError("", "Couldn't determine Test ID. Please enter a Test ID and re-run Preview.");
                     return Page();
                 }
+
+                // Get standard_id GUIDs for all normalized codes
+                var allCodes = standardCols.Select(sc => sc.Code).Distinct().ToList();
+                var schemeToGuidMap = await GetStandardIdsForSchemes(allCodes);
+
+                // Determine if we should use default max_points
+                bool hasPointsSuffix = headers.Any(h => h.EndsWith("Points", StringComparison.OrdinalIgnoreCase));
+                decimal? maxPointsValue = hasPointsSuffix ? null : (decimal?)DefaultMaxPoints;
 
                 string? line;
                 while ((line = await sr.ReadLineAsync()) != null)
@@ -271,11 +267,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                     if (string.IsNullOrWhiteSpace(line)) continue;
                     var cells = line.Split(delimiterChar);
 
-                    // 0..4 are student info; points start after
                     if (cells.Length < 5) continue;
 
-                    // FIRST COLUMN is the file's localstudentid
-                    if (!int.TryParse(cells[0].Trim(), out var localStudentId)) continue;
+                    var localStudentIdStr = cells[0].Trim();
+                    if (string.IsNullOrWhiteSpace(localStudentIdStr)) continue;
 
                     foreach (var sc in standardCols)
                     {
@@ -285,19 +280,22 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
                         if (decimal.TryParse(v, NumberStyles.Number, CultureInfo.InvariantCulture, out var pts))
                         {
-                            var r = tvp.NewRow();
-                            r["local_student_id"] = localStudentId;
-                            r["test_id"] = TestId;
-                            r["human_coding_scheme"] = sc.Code; // normalized code
-                            r["points"] = pts;
-                            r["max_points"] = DBNull.Value;
-                            tvp.Rows.Add(r);
+                            if (schemeToGuidMap.TryGetValue(sc.Code, out var standardId))
+                            {
+                                var r = tvp.NewRow();
+                                r["local_student_id"] = localStudentIdStr;
+                                r["human_coding_scheme"] = sc.Code;
+                                r["points"] = pts;
+                                r["max_points"] = maxPointsValue.HasValue ? (object)maxPointsValue.Value : DBNull.Value;
+                                r["standard_id"] = standardId.ToString("D");
+                                r["tested_date"] = DateTime.Today; // Use today's date since Illuminate files don't include test date
+                                tvp.Rows.Add(r);
+                            }
                         }
                     }
                 }
-            } // reader disposed here
+            }
 
-            // Execute proc
             var connStr = _config.GetConnectionString("DefaultConnection");
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
@@ -327,6 +325,69 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
 
         // --- Helpers --------------------------------------------------------------------------
 
+        private record HeaderParse(string Header, int Index, string TestName, string CodeRaw);
+
+        private List<HeaderParse> ParseHeaders(string[] headers)
+        {
+            var result = new List<HeaderParse>();
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var h = headers[i].Trim();
+                if (string.IsNullOrWhiteSpace(h)) continue;
+
+                // Skip standard non-assessment columns
+                if (h.Equals("Student ID", StringComparison.OrdinalIgnoreCase) ||
+                    h.Equals("Last Name", StringComparison.OrdinalIgnoreCase) ||
+                    h.Equals("First Name", StringComparison.OrdinalIgnoreCase) ||
+                    h.Equals("Middle Name", StringComparison.OrdinalIgnoreCase) ||
+                    h.Equals("Current Grade Level", StringComparison.OrdinalIgnoreCase) ||
+                    h.Equals("Teacher Name", StringComparison.OrdinalIgnoreCase) ||
+                    h.Contains("# of Standards", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // Try to extract standard code
+                var match = UniversalStandardRe.Match(h);
+                if (!match.Success) continue;
+
+                var code = match.Groups[1].Value.Trim();
+                code = StripElaPrefix(code);
+
+                // Try to determine test name from header
+                string testName = "";
+                if (h.Contains("Points", StringComparison.OrdinalIgnoreCase))
+                {
+                    // C1 format: extract everything before the code
+                    var idx = h.IndexOf(code, StringComparison.OrdinalIgnoreCase);
+                    if (idx > 0)
+                    {
+                        testName = h.Substring(0, idx).Trim();
+                    }
+                }
+
+                result.Add(new HeaderParse(h, i, testName, code));
+            }
+
+            return result;
+        }
+
+        private string DetermineFormat(string[] headers, List<HeaderParse> parsed)
+        {
+            bool hasPointsSuffix = headers.Any(h => h.EndsWith("Points", StringComparison.OrdinalIgnoreCase));
+            bool hasDateInHeader = parsed.Any(p => !string.IsNullOrWhiteSpace(p.TestName) && 
+                Regex.IsMatch(p.TestName, @"\d{2,4}-\d{2}"));
+            bool hasTeacherColumn = headers.Any(h => h.Equals("Teacher Name", StringComparison.OrdinalIgnoreCase));
+
+            if (hasPointsSuffix && hasDateInHeader)
+                return "C1 (with dates)";
+            else if (hasPointsSuffix)
+                return "C1 (simple)";
+            else if (hasTeacherColumn)
+                return "Cycle2 (with teacher)";
+            else
+                return "Cycle2 (simple)";
+        }
+
         private static void TryDelete(string? path)
         {
             if (string.IsNullOrWhiteSpace(path)) return;
@@ -335,7 +396,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             catch (UnauthorizedAccessException) { }
         }
 
-        // Strip CCSS ELA prefix so "CCSS.ELA-Literacy.L.7.4.a" -> "L.7.4.a"
         private static string StripElaPrefix(string code)
         {
             const string prefix = "CCSS.ELA-Literacy.";
@@ -344,7 +404,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 : code.Trim();
         }
 
-        // Add math cluster candidates (A..F) for codes like 7.NS.1.a
         private static void AddClusterCandidates(string codeRaw, HashSet<string> dest)
         {
             var mm = Regex.Match(codeRaw, @"^(?<g>\d+)\.(?<dom>[A-Z]{1,3})\.(?<num>\d+)(?<sub>\.[a-z])?$", RegexOptions.IgnoreCase);
@@ -357,12 +416,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
                 dest.Add($"{g}.{dom}.{cl}.{num}{sub}");
         }
 
-        // Returns normalized code if a candidate exists in 'existing' set; otherwise returns original.
         private string NormalizeCode(string code, HashSet<string> existing)
         {
             if (existing.Contains(code)) return code;
 
-            // pattern: grade.DOMAIN.NUM[.sub]  — missing cluster letter (A/B/...)
             var m = Regex.Match(code, @"^(?<g>\d+)\.(?<dom>[A-Z]{1,3})\.(?<num>\d+)(?<sub>\.[a-z])?$", RegexOptions.IgnoreCase);
             if (!m.Success) return code;
 
@@ -379,7 +436,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             return code;
         }
 
-        // Parameterized IN (no user-defined TVP required)
         private async Task<HashSet<string>> LoadExistingStandards(IEnumerable<string> codes)
         {
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -410,12 +466,10 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             return result;
         }
 
-        // Validate that localstudentid exists in students for the selected district
         private async Task<(int found, List<int> missingSample)> ValidateLocalStudents(int districtId, HashSet<int> localIds)
         {
             if (localIds.Count == 0) return (0, new List<int>());
 
-            // Convert our ids to strings since students.localstudentid is NVARCHAR
             var idStrings = localIds.Select(x => x.ToString()).ToList();
 
             var sb = new StringBuilder();
@@ -438,7 +492,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using var cmd = new SqlCommand(sb.ToString(), conn);
             cmd.Parameters.AddWithValue("@district", districtId);
 
-            // Ensure params are NVARCHAR to match the column type
             for (int i = 0; i < idStrings.Count; i++)
             {
                 var p = cmd.Parameters.Add($"@id{i}", SqlDbType.NVarChar, 64);
@@ -450,7 +503,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             {
                 while (await rdr.ReadAsync())
                 {
-                    // localstudentid is NVARCHAR -> read as string, then TryParse
                     var s = rdr.GetString(0);
                     if (int.TryParse(s, out var lid))
                         found.Add(lid);
@@ -461,6 +513,45 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             return (found.Count, missing);
         }
 
+        private async Task<Dictionary<string, Guid>> GetStandardIdsForSchemes(IEnumerable<string> schemes)
+        {
+            var schemeMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+            var schemeList = schemes.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (!schemeList.Any()) return schemeMap;
+
+            var connStr = _config.GetConnectionString("DefaultConnection");
+            using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+
+            var parameters = new List<SqlParameter>();
+            var sqlBuilder = new StringBuilder("SELECT human_coding_scheme, id FROM dbo.standards WHERE human_coding_scheme IN (");
+
+            for (int i = 0; i < schemeList.Count; i++)
+            {
+                var paramName = $"@p{i}";
+                sqlBuilder.Append(paramName);
+                if (i < schemeList.Count - 1) sqlBuilder.Append(',');
+
+                parameters.Add(new SqlParameter(paramName, schemeList[i]));
+            }
+            sqlBuilder.Append(')');
+
+            using var cmd = new SqlCommand(sqlBuilder.ToString(), conn);
+            cmd.Parameters.AddRange(parameters.ToArray());
+
+            using var rdr = await cmd.ExecuteReaderAsync();
+            while (await rdr.ReadAsync())
+            {
+                var scheme = rdr.GetString(0);
+                
+                if (Guid.TryParse(rdr.GetString(1), out var id))
+                {
+                    schemeMap[scheme] = id;
+                }
+            }
+            return schemeMap;
+        }
+
         private async Task LoadDistrictOptionsAsync()
         {
             DistrictOptions.Clear();
@@ -469,7 +560,6 @@ namespace ORSV2.Pages.Admin.FileImport.Assessments
             using var conn = new SqlConnection(connStr);
             await conn.OpenAsync();
 
-            // Adjust if your districts schema differs
             var sql = @"SELECT Id, Name FROM dbo.districts ORDER BY Name;";
             using var cmd = new SqlCommand(sql, conn);
             using var rdr = await cmd.ExecuteReaderAsync();
