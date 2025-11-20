@@ -148,7 +148,6 @@
         DateTime? maxAnchor = districtTimeline.SelectMany(d => new[] { d.CP1, d.CP2, d.CP3, d.CP4, d.CP5 }).Where(d => d.HasValue).DefaultIfEmpty().Max();
         DateTime startWindow = (minAnchor ?? DateTime.Today).AddDays(-7).Date;
         DateTime endWindow = ((maxAnchor ?? DateTime.Today).AddDays(14)).Date;
-        DateTime EndOfMonth(DateTime d) => new DateTime(d.Year, d.Month, DateTime.DaysInMonth(d.Year, d.Month));
         Func<DateTime, double> pct = dt => {
             var span = (endWindow - startWindow).TotalDays;
             if (span <= 0) return 0;
@@ -164,15 +163,15 @@
 
         <div class="orenda-card ga-gantt-card mb-4">
           <div class="orenda-card-body">
-            <div class="gantt-header-toggle" data-bs-toggle="collapse" data-bs-target="#ganttCollapseContent" aria-expanded="true" aria-controls="ganttCollapseContent">
+            <div class="gantt-header-toggle" data-bs-toggle="collapse" data-bs-target="#ganttCollapseContent" aria-expanded="false" aria-controls="ganttCollapseContent">
               <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 text-orenda-primary">GA Checkpoint Timeline</h5>
-                <i class="bi bi-chevron-up collapse-icon"></i>
+                <i class="bi bi-chevron-down collapse-icon"></i>
               </div>
-              <div class="text-muted small">Bars show CP windows (start → next CP; CP5 → end of month)</div>
+              <div class="text-muted small">Click to expand the GA Calendar</div>
             </div>
 
-            <div class="collapse show" id="ganttCollapseContent">
+            <div class="collapse" id="ganttCollapseContent">
               <div class="gantt-content-wrapper mt-4">
                 <div class="ga-gantt-scale">
                   <div class="ga-gantt-scale-track">
@@ -204,8 +203,10 @@
                       if (d.CP3.HasValue && d.CP4.HasValue) spans.Add(("CP3", d.CP3.Value, d.CP4.Value));
                       if (d.CP4.HasValue && d.CP5.HasValue) spans.Add(("CP4", d.CP4.Value, d.CP5.Value));
                       if (d.CP5.HasValue) {
-                          var eom = EndOfMonth(d.CP5.Value);
-                          spans.Add(("CP5", d.CP5.Value, eom));
+                          // CP5 extends to June 30th of the school year
+                          var year = d.CP5.Value.Month >= 7 ? d.CP5.Value.Year + 1 : d.CP5.Value.Year;
+                          var june30 = new DateTime(year, 6, 30);
+                          spans.Add(("CP5", d.CP5.Value, june30));
                       }
 
                       <div class="ga-gantt-row">
