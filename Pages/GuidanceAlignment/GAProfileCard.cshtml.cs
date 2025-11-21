@@ -17,6 +17,7 @@ namespace ORSV2.Pages.GuidanceAlignment
         public List<IndicatorSummary> StudentIndicators { get; set; } = new();
         public int? AttendanceAbsences { get; set; }
         public double? CumulativeGPA => Student?.CumulativeGPA;
+        public double? CurrentGPA => Student?.CurrentGPA;
         public decimal? CreditsCompleted => Student?.CreditsCompleted;
         public List<IndicatorRequirement> IndicatorRequirements { get; set; } = new();
         public GAAGProgress? AGProgress { get; set; }

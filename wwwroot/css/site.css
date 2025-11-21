@@ -280,6 +280,21 @@ a:hover {
   box-shadow: 0 2px 6px var(--orenda-shadow);
 }
 
+/* Refresh Button Style */
+.btn-refresh {
+  background: #e0f7fa; /* Light Cyan background */
+  color: #006064;      /* Dark Cyan text for contrast */
+  border: 1px solid #b2ebf2; /* Subtle border to define shape */
+}
+
+.btn-refresh:hover {
+  background: #b2ebf2;
+  color: #00838f;
+  border-color: #80deea;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 150, 136, 0.15);
+}
+
 /* Print Button Style */
 .btn-print {
   background: #fff;

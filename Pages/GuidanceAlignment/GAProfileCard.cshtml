@@ -109,6 +109,7 @@
                         <span class="@(met ? metBadge : notBadge)">@((met) ? "Met" : "Not Met")</span>
                     </div>
                     <div class="small">Cumulative GPA: <strong>@(Model.CumulativeGPA?.ToString("0.00") ?? "—")</strong></div>
+                    <div class="small">Current GPA: <strong>@(Model.CumulativeGPA?.ToString("0.00") ?? "—")</strong></div>
                     <div class="small text-muted">Requirement: <em>@Req("GPA")</em></div>
                 </div>
             </div>
