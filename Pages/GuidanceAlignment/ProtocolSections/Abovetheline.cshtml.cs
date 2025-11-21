@@ -74,36 +74,25 @@ public class AbovethelineModel : ProtocolSectionBaseModel
         if (Protocol == null || School == null) return;
         
         var cp = Protocol.CP;
-        var schoolYear = Protocol.SchoolYear;
 
         // Load comment
         AboveLineComment = Responses.GetValueOrDefault(3, string.Empty);
 
-        // Load current checkpoint results
-        var currentResults = await _context.GAResults
-            .Where(r => r.SchoolId == School.Id && 
-                       r.DistrictId == School.DistrictId && 
-                       r.SchoolYear == schoolYear && 
-                       r.CP == cp)
-            .ToListAsync();
+        // Load current checkpoint results from frozen data
+        var currentResults = await GetProtocolFinalizedResultsAsync(cp, forComparison: false);
 
         // Load comparison results if requested
-        var compareResults = new List<GAResults>();
+        var compareResults = new List<GAResultsFinalized>();
         if (CompareCP.HasValue && CompareCP.Value < cp)
         {
-            compareResults = await _context.GAResults
-                .Where(r => r.SchoolId == School.Id && 
-                           r.DistrictId == School.DistrictId && 
-                           r.SchoolYear == schoolYear && 
-                           r.CP == CompareCP.Value)
-                .ToListAsync();
+            compareResults = await GetProtocolFinalizedResultsAsync(CompareCP.Value, forComparison: true);
         }
 
         // Load targets
         var targets = await _context.GAProtocolTargets
             .Where(t => t.SchoolId == School.Id && 
                        t.DistrictId == School.DistrictId && 
-                       t.SchoolYear == schoolYear && 
+                       t.SchoolYear == Protocol.SchoolYear && 
                        t.TargetType == "AboveLine")
             .ToDictionaryAsync(t => t.GradeLevel, t => t.TargetValue);
 
@@ -111,7 +100,7 @@ public class AbovethelineModel : ProtocolSectionBaseModel
         TableGroups = BuildTableGroups(currentResults, compareResults, targets);
     }
 
-    private List<TableGroup> BuildTableGroups(List<GAResults> currentResults, List<GAResults> compareResults, Dictionary<int, decimal> targets)
+    private List<TableGroup> BuildTableGroups(List<GAResultsFinalized> currentResults, List<GAResultsFinalized> compareResults, Dictionary<int, decimal> targets)
     {
         var summaryRows = BuildSummaryRows(currentResults, compareResults, targets);
 
@@ -154,7 +143,7 @@ public class AbovethelineModel : ProtocolSectionBaseModel
         };
     }
 
-    private List<AboveLineSummaryRow> BuildSummaryRows(List<GAResults> currentResults, List<GAResults> compareResults, Dictionary<int, decimal> targets)
+    private List<AboveLineSummaryRow> BuildSummaryRows(List<GAResultsFinalized> currentResults, List<GAResultsFinalized> compareResults, Dictionary<int, decimal> targets)
     {
         return currentResults
             .GroupBy(r => r.Grade)
@@ -178,7 +167,7 @@ public class AbovethelineModel : ProtocolSectionBaseModel
             .ToList();
     }
 
-    private static decimal CalculateAboveLinePct(IEnumerable<GAResults> results)
+    private static decimal CalculateAboveLinePct(IEnumerable<GAResultsFinalized> results)
     {
         var resultList = results.ToList();
         if (!resultList.Any()) return 0;

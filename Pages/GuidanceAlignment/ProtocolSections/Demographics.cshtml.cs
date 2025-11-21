@@ -79,15 +79,9 @@ public class DemographicsModel : ProtocolSectionBaseModel
         if (Protocol == null || School == null) return;
 
         var cp = Protocol.CP;
-        var schoolYear = Protocol.SchoolYear;
 
-        // Load current checkpoint results
-        var currentResults = await _context.GAResults
-            .Where(r => r.SchoolId == School.Id && 
-                       r.DistrictId == School.DistrictId && 
-                       r.SchoolYear == schoolYear && 
-                       r.CP == cp)
-            .ToListAsync();
+        // Load current checkpoint results from frozen data
+        var currentResults = await GetProtocolFinalizedResultsAsync(cp, forComparison: false);
 
         // Build demographic summary by grade
         DemographicRows = currentResults
@@ -126,7 +120,7 @@ public class DemographicsModel : ProtocolSectionBaseModel
             .ToList();
     }
 
-    private static decimal CalculateAboveLinePct(IEnumerable<GAResults> results)
+    private static decimal CalculateAboveLinePct(IEnumerable<GAResultsFinalized> results)
     {
         var resultList = results.ToList();
         if (!resultList.Any()) return 0;

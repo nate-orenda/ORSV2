@@ -118,6 +118,21 @@ namespace ORSV2.Pages.GuidanceAlignment
             _context.GAProtocols.Add(protocol);
             await _context.SaveChangesAsync();
 
+            // Freeze the data immediately after protocol creation
+            try
+            {
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"EXEC sp_FreezeProtocolData @ProtocolId = {protocol.Id}"
+                );
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the protocol creation
+                System.Diagnostics.Debug.WriteLine($"Protocol freeze failed for ProtocolId {protocol.Id}: {ex.Message}");
+                ModelState.AddModelError(string.Empty, $"Protocol created but data freeze failed: {ex.Message}");
+                return RedirectToPage(new { schoolId = SchoolId });
+            }
+
             return RedirectToPage(new { schoolId = SchoolId });
         }
 
@@ -144,20 +159,49 @@ namespace ORSV2.Pages.GuidanceAlignment
             var ok = await AuthorizeAsync();
             if (!ok) return Forbid();
 
-            if (!(User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser")))
-                return Forbid();
-
             var p = await _context.GAProtocols.FirstOrDefaultAsync(x => x.Id == protocolId);
             if (p is null) return NotFound();
 
             if (p.IsFinalized)
             {
-                p.IsFinalized = false; // simple unlock
+                p.IsFinalized = false;
                 p.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
 
             return RedirectToPage(new { schoolId = p.SchoolId });
+        }
+
+        public async Task<IActionResult> OnPostRefreshProtocolDataAsync(int protocolId)
+        {
+            var ok = await AuthorizeAsync();
+            if (!ok) return Forbid();
+
+            var protocol = await _context.GAProtocols.FirstOrDefaultAsync(x => x.Id == protocolId);
+            if (protocol is null) return NotFound();
+
+            // Prevent refresh if protocol is finalized
+            if (protocol.IsFinalized)
+            {
+                TempData["Error"] = "Cannot refresh data for a finalized protocol.";
+                return RedirectToPage(new { schoolId = protocol.SchoolId });
+            }
+
+            try
+            {
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"EXEC sp_FreezeProtocolData @ProtocolId = {protocolId}"
+                );
+
+                TempData["Success"] = "Protocol data refreshed successfully.";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Protocol refresh failed for ProtocolId {protocolId}: {ex.Message}");
+                TempData["Error"] = $"Data refresh failed: {ex.Message}";
+            }
+
+            return RedirectToPage(new { schoolId = protocol.SchoolId });
         }
 
     }

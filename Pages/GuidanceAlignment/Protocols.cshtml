@@ -294,11 +294,18 @@
                                             Print
                                         </a>
 
+                                        <!-- Disabled refresh button when finalized -->
+                                        <button class="btn btn-sm btn-disabled ms-2" disabled 
+                                                title="Cannot refresh finalized protocol">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>
+                                            Refresh Data
+                                        </button>
+
                                         <span class="badge bg-danger ms-2">Finalized</span>
 
                                         @* Orenda-only unlock *@
-                                        @if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser"))
-                                        {
+                                        @*if (User.IsInRole("OrendaAdmin") || User.IsInRole("OrendaManager") || User.IsInRole("OrendaUser"))
+                                        {*@
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="protocolId" value="@protocol.Id" />
                                                 <button formaction="?handler=Unlock" class="btn btn-sm btn-warning ms-2">
@@ -306,7 +313,7 @@
                                                 </button>
                                                 @Html.AntiForgeryToken()
                                             </form>
-                                        }
+                                        @*}*@
                                     }
                                     else
                                     {
@@ -325,6 +332,19 @@
                                             <i class="bi bi-printer me-1"></i>
                                             Print
                                         </a>
+
+                                        <!-- Refresh Data Button -->
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="protocolId" value="@protocol.Id" />
+                                            <button formaction="?handler=RefreshProtocolData" 
+                                                    class="btn btn-sm btn-info ms-2"
+                                                    title="Refresh protocol data from latest GAResults"
+                                                    onclick="return confirm('Refresh protocol data? This will update all student data from the latest records.');">
+                                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                                Refresh Data
+                                            </button>
+                                            @Html.AntiForgeryToken()
+                                        </form>
 
                                         <span class="badge bg-secondary ms-2">In-Progress</span>
 

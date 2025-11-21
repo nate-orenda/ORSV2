@@ -91,12 +91,11 @@ public class IndicatorsModel : ProtocolSectionBaseModel
         if (Protocol == null || School == null) return;
 
         var cp = Protocol.CP;
-        var schoolYear = Protocol.SchoolYear;
         var districtId = School.DistrictId;
         var schoolId = School.Id;
 
-        // Load all GAResults for this school/checkpoint/year with demographic filtering
-        var allResults = await GetFilteredGAResultsAsync(schoolId, districtId, schoolYear, cp);
+        // Load all finalized results for this school/checkpoint/year with demographic filtering
+        var allResults = await GetFilteredFinalizedResultsAsync(schoolId, districtId, cp);
 
         // Get indicators for grades 6-12
         var indicatorsQuery = _context.GAQuadrantIndicators
@@ -166,13 +165,14 @@ public class IndicatorsModel : ProtocolSectionBaseModel
         }
     }
 
-    private async Task<List<GAResults>> GetFilteredGAResultsAsync(int schoolId, int districtId, int schoolYear, int cp)
+    private async Task<List<GAResultsFinalized>> GetFilteredFinalizedResultsAsync(int schoolId, int districtId, int cp)
     {
-        var query = _context.GAResults
+        var query = _context.GAResultsFinalized
             .Where(r => r.SchoolId == schoolId && 
                        r.DistrictId == districtId && 
-                       r.SchoolYear == schoolYear && 
-                       r.CP == cp);
+                       r.SchoolYear == Protocol!.SchoolYear &&
+                       r.CP == cp &&
+                       r.ProtocolId == ProtocolId);
 
         // Apply demographic filter
         query = DemographicFilter switch
@@ -194,7 +194,7 @@ public class IndicatorsModel : ProtocolSectionBaseModel
         string gradeRange, 
         List<int> grades,
         IEnumerable<GAQuadrantIndicators> allIndicators,
-        Dictionary<int, List<GAResults>> resultsByGrade,
+        Dictionary<int, List<GAResultsFinalized>> resultsByGrade,
         int cp)
     {
         var group = new IndicatorTableGroup
@@ -264,7 +264,7 @@ public class IndicatorsModel : ProtocolSectionBaseModel
         return group;
     }
 
-    private (decimal PercentMet, int CountMet, int TotalCount) CalculateIndicatorMetrics(string indicatorName, List<GAResults> results)
+    private (decimal PercentMet, int CountMet, int TotalCount) CalculateIndicatorMetrics(string indicatorName, List<GAResultsFinalized> results)
     {
         if (!results.Any())
             return (0, 0, 0);

@@ -96,17 +96,11 @@ public class TrendsModel : ProtocolSectionBaseModel
         if (Protocol == null || School == null) return;
 
         var cp = Protocol.CP;
-        var schoolYear = Protocol.SchoolYear;
         var districtId = School.DistrictId;
         var schoolId = School.Id;
 
-        // Load all GAResults for this school/checkpoint/year
-        var allResults = await _context.GAResults
-            .Where(r => r.SchoolId == schoolId && 
-                       r.DistrictId == districtId && 
-                       r.SchoolYear == schoolYear && 
-                       r.CP == cp)
-            .ToListAsync();
+        // Load all finalized results for this school/checkpoint/year
+        var allResults = await GetProtocolFinalizedResultsAsync(cp, forComparison: false);
 
         // Get all indicators for grades 6-12 from the most specific scope available
         var indicators = await _context.GAQuadrantIndicators
@@ -125,7 +119,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         BuildDemographicSections(allResults, indicators, cp);
     }
 
-    private void BuildPredictiveGradesSections(List<GAResults> allResults, List<GAQuadrantIndicators> indicators, int cp)
+    private void BuildPredictiveGradesSections(List<GAResultsFinalized> allResults, List<GAQuadrantIndicators> indicators, int cp)
     {
         // Predictive Grades 6-8 (Middle School)
         var grades6_8 = allResults.Where(r => r.Grade >= 6 && r.Grade <= 8).ToList();
@@ -144,7 +138,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         }
     }
 
-    private void BuildEndOfJourneySections(List<GAResults> allResults, List<GAQuadrantIndicators> indicators, int cp)
+    private void BuildEndOfJourneySections(List<GAResultsFinalized> allResults, List<GAQuadrantIndicators> indicators, int cp)
     {
         // End of Journey Grades 11-12
         var grades11_12 = allResults.Where(r => r.Grade >= 11 && r.Grade <= 12).ToList();
@@ -155,7 +149,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         }
     }
 
-    private void BuildDemographicSections(List<GAResults> allResults, List<GAQuadrantIndicators> indicators, int cp)
+    private void BuildDemographicSections(List<GAResultsFinalized> allResults, List<GAQuadrantIndicators> indicators, int cp)
     {
         // English Learners (LF = 'EL') - Filter by school for total count
         var englishLearners = allResults.Where(r => r.LF == "EL" && r.SchoolId == School!.Id).ToList();
@@ -195,7 +189,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         string gradeRange, 
         List<int> grades,
         IEnumerable<GAQuadrantIndicators> allIndicators,
-        List<GAResults> filteredResults,
+        List<GAResultsFinalized> filteredResults,
         int cp)
     {
         var group = new IndicatorTableGroup
@@ -267,7 +261,7 @@ public class TrendsModel : ProtocolSectionBaseModel
         return group;
     }
 
-    private (decimal PercentMet, int CountMet, int TotalCount) CalculateIndicatorMetrics(string indicatorName, List<GAResults> results)
+    private (decimal PercentMet, int CountMet, int TotalCount) CalculateIndicatorMetrics(string indicatorName, List<GAResultsFinalized> results)
     {
         if (!results.Any())
             return (0, 0, 0);

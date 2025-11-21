@@ -49,6 +49,27 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
             .FirstOrDefaultAsync(p => p.Id == ProtocolId);
         if (Protocol == null) return NotFound();
 
+        // NEW: Check if protocol has frozen data, if not, freeze it now (backfill for existing protocols)
+        var hasFrozenData = await _context.GAResultsFinalized
+            .AnyAsync(r => r.ProtocolId == ProtocolId);
+        
+        if (!hasFrozenData)
+        {
+            try
+            {
+                // Auto-freeze if data doesn't exist
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"EXEC sp_FreezeProtocolData @ProtocolId = {ProtocolId}"
+                );
+                System.Diagnostics.Debug.WriteLine($"[AUTO-FREEZE] Protocol {ProtocolId} (District: {Protocol.DistrictId}, School: {Protocol.SchoolId}, CP: {Protocol.CP}) - backfilled from GAResults");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AUTO-FREEZE ERROR] ProtocolId {ProtocolId}: {ex.Message}");
+                TempData["Warning"] = "Protocol data could not be loaded. Please contact your administrator.";
+            }
+        }
+
         School = await _context.Schools
             .Include(s => s.District)
             .FirstOrDefaultAsync(s => s.Id == Protocol.SchoolId);
@@ -92,6 +113,29 @@ public abstract class ProtocolSectionBaseModel : GABasePageModel
         ViewData["IsLocked"] = IsLocked;
 
         return Page();
+    }
+
+    protected async Task<List<GAResultsFinalized>> GetProtocolFinalizedResultsAsync(
+        int cp,
+        bool forComparison = false)
+    {
+        if (Protocol == null || School == null)
+            return new List<GAResultsFinalized>();
+
+        var query = _context.GAResultsFinalized
+            .Where(r => r.SchoolId == School.Id &&
+                       r.DistrictId == School.DistrictId &&
+                       r.SchoolYear == Protocol.SchoolYear &&
+                       r.CP == cp);
+
+        // For current checkpoint: add ProtocolId filter (most specific)
+        // For comparison checkpoint: don't add ProtocolId (queries different protocol snapshot)
+        if (!forComparison)
+        {
+            query = query.Where(r => r.ProtocolId == ProtocolId);
+        }
+
+        return await query.ToListAsync();
     }
 
     protected async Task<IActionResult> SaveSectionResponseAsync(int sectionNumber, string content)
